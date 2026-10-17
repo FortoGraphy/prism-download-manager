@@ -92,6 +92,7 @@
           "ffmpeg"
         ],
         "files": {},
+        "desktopTemplate": "../../packaging/linux/prism.desktop",
         "postInstallScript": "../../packaging/linux/postinst.sh",
         "preRemoveScript": "../../packaging/linux/prerm.sh"
       },
@@ -99,6 +100,7 @@
         "depends": [
           "/usr/bin/ffmpeg"
         ],
+        "desktopTemplate": "../../packaging/linux/prism.desktop",
         "postInstallScript": "../../packaging/linux/postinst.sh",
         "preRemoveScript": "../../packaging/linux/prerm.sh"
       },

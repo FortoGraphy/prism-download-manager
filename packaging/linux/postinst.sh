@@ -43,5 +43,4 @@ for dir in /usr/lib/mozilla/native-messaging-hosts /usr/lib64/mozilla/native-mes
 done
 
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q /usr/share/applications || true
-command -v xdg-mime >/dev/null 2>&1 && xdg-mime default prism.desktop x-scheme-handler/magnet application/x-bittorrent 2>/dev/null || true
 exit 0
