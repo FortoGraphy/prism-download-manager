@@ -55,10 +55,6 @@ const ACTIVE: Status[] = ["connecting", "downloading", "retrying", "processing"]
 
 export const isActive = (s: Status) => ACTIVE.includes(s);
 
-/** Ids an auto-opened progress window already covers for their current active run —
- *  cleared once the item leaves the active set, so a later restart pops again. */
-const autoOpenedProgress = new Set<string>();
-
 export const useApp = create<AppState>((set, get) => ({
   ready: false,
   version: "",
@@ -113,33 +109,15 @@ function handleEvent(e: CoreEvent) {
   switch (e.type) {
     case "itemsAdded": {
       const items = { ...st.items };
-      for (const i of e.payload) {
-        items[i.id] = i;
-        // A `StartMode::Now` item can arrive already "downloading" — there's no prior
-        // state to show a was-inactive → now-active transition, so this is the only
-        // place that catches it (the itemUpdated case below catches a later restart).
-        if (isActive(i.status) && st.settings?.general.showProgressWindow && !autoOpenedProgress.has(i.id)) {
-          autoOpenedProgress.add(i.id);
-          void api.openDetails(i.id);
-        }
-      }
+      for (const i of e.payload) items[i.id] = i;
       useApp.setState({ items });
       break;
     }
     case "itemUpdated": {
       const prev = st.items[e.payload.id];
       const items = { ...st.items, [e.payload.id]: e.payload };
-      const nowActive = isActive(e.payload.status);
-      if (!nowActive) {
-        autoOpenedProgress.delete(e.payload.id);
-      } else if (!isActive(prev?.status ?? e.payload.status) && st.settings?.general.showProgressWindow && !autoOpenedProgress.has(e.payload.id)) {
-        // A download just (re)started: pop its progress window, same as IDM's
-        // own "Download File Info" progress dialog opening immediately.
-        autoOpenedProgress.add(e.payload.id);
-        void api.openDetails(e.payload.id);
-      }
       // Drop stale live progress once a job stops.
-      if (!nowActive && st.progress[e.payload.id]) {
+      if (!isActive(e.payload.status) && st.progress[e.payload.id]) {
         const progress = { ...st.progress };
         delete progress[e.payload.id];
         useApp.setState({ items, progress });

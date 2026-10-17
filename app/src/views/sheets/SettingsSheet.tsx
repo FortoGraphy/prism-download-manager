@@ -564,9 +564,11 @@ function BrowserIntegration() {
           </div>
         </div>
         <span className="spacer" />
-        <button type="button" className="btn btn--primary" disabled={busy} onClick={repair}>
-          <Icon name="refresh-url" size={15} /> {busy ? "Repairing…" : "Repair"}
-        </button>
+        {(!status?.extensionConnected || status.extensionOutdated) && (
+          <button type="button" className="btn btn--primary" disabled={busy} onClick={repair}>
+            <Icon name="refresh-url" size={15} /> {busy ? "Repairing…" : "Repair"}
+          </button>
+        )}
       </div>
       <div className="group">
         <div className="group__t">Install the extension</div>

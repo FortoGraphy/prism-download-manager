@@ -361,16 +361,39 @@ fn spawn_event_forwarder(app: AppHandle, core: Core) {
     tauri::async_runtime::spawn(async move {
         let mut was_active = None::<bool>;
         let mut last_tooltip = std::time::Instant::now();
+        // Ids an auto-opened progress window already covers for their current active run.
+        // Lives here (not in the frontend) because every open window would otherwise react
+        // to the same event independently and race to open duplicate windows.
+        let mut opened_progress = std::collections::HashSet::<String>::new();
         loop {
             let event = match rx.recv().await {
                 Ok(e) => e,
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
                 Err(_) => break,
             };
-            side_effects(&app, &core, &event, &mut was_active, &mut last_tooltip);
+            side_effects(&app, &core, &event, &mut was_active, &mut last_tooltip, &mut opened_progress);
             let _ = app.emit("core", &event);
         }
     });
+}
+
+/// Opens the item's progress window the first time it's seen active, when the setting is on.
+/// `opened_progress.insert` both checks and records "already handled" in one step.
+fn maybe_open_progress_window(
+    app: &AppHandle,
+    settings: &Settings,
+    opened_progress: &mut std::collections::HashSet<String>,
+    item: &prism_core::model::DownloadItem,
+) {
+    if item.status.is_active() {
+        if settings.general.show_progress_window && opened_progress.insert(item.id.clone()) {
+            if let Err(e) = windows::open_details(app, &item.id) {
+                tracing::error!("could not open the progress window: {e}");
+            }
+        }
+    } else {
+        opened_progress.remove(&item.id);
+    }
 }
 
 fn side_effects(
@@ -379,6 +402,7 @@ fn side_effects(
     event: &CoreEvent,
     was_active: &mut Option<bool>,
     last_tooltip: &mut std::time::Instant,
+    opened_progress: &mut std::collections::HashSet<String>,
 ) {
     let settings = core.settings();
     let notify = |title: &str, body: &str| {
@@ -387,6 +411,14 @@ fn side_effects(
         }
     };
     match event {
+        CoreEvent::ItemsAdded(items) => {
+            for item in items {
+                maybe_open_progress_window(app, &settings, opened_progress, item);
+            }
+        }
+        CoreEvent::ItemUpdated(item) => {
+            maybe_open_progress_window(app, &settings, opened_progress, item);
+        }
         CoreEvent::CaptureRequested(info) => {
             if let Err(e) = windows::open(app, "capture", Some(&info.id)) {
                 // Never lose a download because its dialog could not open: start it directly.

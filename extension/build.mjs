@@ -21,7 +21,10 @@ const common = {
   manifest_version: 3,
   name: 'Prism Download Manager',
   short_name: 'Prism',
+  // Chrome requires `version` to stay strictly numeric (no pre-release suffix); the
+  // free-form `version_name` is what chrome://extensions actually displays.
   version: pkg.version,
+  ...(process.env.PRISM_VERSION_NAME ? { version_name: process.env.PRISM_VERSION_NAME } : {}),
   description,
   icons,
   action: { default_popup: 'popup.html', default_title: 'Prism', default_icon: { 16: icons[16], 32: icons[32] } },

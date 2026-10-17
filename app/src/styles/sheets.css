@@ -7,7 +7,7 @@
 .settings { flex: 1; min-height: 0; display: flex; }
 .snav { width: 230px; flex: none; display: flex; flex-direction: column; gap: 10px; padding: 12px 10px; overflow-y: auto; }
 .snav .side-item { width: 100%; text-align: left; height: 30px; }
-.snav .grp { height: 8px; }
+.snav .grp { height: 1px; margin: 3px 2px; background: var(--divider); }
 .scontent { flex: 1; min-width: 0; border-left: 1px solid var(--divider); background: var(--surface-base); overflow-y: auto; }
 [data-theme="dark"] .scontent { background: rgb(12 13 18 / 0.9); }
 [data-theme="light"] .scontent { background: rgb(255 255 255 / 0.78); }

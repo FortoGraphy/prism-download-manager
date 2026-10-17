@@ -15,6 +15,7 @@ import { copyText, win } from "../lib/win";
 export default function DetailsWindow({ id }: { id: string }) {
   const item = useApp((s) => s.items[id]);
   const progress = useApp((s) => s.progress[id]);
+  const settings = useApp((s) => s.settings);
   const details = useItemDetails(id, 500);
   const [pinned, setPinned] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -160,9 +161,10 @@ export default function DetailsWindow({ id }: { id: string }) {
       </div>
 
       <footer className="dialog__footer">
-        <label className="opt">
+        <label className="opt" data-tip={limit === 0 && settings?.downloads.speedLimiterEnabled ? `Also shares the global ${formatSpeed(settings.downloads.speedLimit)} limit (Settings → Speed & queues)` : undefined}>
           <Switch checked={limit > 0} label="Limit speed" onChange={(on) => setLimit(on ? limit || 2 * 1024 * 1024 : 0)} />
           Limit
+          {limit === 0 && settings?.downloads.speedLimiterEnabled && <span className="text-tertiary"> (global {formatSpeed(settings.downloads.speedLimit)} applies)</span>}
         </label>
         {limit > 0 && <RateField value={limit} onCommit={setLimit} label="Speed limit" width={120} />}
         <span className="spacer" />
