@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type MediaItem, addMedia, classifyMedia, elementMedia, elementSources, humanSize, isIgnoredMediaUrl, linkedinCommentaryPath, linkedinPostPath, mediaDetail, mediaKey, mediaLabel, postUrl, qualityFromUrl, totalSize, visibleMedia } from '../src/shared/media';
+import { type MediaItem, addMedia, classifyMedia, elementMedia, elementSources, humanSize, isIgnoredMediaUrl, linkedinCommentaryPath, linkedinPostPath, manifestKind, mediaDetail, mediaKey, mediaLabel, postUrl, qualityFromUrl, totalSize, visibleMedia } from '../src/shared/media';
 
 const LI = 'https://dms.licdn.com/playlist/vid/v2/D5610AQFKo9M0zqY2_g';
 
@@ -242,5 +242,22 @@ describe('linkedinCommentaryPath (LinkedIn newer UI: the post text block)', () =
   });
   it('the paths count as single posts', () => {
     expect(postUrl('/feed/update/urn:li:share:7400000000000000123/', 'https://www.linkedin.com/search/results/content/')).toBe('https://www.linkedin.com/feed/update/urn:li:share:7400000000000000123');
+  });
+});
+
+describe('manifestKind (disguised-playlist body probe)', () => {
+  it('recognizes an HLS playlist by its magic line', () => {
+    expect(manifestKind('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=5558000\n720/playlist_001.png')).toBe('hls');
+    expect(manifestKind('  #EXTM3U')).toBe('hls');
+  });
+  it('recognizes a DASH manifest after the XML prolog', () => {
+    expect(manifestKind('<?xml version="1.0" encoding="UTF-8"?>\n<MPD xmlns="urn:mpeg:dash:schema:mpd:2011">')).toBe('dash');
+    expect(manifestKind('<MPD profiles="urn:mpeg:dash:profile:isoff-live:2011">')).toBe('dash');
+  });
+  it('does not misread non-manifest bodies', () => {
+    expect(manifestKind('\u0089PNG\r\n\u001a\n')).toBeNull();
+    expect(manifestKind('<!DOCTYPE html><html><body>')).toBeNull();
+    expect(manifestKind('{"error":"not found"}')).toBeNull();
+    expect(manifestKind('')).toBeNull();
   });
 });

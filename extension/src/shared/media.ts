@@ -11,7 +11,7 @@ export interface MediaClassification {
 const HLS_MIMES = ['application/vnd.apple.mpegurl', 'application/x-mpegurl', 'audio/mpegurl', 'audio/x-mpegurl'];
 const DASH_MIMES = ['application/dash+xml'];
 const SEGMENT_MIMES = ['video/mp2t', 'video/iso.segment', 'audio/iso.segment'];
-const GENERIC_MIMES = ['', 'application/octet-stream', 'binary/octet-stream', 'text/plain', 'application/binary', 'application/x-www-form-urlencoded'];
+export const GENERIC_MIMES = ['', 'application/octet-stream', 'binary/octet-stream', 'text/plain', 'application/binary', 'application/x-www-form-urlencoded'];
 
 const VIDEO_EXTS = ['MP4', 'M4V', 'WEBM', 'MKV', 'MOV', 'FLV', 'AVI', 'OGV', '3GP', 'WMV'];
 const AUDIO_EXTS = ['MP3', 'M4A', 'AAC', 'OGG', 'OGA', 'OPUS', 'FLAC', 'WAV', 'WMA'];
@@ -47,6 +47,15 @@ export function classifyMedia(input: { url: string; contentType?: string; resour
     if (VIDEO_EXTS.includes(ext)) return { kind: 'video', streamKind: 'direct' };
     if (AUDIO_EXTS.includes(ext)) return { kind: 'audio', streamKind: 'direct' };
   }
+  return null;
+}
+
+/** What the start of a response body says a disguised manifest is: HLS playlists start
+ *  with the literal `#EXTM3U`; DASH is XML, so `<MPD` follows a possible BOM / prolog.
+ *  Everything else is not a manifest. */
+export function manifestKind(prefix: string): 'hls' | 'dash' | null {
+  if (/^\s*#EXTM3U/.test(prefix)) return 'hls';
+  if (/<MPD[\s>]/i.test(prefix)) return 'dash';
   return null;
 }
 
