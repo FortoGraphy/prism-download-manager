@@ -387,12 +387,15 @@ fn maybe_open_progress_window(
 ) {
     if item.status.is_active() {
         if settings.general.show_progress_window && opened_progress.insert(item.id.clone()) {
-            if let Err(e) = windows::open_details(app, &item.id) {
+            if let Err(e) = windows::open_progress(app, &item.id) {
                 tracing::error!("could not open the progress window: {e}");
             }
         }
     } else {
-        opened_progress.remove(&item.id);
+        if opened_progress.remove(&item.id) && item.status == prism_core::model::Status::Completed {
+            // The completion dialog takes over; no reason to leave the popup open too.
+            windows::close_progress(app, &item.id);
+        }
     }
 }
 

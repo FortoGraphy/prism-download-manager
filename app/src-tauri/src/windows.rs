@@ -28,6 +28,9 @@ fn spec(kind: &str) -> Spec {
         "video" => s(680.0, 640.0, true, true, "Download Video"),
         "complete" => s(500.0, 300.0, true, false, "Download Complete"),
         "details" => s(760.0, 600.0, false, true, "Download Details"),
+        // The auto-opened progress popup: header + connections only, no speed chart/stats —
+        // matches IDM's simpler always-on progress dialog, so it's shorter than "details".
+        "progress" => s(620.0, 420.0, false, true, "Downloading"),
         "torrent" => s(680.0, 600.0, true, true, "Add Torrent"),
         "addurl" => s(600.0, 300.0, true, false, "Add URL"),
         "mini" => s(360.0, 220.0, true, false, "Prism Mini"),
@@ -66,6 +69,11 @@ pub fn open(app: &AppHandle, kind: &str, id: Option<&str>) -> tauri::Result<Webv
         .decorations(false)
         .transparent(true)
         .shadow(false)
+        // A solid fallback behind the transparent/glass surface: without this, a region the
+        // webview hasn't painted yet (or a compositor hiccup during resize/creation) can show
+        // whatever was on screen behind the window instead of this app, looking like ghosted
+        // page content bleeding through the dialog's edges.
+        .background_color(tauri::window::Color(7, 8, 11, 255))
         .always_on_top(sp.always_on_top)
         .skip_taskbar(matches!(kind, "mini" | "dropzone"))
         // Windows/Linux: hidden until the page has painted (no white flash). macOS: WKWebView
@@ -132,6 +140,20 @@ fn place_bottom_right(window: &WebviewWindow, higher: bool) {
 
 pub fn open_details(app: &AppHandle, id: &str) -> tauri::Result<()> {
     open(app, "details", Some(id)).map(|_| ())
+}
+
+/// The auto-opened progress popup — a distinct window kind from `open_details` so it never
+/// collides with (or gets reused by) a manually-opened full details window for the same item.
+pub fn open_progress(app: &AppHandle, id: &str) -> tauri::Result<()> {
+    open(app, "progress", Some(id)).map(|_| ())
+}
+
+/// Closes the auto-opened progress popup for `id`, if one is open (used when the download
+/// finishes — the completion dialog takes over, so the simpler popup doesn't need to linger).
+pub fn close_progress(app: &AppHandle, id: &str) {
+    if let Some(w) = app.get_webview_window(&format!("progress-{id}")) {
+        let _ = w.close();
+    }
 }
 
 fn toggle(app: &AppHandle, kind: &str) -> tauri::Result<bool> {

@@ -11,9 +11,10 @@ export type Route =
   | { name: "video"; id: string }
   | { name: "complete"; id: string }
   | { name: "details"; id: string }
+  | { name: "progress"; id: string }
   | { name: "torrent"; source: string };
 
-const WITH_ID = ["capture", "batch", "video", "complete", "details"] as const;
+const WITH_ID = ["capture", "batch", "video", "complete", "details", "progress"] as const;
 
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, "").replace(/^\/+/, "");

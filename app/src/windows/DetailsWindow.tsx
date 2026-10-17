@@ -12,7 +12,7 @@ import { useApp } from "../lib/store";
 import { attempt } from "../lib/ui";
 import { copyText, win } from "../lib/win";
 
-export default function DetailsWindow({ id }: { id: string }) {
+export default function DetailsWindow({ id, simple }: { id: string; simple?: boolean }) {
   const item = useApp((s) => s.items[id]);
   const progress = useApp((s) => s.progress[id]);
   const settings = useApp((s) => s.settings);
@@ -133,12 +133,12 @@ export default function DetailsWindow({ id }: { id: string }) {
         )}
       </div>
 
-      <div className={`panel${status === "completed" ? " panel--single" : ""}`}>
+      <div className={`panel${simple ? " panel--single" : ""}`}>
         <div className="panel__conn">
           <div className="ph">Connections</div>
           {status === "completed" ? <p className="lanes__empty">Download complete.</p> : <ConnectionLanes segments={segments} max={12} />}
         </div>
-        {status !== "completed" && (
+        {!simple && (
           <div className="panel__speed">
             <div className="ph">
               Speed <span>last 60 s</span>

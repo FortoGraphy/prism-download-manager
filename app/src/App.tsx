@@ -38,6 +38,8 @@ function View({ route }: { route: Route }) {
       return <CompleteWindow id={route.id} />;
     case "details":
       return <DetailsWindow id={route.id} />;
+    case "progress":
+      return <DetailsWindow id={route.id} simple />;
     case "mini":
       return <MiniWindow />;
     case "dropzone":
