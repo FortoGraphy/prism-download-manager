@@ -134,7 +134,7 @@
 [data-theme="dark"] .details .panel { background: rgb(12 13 18 / 0.92); }
 [data-theme="light"] .details .panel { background: rgb(255 255 255 / 0.82); }
 .panel__conn { padding: 0 16px 10px; overflow-y: auto; min-height: 0; }
-.panel__speed { border-left: 1px solid var(--divider); padding: 0 16px 12px 14px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.panel__speed { border-left: 1px solid var(--divider); padding: 0 16px 12px 14px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
 .panel__speed .chart { flex: 1; min-height: 100px; }
 .ph { display: flex; align-items: center; justify-content: space-between; height: 36px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 .ph span { font-weight: 400; font-size: 11px; color: var(--text-tertiary); }

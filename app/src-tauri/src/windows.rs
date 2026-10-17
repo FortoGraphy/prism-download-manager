@@ -30,7 +30,7 @@ fn spec(kind: &str) -> Spec {
         "details" => s(760.0, 600.0, false, true, "Download Details"),
         // The auto-opened progress popup: header + connections only, no speed chart/stats —
         // matches IDM's simpler always-on progress dialog, so it's shorter than "details".
-        "progress" => s(620.0, 420.0, false, true, "Downloading"),
+        "progress" => s(700.0, 420.0, false, true, "Downloading"),
         "torrent" => s(680.0, 600.0, true, true, "Add Torrent"),
         "addurl" => s(600.0, 300.0, true, false, "Add URL"),
         "mini" => s(360.0, 220.0, true, false, "Prism Mini"),
