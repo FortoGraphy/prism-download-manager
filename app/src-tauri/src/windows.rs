@@ -12,6 +12,12 @@ struct Spec {
     always_on_top: bool,
     resizable: bool,
     title: &'static str,
+    /// Smallest the user can resize to. `None` falls back to the generic
+    /// `width.min(420) × height.min(240)` — fine for simple forms, but windows with a fixed
+    /// footer (buttons that must not get squeezed against its own edges) or a multi-section
+    /// layout (content that can overlap the footer if the window gets too short) need a real
+    /// floor instead.
+    min_size: Option<(f64, f64)>,
 }
 
 fn spec(kind: &str) -> Spec {
@@ -21,16 +27,17 @@ fn spec(kind: &str) -> Spec {
         always_on_top,
         resizable,
         title,
+        min_size: None,
     };
     match kind {
         "capture" => s(600.0, 440.0, true, false, "Download File"),
         "batch" => s(820.0, 600.0, true, true, "Download Links"),
         "video" => s(680.0, 640.0, true, true, "Download Video"),
         "complete" => s(500.0, 300.0, true, false, "Download Complete"),
-        "details" => s(760.0, 600.0, false, true, "Download Details"),
+        "details" => Spec { min_size: Some((640.0, 480.0)), ..s(760.0, 600.0, false, true, "Download Details") },
         // The auto-opened progress popup: header + connections only, no speed chart/stats —
         // matches IDM's simpler always-on progress dialog, so it's shorter than "details".
-        "progress" => s(700.0, 420.0, false, true, "Downloading"),
+        "progress" => Spec { min_size: Some((640.0, 340.0)), ..s(700.0, 420.0, false, true, "Downloading") },
         "torrent" => s(680.0, 600.0, true, true, "Add Torrent"),
         "addurl" => s(600.0, 300.0, true, false, "Add URL"),
         "mini" => s(360.0, 220.0, true, false, "Prism Mini"),
@@ -59,12 +66,13 @@ pub fn open(app: &AppHandle, kind: &str, id: Option<&str>) -> tauri::Result<Webv
         None => format!("/{kind}"),
     };
     let sp = spec(kind);
+    let (min_w, min_h) = sp.min_size.unwrap_or((sp.width.min(420.0), sp.height.min(240.0)));
     let init = format!("if (!location.hash) history.replaceState(null, '', '#{route}');");
     let builder = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
         .initialization_script(&init)
         .title(sp.title)
         .inner_size(sp.width, sp.height)
-        .min_inner_size(sp.width.min(420.0), sp.height.min(240.0))
+        .min_inner_size(min_w, min_h)
         .resizable(sp.resizable)
         .decorations(false)
         .transparent(true)
