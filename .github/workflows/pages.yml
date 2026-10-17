@@ -37,6 +37,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/configure-pages@v5
       - name: Drop build-only files
         run: rm -rf site/tools
