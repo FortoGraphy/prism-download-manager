@@ -269,12 +269,17 @@ export class VideoButton {
     root.append(this.wrap);
     this.pill = this.wrap.querySelector('.pill')!;
     this.menu = this.wrap.querySelector('.menu')!;
+    // Only the user's own clicks (isTrusted): the shadow root is open, and a page script must not
+    // open the menu or start a download with the page's cookies through synthetic events.
     this.pill.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (!e.isTrusted) return;
       void this.toggleMenu();
     });
-    this.pill.addEventListener('pointerenter', () => this.prefetch());
+    this.pill.addEventListener('pointerenter', (e) => {
+      if (e.isTrusted) this.prefetch();
+    });
     for (const el of [this.pill, this.menu]) {
       el.addEventListener('pointerenter', () => {
         this.overUi = true;
@@ -521,6 +526,7 @@ export class VideoButton {
       );
       this.menu.querySelector<HTMLButtonElement>('.item[data-id="best"]')!.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (!e.isTrusted) return;
         void this.choose({ id: 'fmt:best', label: 'Best quality', group: 'video', formatId: 'best' }, ctx.title, best);
       });
     }
@@ -560,6 +566,7 @@ export class VideoButton {
     this.menu.querySelectorAll<HTMLButtonElement>('.item').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (!e.isTrusted) return;
         const opt = res.options.find((o) => o.id === btn.dataset.id);
         if (opt) void this.choose(opt, res.title || title, opt.formatId ? res.pageUrl : undefined);
       });

@@ -1,5 +1,5 @@
 import { IS_FIREFOX, api } from '../shared/api';
-import { buildCookieHeader, mergeCookieHeaders, pickCookieStoreId } from '../shared/cookies';
+import { buildCookieHeader, mergeCookieHeaders, pickCookieStoreId, storeCookiesToAdd } from '../shared/cookies';
 import type { BrowserName } from '../shared/protocol';
 import { getConnection } from './state';
 
@@ -27,15 +27,21 @@ export function actionTimeout(): number {
   return getConnection().state === 'connected' ? 5000 : 12000;
 }
 
-/** Cookie header for `url` from the right cookie store, merged with a captured request Cookie header. */
-export async function cookieHeaderFor(url: string, incognito: boolean, sent?: string): Promise<string> {
+/**
+ * Cookie header for `url` from the right cookie store, merged with a captured request Cookie header.
+ * For a captured download (`capture`, which a page can start on its own), stored SameSite=Strict
+ * cookies are added only where the browser itself would have sent them (`storeCookiesToAdd`). The
+ * menus, the video button and the popup act on the user's own click and keep the full store.
+ */
+export async function cookieHeaderFor(url: string, incognito: boolean, sent?: string, capture?: { initiator: string | undefined }): Promise<string> {
   let fromStore = '';
   try {
     let storeId: string | undefined;
     if (incognito) storeId = pickCookieStoreId(await api.cookies.getAllCookieStores(), true);
     const details: chrome.cookies.GetAllDetails = { url };
     if (storeId) details.storeId = storeId;
-    fromStore = buildCookieHeader(await api.cookies.getAll(details));
+    const stored = await api.cookies.getAll(details);
+    fromStore = buildCookieHeader(capture ? storeCookiesToAdd(stored, url, sent, capture.initiator) : stored);
   } catch (e) {
     console.debug('[prism] cookies.getAll failed', e);
   }

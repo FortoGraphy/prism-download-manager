@@ -2,6 +2,8 @@ export interface CookieLike {
   name: string;
   value: string;
   path?: string;
+  /** As `cookies.getAll` reports it: "strict", "lax", "no_restriction" or "unspecified". */
+  sameSite?: string;
 }
 
 /**
@@ -45,6 +47,32 @@ export function mergeCookieHeaders(sent: string | undefined, store: string | und
     }
   }
   return out.map(([n, v]) => (n ? `${n}=${v}` : v)).join('; ');
+}
+
+/**
+ * The stored cookies that may be added to a captured download's request. The browser leaves
+ * SameSite=Strict cookies out of a request another site started, and Prism must not put them back
+ * (any page could otherwise make Prism repeat a GET to another site, signed in). So Strict cookies
+ * are added only when the browser's own Cookie header is unknown and the download was started from
+ * `url`'s own scheme and host (`initiator`: the request's referrer); an unknown initiator counts as
+ * another site. Hosts, not registrable domains, are compared: stricter than the browser (a sibling
+ * subdomain loses its Strict cookies here), but a Strict cookie is never added where the browser
+ * withheld it. Lax and None cookies are unchanged: another site gets those from the browser itself
+ * with a plain top-level navigation.
+ */
+export function storeCookiesToAdd<T extends CookieLike>(stored: T[], url: string, sent: string | undefined, initiator: string | undefined): T[] {
+  if (sent === undefined && initiator !== undefined && sameSchemeAndHost(initiator, url)) return stored;
+  return stored.filter((c) => c.sameSite !== 'strict');
+}
+
+function sameSchemeAndHost(a: string, b: string): boolean {
+  try {
+    const x = new URL(a);
+    const y = new URL(b);
+    return x.protocol === y.protocol && x.hostname === y.hostname;
+  } catch {
+    return false;
+  }
 }
 
 export interface CookieStoreLike {

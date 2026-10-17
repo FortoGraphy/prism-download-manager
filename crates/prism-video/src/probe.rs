@@ -1,8 +1,8 @@
 //! yt-dlp invocation helpers: argument building, browser-context passing
 //! (Netscape cookies.txt, Referer, User-Agent), probing and running jobs.
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use tokio::io::AsyncBufReadExt;
@@ -155,7 +155,7 @@ impl Drop for TempFile {
     }
 }
 
-static COOKIE_COUNTER: AtomicU64 = AtomicU64::new(0);
+const COOKIE_PREFIX: &str = "prism-cookies-";
 
 /// LinkedIn posts: yt-dlp reads the `<video data-sources>` of the public post page, which
 /// LinkedIn renders for visitors without a session; a signed-in session gets the web app's page
@@ -179,13 +179,39 @@ pub(crate) fn write_cookie_file(url: &str, ctx: &RequestContext) -> Result<Optio
     let Some(text) = netscape_cookies(url, cookies, expires) else {
         return Ok(None);
     };
-    let path = std::env::temp_dir().join(format!(
-        "prism-cookies-{}-{}.txt",
-        std::process::id(),
-        COOKIE_COUNTER.fetch_add(1, Ordering::Relaxed)
-    ));
-    std::fs::write(&path, text)?;
+    // The file holds the user's session cookies for the site. On Linux the temp dir is shared by
+    // every account: create it new (nothing planted at that path is followed), owner-only (0600)
+    // and under a random name, so no other account can read it or guess it.
+    let mut file = tempfile::Builder::new()
+        .prefix(COOKIE_PREFIX)
+        .suffix(".txt")
+        .tempfile()?;
+    file.write_all(text.as_bytes())?;
+    let (_, path) = file.keep().map_err(|e| e.error)?;
     Ok(Some(TempFile(path)))
+}
+
+/// Removes cookie files a crash left behind (they are deleted on drop otherwise). Only files of
+/// this user can be removed, and only ones older than an hour, so a running job keeps its own.
+pub(crate) fn sweep_stale_cookie_files() {
+    let Ok(dir) = std::fs::read_dir(std::env::temp_dir()) else {
+        return;
+    };
+    let hour_ago = std::time::SystemTime::now() - Duration::from_secs(3600);
+    for e in dir.flatten() {
+        let name = e.file_name();
+        let name = name.to_string_lossy();
+        if !(name.starts_with(COOKIE_PREFIX) && name.ends_with(".txt")) {
+            continue;
+        }
+        let old = e
+            .metadata()
+            .and_then(|m| m.modified())
+            .is_ok_and(|t| t < hour_ago);
+        if old {
+            let _ = std::fs::remove_file(e.path());
+        }
+    }
 }
 
 fn last_error(stderr: &str) -> String {
@@ -360,5 +386,42 @@ mod tests {
         let f =
             write_cookie_file("https://www.linkedin.com/learning/some-course/intro", &ctx).unwrap();
         assert!(f.is_some_and(|f| std::fs::read_to_string(&f.0).unwrap().contains("li_at")));
+    }
+
+    #[test]
+    fn the_cookie_file_is_private_and_its_name_unguessable() {
+        let ctx = RequestContext {
+            cookies: Some("SID=secret".into()),
+            ..Default::default()
+        };
+        let url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ";
+        let a = write_cookie_file(url, &ctx).unwrap().unwrap();
+        let b = write_cookie_file(url, &ctx).unwrap().unwrap();
+        assert_ne!(a.0, b.0);
+        // It holds the user's session cookies: no other local account may read it...
+        #[cfg(unix)]
+        for f in [&a, &b] {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&f.0).unwrap().permissions().mode();
+            assert_eq!(mode & 0o077, 0, "mode {mode:o}");
+        }
+        // ...nor predict the next name and plant a file or a link there first.
+        let pid = std::process::id().to_string();
+        for f in [&a, &b] {
+            let name = f.0.file_name().unwrap().to_string_lossy().into_owned();
+            assert!(
+                name.starts_with(COOKIE_PREFIX) && name.ends_with(".txt") && !name.contains(&pid),
+                "{name}"
+            );
+            assert!(
+                std::fs::read_to_string(&f.0)
+                    .unwrap()
+                    .contains("SID	secret")
+            );
+        }
+        // ...and it is gone when the job is done.
+        let path = a.0.clone();
+        drop(a);
+        assert!(!path.exists());
     }
 }

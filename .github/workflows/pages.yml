@@ -7,12 +7,13 @@ on:
       - "site/**"
       - ".github/workflows/pages.yml"
   # Refreshes the README badge data (site/release.json, downloads.json, tests.json): after CI and
-  # release builds finish, and hourly for the download count.
+  # release builds finish, and every 15 minutes for the download count (GitHub delays or skips
+  # scheduled runs under load: hourly ones left the badge hours behind).
   workflow_run:
     workflows: ["CI", "Release builds"]
     types: [completed]
   schedule:
-    - cron: "23 * * * *"
+    - cron: "8,23,38,53 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -55,9 +56,10 @@ jobs:
           tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName) || tag=""
           if [ -n "$tag" ]; then badge release.json release "$tag" 7c5cff; else keep release.json; fi
 
-          # Downloads of every release asset, as shields.io's github/downloads counted them.
+          # Downloads of the release files people get (installers, update bundles, extensions), not
+          # latest.json, which every running Prism fetches on each update check, or SHA256SUMS.txt.
           total=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-            --jq '[.[].assets[].download_count] | add // 0' \
+            --jq '[.[].assets[] | select(.name != "latest.json" and .name != "SHA256SUMS.txt") | .download_count] | add // 0' \
             | awk '{ s += $1 } END { print s + 0 }') || total=0
           if [ "${total:-0}" -gt 0 ]; then
             message=$(awk -v n="$total" 'BEGIN {

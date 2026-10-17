@@ -68,6 +68,7 @@ pub struct VideoService {
 impl VideoService {
     pub fn new(tools_dir: PathBuf, opts: VideoOptions) -> Self {
         tools::cleanup_tools_dir(&tools_dir);
+        probe::sweep_stale_cookie_files();
         VideoService {
             inner: Arc::new(Inner {
                 tools_dir,

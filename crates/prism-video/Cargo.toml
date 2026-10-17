@@ -25,11 +25,12 @@ sha1 = { workspace = true }
 zip = { version = "9", default-features = false, features = ["deflate"] }
 tar = "0.4"
 lzma-rust2 = { version = "0.22", default-features = false, features = ["std", "xz", "optimization"] }
+# The temporary cookies.txt for yt-dlp: created new, owner-only (0600), under a random name.
+tempfile = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [dev-dependencies]
-tempfile = { workspace = true }
 # Encoder only for building test archives.
 lzma-rust2 = { version = "0.22", default-features = false, features = ["std", "xz", "encoder"] }

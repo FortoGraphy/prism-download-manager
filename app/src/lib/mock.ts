@@ -694,10 +694,10 @@ const commands: Record<string, (args: Record<string, unknown>) => unknown> = {
   integration_status: () => ({
     hostPath: "C:\\Program Files\\Prism\\prism-native-host.exe",
     extensionConnected: mockExtSeen > 0,
-    extensionVersion: mockExtSeen > 0 ? (demoParam("oldext") ? "1.0.0" : "1.0.7") : null,
+    extensionVersion: mockExtSeen > 0 ? (demoParam("oldext") ? "1.0.0" : "1.0.8") : null,
     extensionInstallType: mockExtSeen > 0 ? (demoParam("exttype") ?? "development") : null,
     extensionOutdated: mockExtSeen > 0 && !!demoParam("oldext") && !["normal", "admin"].includes(demoParam("exttype") ?? ""),
-    appVersion: "1.0.7",
+    appVersion: "1.0.8",
     lastSeen: mockExtSeen || null,
     browsers: (
       [

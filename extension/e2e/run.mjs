@@ -206,6 +206,37 @@ try {
     return `browser download state: ${items.join(',')}`;
   });
 
+  await step('(1c) a download another site starts gets no SameSite=Strict cookie; one the site starts keeps it', async () => {
+    // GHSA-v77r-x9qx-wgpx: Prism must not add the Strict cookies the browser withheld from a cross-site request.
+    const u = new URL(site.origin);
+    await context.addCookies([{ name: 'strictsess', value: 's1', domain: u.hostname, path: '/', sameSite: 'Strict', httpOnly: true }]);
+    const evil = await context.newPage();
+    await evil.route('https://evil.example/**', (route) =>
+      route.fulfill({ contentType: 'text/html', body: `<a id="x" href="${site.origin}/files/test.zip?from=evil">get</a> <a id="nr" rel="noreferrer" href="${site.origin}/files/test.zip?from=noref">get</a>` }),
+    );
+    await evil.goto('https://evil.example/');
+    let since = Date.now();
+    await evil.click('#x');
+    const cross = (await mock.waitFor((m) => m.type === 'download' && m.url.includes('from=evil'), 4000, { since })).msg;
+    assert.ok(!/(^|; )strictsess=/.test(cross.cookies), `Strict cookie added to a cross-site capture: ${cross.cookies}`);
+    assert.match(cross.cookies, /(^|; )session=abc123(;|$)/, 'the Lax session cookie the browser sends must stay');
+    await evil.goto('https://evil.example/');
+    since = Date.now();
+    await evil.click('#nr');
+    const noref = (await mock.waitFor((m) => m.type === 'download' && m.url.includes('from=noref'), 4000, { since })).msg;
+    assert.ok(!/(^|; )strictsess=/.test(noref.cookies), `Strict cookie added without a referrer: ${noref.cookies}`);
+    await evil.close();
+    // The site's own link: the browser sends the Strict cookie itself, and Prism keeps it.
+    await page.goto(`${site.origin}/`);
+    since = Date.now();
+    await page.click('#zip');
+    const own = (await mock.waitFor((m) => m.type === 'download', 4000, { since })).msg;
+    assert.match(own.cookies, /(^|; )strictsess=s1(;|$)/, `same-site capture lost the Strict cookie: ${own.cookies}`);
+    await context.clearCookies({ name: 'strictsess' });
+    await sleep(1200);
+    return `cross-site: ${cross.cookies} · no referrer: ${noref.cookies} · same site: ${own.cookies}`;
+  });
+
   await step('(2) video button appears on hover and sends the sniffed stream', async () => {
     await page.locator('#vid').scrollIntoViewIfNeeded();
     // the <video> request must have been sniffed
@@ -236,6 +267,38 @@ try {
     assert.match(msg.cookies, /session=abc123/);
     await page.locator('[data-prism-video-button] .pill.done').waitFor({ timeout: 2000 });
     return `menu item "${label}"`;
+  });
+
+  await step('(2s) a page script cannot open the video button or pick a format with synthetic clicks', async () => {
+    await page.goto(`${site.origin}/`);
+    await page.locator('#vid').scrollIntoViewIfNeeded();
+    const box = await page.locator('#vid').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.move(box.x + box.width / 2 + 10, box.y + box.height / 2 + 5);
+    const pill = page.locator('[data-prism-video-button] .pill');
+    await pill.waitFor({ state: 'visible', timeout: 3000 });
+    let since = Date.now();
+    // What a hostile page can do: reach into the open shadow root and click from script.
+    const expanded = await page.evaluate(async () => {
+      const root = document.querySelector('[data-prism-video-button]').shadowRoot;
+      root.querySelector('.pill').click();
+      await new Promise((r) => setTimeout(r, 900));
+      return root.querySelector('.pill').getAttribute('aria-expanded');
+    });
+    assert.notEqual(expanded, 'true', 'a synthetic click opened the menu');
+    // The user opens the menu; the page then clicks a format from script.
+    await pill.click();
+    const items = page.locator('[data-prism-video-button] .item');
+    await items.first().waitFor({ state: 'visible', timeout: 4000 });
+    since = Date.now();
+    await page.evaluate(() => {
+      for (const b of document.querySelector('[data-prism-video-button]').shadowRoot.querySelectorAll('.item')) b.click();
+    });
+    await sleep(1000);
+    assert.ok(!mock.messages.some((m) => m.receivedAt >= since && (m.msg.type === 'video' || m.msg.type === 'probeVideo')), 'a synthetic click on a format reached the app');
+    await page.keyboard.press('Escape');
+    await page.mouse.move(5, 5);
+    return 'synthetic clicks: menu stayed closed, a format click sent nothing';
   });
 
   await step('(2a) on a feed the button offers the hovered video, not the bigger autoplaying ad above it', async () => {
@@ -518,6 +581,11 @@ try {
 
   await step('(5) app down → capture fails open (browser keeps the download) and popup shows the fix hint', async () => {
     await mock.close();
+    // (1c) already captured test.zip: forget that result so the wait below sees this click's.
+    await sw.evaluate(() => {
+      globalThis.__prism.lastCapture.url = undefined;
+      globalThis.__prism.lastCapture.result = undefined;
+    });
     const since = Date.now();
     await page.click('#zip');
     const zipUrl = `${site.origin}/files/test.zip`;

@@ -66,9 +66,12 @@ export async function maybeHandOff({ candidate, req, incognito }: HandOffInput):
   }
   const url = candidate.url;
   const finalUrl = candidate.finalUrl && candidate.finalUrl !== url ? candidate.finalUrl : undefined;
+  // The page that started the download, as the browser's Referer names it: a download another site
+  // started must not gain the SameSite=Strict cookies the browser withheld from it.
+  const capture = { initiator: req?.referer || candidate.referrer || undefined };
   const [cookies, finalCookies] = await Promise.all([
-    cookieHeaderFor(url, incognito, req && req.url === url ? req.cookie : undefined),
-    finalUrl && !sameOrigin(url, finalUrl) ? cookieHeaderFor(finalUrl, incognito, req?.cookie) : Promise.resolve(undefined),
+    cookieHeaderFor(url, incognito, req && req.url === url ? req.cookie : undefined, capture),
+    finalUrl && !sameOrigin(url, finalUrl) ? cookieHeaderFor(finalUrl, incognito, req?.cookie, capture) : Promise.resolve(undefined),
   ]);
   const headers: Record<string, string> = {};
   if (req?.origin) headers.Origin = req.origin;
