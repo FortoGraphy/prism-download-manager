@@ -59,7 +59,7 @@ function pickDefault(browsers: BrowserIntegration[]): string {
  * extensions page, switch on Developer mode, load the Prism folder — with a live check that
  * turns green the moment the extension connects.
  */
-export function BrowserConnect({ status, connected }: { status: IntegrationStatus | null; connected: boolean }) {
+export function BrowserConnect({ status, connected, hideOwnStatus }: { status: IntegrationStatus | null; connected: boolean; hideOwnStatus?: boolean }) {
   const browsers = useMemo(() => {
     const list = status?.browsers ?? [];
     const shown = ORDER.filter((id) => list.some((b) => b.browser === id && b.installed && b.supported !== false));
@@ -180,7 +180,7 @@ export function BrowserConnect({ status, connected }: { status: IntegrationStatu
       </ol>
 
       <AnimatePresence mode="wait" initial={false}>
-        {connected ? (
+        {hideOwnStatus && connected ? null : connected ? (
           <motion.div
             key="ok"
             className="bstatus bstatus--ok"

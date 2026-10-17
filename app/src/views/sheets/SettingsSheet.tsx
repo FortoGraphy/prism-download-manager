@@ -572,7 +572,7 @@ function BrowserIntegration() {
       </div>
       <div className="group">
         <div className="group__t">Install the extension</div>
-        <BrowserConnect status={live.status ?? status} connected={live.connected} />
+        <BrowserConnect status={live.status ?? status} connected={live.connected} hideOwnStatus />
       </div>
       <div className="group">
         <div className="group__t">Browsers</div>

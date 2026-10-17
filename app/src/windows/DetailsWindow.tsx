@@ -133,31 +133,33 @@ export default function DetailsWindow({ id }: { id: string }) {
         )}
       </div>
 
-      <div className="panel">
+      <div className={`panel${status === "completed" ? " panel--single" : ""}`}>
         <div className="panel__conn">
           <div className="ph">Connections</div>
           {status === "completed" ? <p className="lanes__empty">Download complete.</p> : <ConnectionLanes segments={segments} max={12} />}
         </div>
-        <div className="panel__speed">
-          <div className="ph">
-            Speed <span>last 60 s</span>
+        {status !== "completed" && (
+          <div className="panel__speed">
+            <div className="ph">
+              Speed <span>last 60 s</span>
+            </div>
+            <SpeedChart samples={samples} height={150} />
+            <div className="sstats">
+              <div className="sstat">
+                <div className="k">Now</div>
+                <div className="v tnum">{formatSpeed(speed)}</div>
+              </div>
+              <div className="sstat">
+                <div className="k">Average</div>
+                <div className="v tnum">{formatSpeed(avg)}</div>
+              </div>
+              <div className="sstat">
+                <div className="k">Peak</div>
+                <div className="v tnum">{formatSpeed(Math.max(0, ...history))}</div>
+              </div>
+            </div>
           </div>
-          <SpeedChart samples={samples} height={150} />
-          <div className="sstats">
-            <div className="sstat">
-              <div className="k">Now</div>
-              <div className="v tnum">{formatSpeed(speed)}</div>
-            </div>
-            <div className="sstat">
-              <div className="k">Average</div>
-              <div className="v tnum">{formatSpeed(avg)}</div>
-            </div>
-            <div className="sstat">
-              <div className="k">Peak</div>
-              <div className="v tnum">{formatSpeed(Math.max(0, ...history))}</div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       <footer className="dialog__footer">

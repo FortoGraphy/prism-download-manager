@@ -130,6 +130,7 @@
 .map .segbar { flex: 1; height: 6px; border-radius: 3px; }
 .details .banner--danger { margin-top: 10px; }
 .details .panel { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 280px; border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); background: var(--surface-base); }
+.details .panel--single { grid-template-columns: minmax(0, 1fr); }
 [data-theme="dark"] .details .panel { background: rgb(12 13 18 / 0.92); }
 [data-theme="light"] .details .panel { background: rgb(255 255 255 / 0.82); }
 .panel__conn { padding: 0 16px 10px; overflow-y: auto; min-height: 0; }

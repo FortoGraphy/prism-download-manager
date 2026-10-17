@@ -4,7 +4,7 @@ const UNITS = ["B", "KB", "MB", "GB", "TB"];
 
 export function formatBytes(n?: number | null, digits = 1): string {
   if (n == null || !Number.isFinite(n)) return "—";
-  if (n < 1024) return `${n} B`;
+  if (n < 1024) return `${Math.round(n)} B`;
   let v = n;
   let i = 0;
   while (v >= 1024 && i < UNITS.length - 1) {
