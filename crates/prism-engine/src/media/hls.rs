@@ -87,6 +87,32 @@ pub(crate) fn choose_variant(
     }
 }
 
+/// Lists every variant a master playlist declares, in manifest order — the position of each
+/// entry in the returned `Vec` is exactly what `VariantSelection::Index` expects. A plain
+/// media playlist (no variants) returns a single entry standing for the stream itself, so
+/// single-rendition streams keep behaving exactly as before.
+pub(crate) fn list_variants(text: &str, base_url: &Url) -> Result<Vec<super::Variant>, EngineError> {
+    Ok(match parse(text)? {
+        Playlist::MediaPlaylist(_) => vec![super::Variant {
+            url: base_url.clone(),
+            bandwidth: None,
+            width: None,
+            height: None,
+        }],
+        Playlist::MasterPlaylist(master) => master
+            .variants
+            .iter()
+            .filter(|v| !v.is_i_frame)
+            .map(|v| super::Variant {
+                url: base_url.join(&v.uri).unwrap_or_else(|_| base_url.clone()),
+                bandwidth: Some(v.bandwidth),
+                width: v.resolution.as_ref().map(|r| r.width),
+                height: v.resolution.as_ref().map(|r| r.height),
+            })
+            .collect(),
+    })
+}
+
 /// The audio rendition of `group` (default, then autoselect, then first) that has its own URI.
 fn choose_audio<'a>(alts: &'a [AlternativeMedia], group: &str) -> Option<&'a AlternativeMedia> {
     let mut candidates: Vec<&AlternativeMedia> = alts
@@ -372,5 +398,34 @@ mod tests {
         assert!(choose_variant(&v, VariantSelection::Index(3)).is_err());
         assert_eq!(choose_audio(&m.alternatives, "a").unwrap().name, "en");
         assert!(choose_audio(&m.alternatives, "zzz").is_none());
+    }
+
+    #[test]
+    fn list_variants_reports_every_rendition_in_manifest_order() {
+        let text = "#EXTM3U\n\
+            #EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360\nlow.m3u8\n\
+            #EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\nhigh.m3u8\n\
+            #EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1280x720\nmid.m3u8\n";
+        let base = Url::parse("https://example.com/master.m3u8").unwrap();
+        let variants = list_variants(text, &base).unwrap();
+        // Manifest order preserved (not sorted by quality) — index must match `choose_variant`.
+        assert_eq!(variants.len(), 3);
+        assert_eq!(variants[0].bandwidth, Some(800_000));
+        assert_eq!(variants[0].width, Some(640));
+        assert_eq!(variants[0].height, Some(360));
+        assert_eq!(variants[0].url.as_str(), "https://example.com/low.m3u8");
+        assert_eq!(variants[1].bandwidth, Some(5_000_000));
+        assert_eq!(variants[1].height, Some(1080));
+        assert_eq!(variants[2].height, Some(720));
+    }
+
+    #[test]
+    fn list_variants_on_a_media_playlist_returns_one_entry_for_the_stream_itself() {
+        let text = "#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXTINF:6,\nseg0.ts\n#EXT-X-ENDLIST\n";
+        let base = Url::parse("https://example.com/stream.m3u8").unwrap();
+        let variants = list_variants(text, &base).unwrap();
+        assert_eq!(variants.len(), 1);
+        assert_eq!(variants[0].url, base);
+        assert_eq!(variants[0].bandwidth, None);
     }
 }

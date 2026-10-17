@@ -261,6 +261,17 @@ pub fn human_size(bytes: u64) -> String {
     }
 }
 
+/// Whether `s` looks like a resolution label (`"1080p"`, `"1080p60"`) rather than other text
+/// a `format_note` can carry ("Premium", a codec hint, …) that shouldn't leak into the
+/// quality picker verbatim.
+fn looks_like_resolution_label(s: &str) -> bool {
+    let Some(p) = s.find('p') else { return false };
+    let (digits, rest) = s.split_at(p);
+    !digits.is_empty()
+        && digits.chars().all(|c| c.is_ascii_digit())
+        && rest[1..].chars().all(|c| c.is_ascii_digit())
+}
+
 fn container_label(c: Container) -> &'static str {
     match c {
         Container::Mp4 => "MP4",
@@ -362,17 +373,26 @@ pub fn compute_choices(info: &VideoInfo, container: Container) -> Vec<Choice> {
         };
 
         let fps = best.fps;
-        let mut label = if height > 0 {
-            let mut s = format!("{height}p");
-            if let Some(f) = fps.filter(|f| *f > 30.5) {
-                s.push_str(&format!("{}", f.round() as i64));
+        // Prefer the source's own quality label ("1080p", "1080p60") when it looks like one:
+        // some videos (unusual aspect ratios) encode a tier at a raw pixel height that doesn't
+        // match the round number the label advertises, e.g. a "1080p" format at height=1608.
+        let mut label = match best
+            .format_note
+            .as_deref()
+            .filter(|n| looks_like_resolution_label(n))
+        {
+            Some(n) => n.to_string(),
+            None if height > 0 => {
+                let mut s = format!("{height}p");
+                if let Some(f) = fps.filter(|f| *f > 30.5) {
+                    s.push_str(&format!("{}", f.round() as i64));
+                }
+                s
             }
-            s
-        } else {
-            match &best.format_note {
+            None => match &best.format_note {
                 Some(n) if !n.is_empty() => n.clone(),
                 _ => "Original quality".to_string(),
-            }
+            },
         };
         if hdr {
             label.push_str(" · HDR");

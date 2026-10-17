@@ -151,7 +151,7 @@ export default function CaptureWindow({ id }: { id: string }) {
             </div>
           </div>
           <div className="big tnum">
-            {cap?.probing && cap.size == null ? "…" : formatBytes(cap?.size)}
+            {cap?.probing && cap.size == null ? "…" : cap?.size == null ? "N/A" : formatBytes(cap.size)}
             <small className={lowSpace ? "text-danger" : undefined}>{free != null ? `${formatBytes(free)} free` : ""}</small>
           </div>
         </div>

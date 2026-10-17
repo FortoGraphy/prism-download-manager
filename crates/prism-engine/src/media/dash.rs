@@ -289,6 +289,40 @@ fn select_video<'a>(
     }
 }
 
+/// Lists every video representation an MPD declares, in the same order `select_video`/
+/// `VariantSelection::Index` uses. The URL is the manifest URL itself for every entry
+/// (DASH representations are selected by index within the one manifest, not a separate
+/// per-quality URL the way HLS variants are) — display/debug only, not needed for download.
+pub(crate) fn list_variants(text: &str, url: &Url) -> Result<Vec<super::Variant>, EngineError> {
+    let mpd = dash_mpd_core::parse(text).map_err(|e| dash_err(format!("invalid MPD: {e}")))?;
+    if mpd.mpdtype.as_deref() == Some("dynamic") {
+        return Err(unsupported("live DASH streams"));
+    }
+    let period = match mpd.periods.as_slice() {
+        [p] => p,
+        [] => return Err(dash_err("manifest has no period")),
+        _ => return Err(unsupported("multi-period DASH manifests")),
+    };
+    let video: Vec<(&AdaptationSet, &Representation)> = period
+        .adaptations
+        .iter()
+        .filter(dash_mpd_core::is_video_adaptation)
+        .flat_map(|a| a.representations.iter().map(move |r| (a, r)))
+        .collect();
+    if video.is_empty() {
+        return Err(unsupported("DASH manifest without video representations"));
+    }
+    Ok(video
+        .iter()
+        .map(|(a, r)| super::Variant {
+            url: url.clone(),
+            bandwidth: r.bandwidth,
+            width: r.width.or(a.width),
+            height: r.height.or(a.height),
+        })
+        .collect())
+}
+
 /// Resolves a parsed MPD into a plan (exposed for unit tests).
 pub(crate) fn plan_from_mpd(
     mpd: &MPD,
@@ -441,6 +475,20 @@ mod tests {
         );
         let low = plan_from_mpd(&mpd, &url, VariantSelection::MaxHeight(480)).unwrap();
         assert_eq!(low.tracks[0].id, "lo");
+    }
+
+    #[test]
+    fn list_variants_reports_every_video_representation() {
+        let url = Url::parse("http://h/x/manifest.mpd").unwrap();
+        let variants = list_variants(MPD_TEMPLATE, &url).unwrap();
+        // Video representations only (audio is excluded, same as `select_video`), in
+        // manifest order ("lo" before "hi") — the order `VariantSelection::Index` relies on.
+        assert_eq!(variants.len(), 2);
+        assert_eq!(variants[0].bandwidth, Some(100_000));
+        assert_eq!(variants[0].width, Some(640));
+        assert_eq!(variants[0].height, Some(360));
+        assert_eq!(variants[1].bandwidth, Some(900_000));
+        assert_eq!(variants[1].height, Some(1080));
     }
 
     #[test]

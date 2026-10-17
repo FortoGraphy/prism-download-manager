@@ -11,7 +11,7 @@ use parking_lot::Mutex;
 use prism_engine::{
     ConflictPolicy, Credentials, DownloadEvent, DownloadHandle, DownloadRequest, DownloadState,
     EngineConfig, EngineError, ExpectedChecksum, HttpPreference, MediaKind, MediaRequest,
-    ProxyConfig, ResumeState, SegmentStatus, Url,
+    ProxyConfig, ResumeState, SegmentStatus, Url, VariantSelection,
 };
 use prism_video::{
     AudioFormat, Choice, ChoiceKind, Container, OutputOptions, Plan, Probe, RequestContext,
@@ -562,6 +562,17 @@ fn spawn_engine(core: &Core, item: &DownloadItem, media: bool) -> Result<Job> {
         m.connections = req.connections;
         m.speed_limit = req.speed_limit;
         m.max_retries = req.max_retries;
+        // `variant` isn't part of `DownloadRequest` (HTTP/FTP has no such concept); the
+        // quality picker stores it as a sidecar key in the same stored `item.request` JSON,
+        // same way VideoJob reads its own "context"/"pageUrl" sidecar keys from it.
+        if let Some(sel) = item
+            .request
+            .as_ref()
+            .and_then(|r| r.get("variant"))
+            .and_then(|v| serde_json::from_value::<VariantSelection>(v.clone()).ok())
+        {
+            m.variant = sel;
+        }
         core.0.engine.start_media(m, resume, limiters)
     } else {
         core.0.engine.start(req, resume, limiters)

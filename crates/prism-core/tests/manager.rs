@@ -339,6 +339,43 @@ async fn browser_messages_follow_protocol() {
     assert_eq!(unknown["error"]["code"], "bad_request");
 }
 
+/// Picking a quality from the video panel (a sniffed stream or a probed format) must open the
+/// same "Download File" dialog other captures do, not start downloading on its own — the user
+/// may want to rename the file or change where it saves first.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn video_quality_pick_opens_a_capture_dialog_instead_of_starting() {
+    let server = TestServer::start(ServerConfig::default()).await.unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    let core = core_in(tmp.path()).await;
+    core.update_settings(&serde_json::json!({"general": {"showCaptureDialog": true}}))
+        .unwrap();
+    let mut rx = core.subscribe();
+    let url = server.url("/file/clip.mp4?size=1000");
+    let reply = core
+        .handle(serde_json::json!({
+            "id": "1", "type": "video", "pageUrl": "https://example.com/watch",
+            "streams": [{"url": url, "kind": "direct", "quality": "720p"}],
+        }))
+        .await;
+    assert_eq!(reply["ok"], true, "{reply}");
+    assert_eq!(reply["accepted"], true);
+    let info = wait_event(&mut rx, 5, |ev| match ev {
+        CoreEvent::CaptureRequested(info) => Some(info.clone()),
+        _ => None,
+    })
+    .await;
+    // Pending confirmation, not an in-progress download.
+    assert!(core.pending_capture(&info.id).is_some());
+    assert!(core.item(&info.id).is_none());
+    // Confirming it starts the download, same as any other capture.
+    let decision = CaptureDecision {
+        id: info.id,
+        mode: StartMode::Now,
+        ..Default::default()
+    };
+    assert!(core.confirm_capture(decision).is_ok());
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn trash_restore_and_permanent_delete() {
     let tmp = tempfile::tempdir().unwrap();

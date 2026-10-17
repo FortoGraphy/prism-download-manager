@@ -18,13 +18,15 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use reqwest::header::{self, HeaderMap};
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::backoff::Backoff;
+use crate::config::EngineConfig;
 use crate::engine::EngineInner;
 use crate::error::EngineError;
 use crate::filename::{self, part_path_for};
-use crate::http::client::{ClientSpec, build_client};
+use crate::http::client::{ClientSpec, base_tls_config, build_client};
 use crate::http::fetcher::error_chain;
 use crate::http::{base_headers, header_string, parse_content_range};
 use crate::job::{Command, JobShared, ProgressSource, StopReason};
@@ -32,7 +34,7 @@ use crate::limiter::{RateLimiter, acquire_all};
 use crate::progress::{
     Completed, DownloadEvent, DownloadState, ProbeInfo, SegmentStatus, SegmentView,
 };
-use crate::request::{ConflictPolicy, HttpPreference, MediaKind, MediaRequest};
+use crate::request::{ConflictPolicy, HttpPreference, MediaKind, MediaRequest, VariantProbeRequest};
 use crate::resume::{MediaResumeState, RESUME_STATE_VERSION, ResumeKind, ResumeState};
 use crate::storage;
 
@@ -98,6 +100,76 @@ impl MediaPlan {
         }
         unreachable!("index out of range")
     }
+}
+
+/// A manifest-declared variant/representation, shared shape between the HLS and DASH
+/// parsers — not yet chosen for download.
+#[derive(Debug, Clone)]
+pub(crate) struct Variant {
+    pub url: Url,
+    pub bandwidth: Option<u64>,
+    pub width: Option<u64>,
+    pub height: Option<u64>,
+}
+
+/// A manifest-declared variant, as returned by [`list_variants`]. `index` is exactly what
+/// [`crate::request::VariantSelection::Index`] expects in a later [`MediaRequest`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VariantInfo {
+    /// Position in the manifest's variant list (matches `VariantSelection::Index`).
+    pub index: usize,
+    /// Display/debug only — not required to start a download.
+    pub url: Url,
+    /// Bits per second, when the manifest declares one.
+    pub bandwidth: Option<u64>,
+    /// Pixel width, when the manifest declares one.
+    pub width: Option<u64>,
+    /// Pixel height, when the manifest declares one.
+    pub height: Option<u64>,
+}
+
+/// Lists every variant/representation a manifest declares, without downloading anything —
+/// a cheap probe (one small text fetch) for showing a full quality picker before the user
+/// commits to a download.
+pub async fn list_variants(
+    cfg: &EngineConfig,
+    probe: &VariantProbeRequest,
+) -> Result<Vec<VariantInfo>, EngineError> {
+    let spec = ClientSpec {
+        proxy: probe.proxy.clone().unwrap_or_else(|| cfg.default_proxy.clone()),
+        http: HttpPreference::Http1Only,
+        connect_timeout: cfg.connect_timeout,
+        read_timeout: cfg.read_timeout,
+        user_agent: probe
+            .user_agent
+            .clone()
+            .filter(|u| !u.is_empty())
+            .unwrap_or_else(|| cfg.user_agent.clone()),
+        tls: base_tls_config().map_err(|e| EngineError::Network {
+            message: format!("TLS setup failed: {e}"),
+        })?,
+        pool_max_idle: 1,
+    };
+    let client = build_client(&spec)?;
+    let headers = base_headers(&probe.headers, probe.cookies.as_deref(), probe.referer.as_deref())?;
+    let (text, manifest_url) = fetch_text(&client, &headers, &probe.url).await?;
+    let kind = detect_kind(probe.kind, &manifest_url, &text)?;
+    let variants = match kind {
+        MediaKind::Dash => dash::list_variants(&text, &manifest_url)?,
+        _ => hls::list_variants(&text, &manifest_url)?,
+    };
+    Ok(variants
+        .into_iter()
+        .enumerate()
+        .map(|(index, v)| VariantInfo {
+            index,
+            url: v.url,
+            bandwidth: v.bandwidth,
+            width: v.width,
+            height: v.height,
+        })
+        .collect())
 }
 
 /// Fetches a small text resource (manifest).
@@ -491,10 +563,10 @@ fn concat_tracks(plan: &MediaPlan, work_dir: &Path) -> std::io::Result<Vec<PathB
     Ok(out)
 }
 
-/// Detects the stream kind from the request, URL and content.
-fn detect_kind(req: &MediaRequest, url: &Url, text: &str) -> Result<MediaKind, EngineError> {
-    match req.kind {
-        MediaKind::Hls | MediaKind::Dash => Ok(req.kind),
+/// Detects the stream kind from the requested kind, URL and content.
+fn detect_kind(kind: MediaKind, url: &Url, text: &str) -> Result<MediaKind, EngineError> {
+    match kind {
+        MediaKind::Hls | MediaKind::Dash => Ok(kind),
         MediaKind::Auto => {
             let path = url.path().to_ascii_lowercase();
             if path.ends_with(".m3u8")
@@ -599,7 +671,7 @@ async fn run_inner(
         r = fetch_text(&client, &headers, &req.url) => r.map_err(fail)?,
         _ = job.stop.cancelled() => return Err(Box::new((stopped(job), None))),
     };
-    let kind = detect_kind(req, &manifest_url, &text).map_err(fail)?;
+    let kind = detect_kind(req.kind, &manifest_url, &text).map_err(fail)?;
     let plan = tokio::select! {
         r = async {
             match kind {
@@ -928,17 +1000,17 @@ mod tests {
     fn kind_detection_and_names() {
         let mut req = MediaRequest::new(Url::parse("http://h/a.m3u8").unwrap(), ".");
         assert_eq!(
-            detect_kind(&req, &req.url.clone(), "").unwrap(),
+            detect_kind(req.kind, &req.url.clone(), "").unwrap(),
             MediaKind::Hls
         );
         let u = Url::parse("http://h/x?y").unwrap();
         assert_eq!(
-            detect_kind(&req, &u, "<?xml?><MPD>").unwrap(),
+            detect_kind(req.kind, &u, "<?xml?><MPD>").unwrap(),
             MediaKind::Dash
         );
-        assert!(detect_kind(&req, &u, "hello").is_err());
+        assert!(detect_kind(req.kind, &u, "hello").is_err());
         req.kind = MediaKind::Dash;
-        assert_eq!(detect_kind(&req, &u, "#EXTM3U").unwrap(), MediaKind::Dash);
+        assert_eq!(detect_kind(req.kind, &u, "#EXTM3U").unwrap(), MediaKind::Dash);
         assert_eq!(
             name_from_manifest(&Url::parse("http://h/v/master.m3u8").unwrap()),
             "master"

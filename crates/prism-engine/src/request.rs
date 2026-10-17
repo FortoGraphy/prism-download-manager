@@ -321,6 +321,34 @@ impl MediaRequest {
     }
 }
 
+/// Parameters for listing a manifest's variants without downloading anything — a cheap
+/// probe (one small text fetch) for showing a full quality picker before the user commits
+/// to a download. Each returned variant's `index` is exactly what
+/// [`VariantSelection::Index`] expects in a later [`MediaRequest`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VariantProbeRequest {
+    /// Master/media playlist or MPD URL.
+    pub url: Url,
+    /// Stream kind.
+    #[serde(default)]
+    pub kind: MediaKind,
+    /// Extra request headers.
+    #[serde(default)]
+    pub headers: Vec<(String, String)>,
+    /// `Cookie` header value.
+    #[serde(default)]
+    pub cookies: Option<String>,
+    /// `Referer` header value.
+    #[serde(default)]
+    pub referer: Option<String>,
+    /// `User-Agent` override.
+    #[serde(default)]
+    pub user_agent: Option<String>,
+    /// Proxy; `None` = engine default.
+    #[serde(default)]
+    pub proxy: Option<ProxyConfig>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

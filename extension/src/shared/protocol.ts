@@ -160,6 +160,8 @@ export interface VideoStream {
   quality?: string;
   /** Request headers the player used (Referer, Origin). */
   headers?: Record<string, string>;
+  /** One `probeStream` variant picked from the quality list, instead of the engine default. */
+  variantIndex?: number;
 }
 
 export interface VideoRequest {
@@ -208,6 +210,31 @@ export interface ProbeVideoReply extends OkReply {
   formats: VideoFormat[];
 }
 
+/** A sniffed HLS/DASH manifest: list its declared quality variants (no download). */
+export interface ProbeStreamRequest {
+  type: 'probeStream';
+  url: string;
+  kind: 'hls' | 'dash';
+  headers?: Record<string, string>;
+  cookies?: string;
+  pageUrl?: string;
+  userAgent: string;
+}
+
+/** One manifest-declared variant. `index` is what `VideoStream.variantIndex` must carry
+ *  back to `video` for the app to download this exact one. */
+export interface StreamVariant {
+  index: number;
+  url: string;
+  bandwidth?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface ProbeStreamReply extends OkReply {
+  variants: StreamVariant[];
+}
+
 // ---- status / open -------------------------------------------------------
 
 export interface StatusRequest {
@@ -234,6 +261,7 @@ export type AppRequest =
   | BatchRequest
   | VideoRequest
   | ProbeVideoRequest
+  | ProbeStreamRequest
   | StatusRequest
   | OpenRequest
   | { type: 'hostPing' };
@@ -244,6 +272,7 @@ export interface ReplyMap {
   batch: BatchReply;
   video: VideoReply;
   probeVideo: ProbeVideoReply;
+  probeStream: ProbeStreamReply;
   status: StatusReply;
   open: OkReply;
   hostPing: HostPingReply;

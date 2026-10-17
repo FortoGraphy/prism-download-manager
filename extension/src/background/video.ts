@@ -2,7 +2,7 @@
 import type { NativeError } from '../shared/correlator';
 import { type ElementSource, type MediaItem, elementMedia, mediaDetail, mediaLabel, visibleMedia } from '../shared/media';
 import type { VideoOption, VideoOptionsResult } from '../shared/messages';
-import type { VideoRequest, VideoStream } from '../shared/protocol';
+import type { StreamVariant, VideoRequest, VideoStream } from '../shared/protocol';
 import { siteMatches } from '../shared/rules';
 import { actionTimeout, cookieHeaderFor, tabInfo, userAgent } from './context';
 import { native } from './native';
@@ -25,6 +25,62 @@ export function streamOf(m: MediaItem): VideoStream {
 }
 
 const rank = (m: MediaItem) => (m.kind === 'hls' || m.kind === 'dash' ? 0 : m.kind === 'video' ? 1 : 2);
+
+function variantLabel(v: StreamVariant): string {
+  return v.height ? `${v.height}p` : v.bandwidth ? `${Math.round(v.bandwidth / 1000)} kbps` : 'Stream';
+}
+
+function variantDetail(v: StreamVariant, kind: 'hls' | 'dash'): string {
+  const parts = [kind.toUpperCase()];
+  if (v.bandwidth) parts.push(`${Math.round(v.bandwidth / 1000)} kbps`);
+  return parts.join(' · ');
+}
+
+/**
+ * A sniffed HLS/DASH manifest is one network request, but it can declare several quality
+ * variants inside its own content — the player only fetches whichever one it picks, so the
+ * sniffer alone never sees the others. Probes the manifest for its full variant list; falls
+ * back to the single raw entry (today's behavior) on any failure, timeout, or a manifest with
+ * only one variant worth naming.
+ */
+async function expandStream(
+  m: MediaItem,
+  group: VideoOption['group'],
+  pageUrl: string,
+  incognito: boolean,
+): Promise<VideoOption[]> {
+  const base = (): VideoOption => ({ id: `s:${m.key}`, label: mediaLabel(m), detail: mediaDetail(m), group, stream: streamOf(m) });
+  if (m.kind !== 'hls' && m.kind !== 'dash') return [base()];
+  try {
+    const reply = await native.request(
+      {
+        type: 'probeStream',
+        url: m.url,
+        kind: m.kind,
+        ...(m.headers ? { headers: m.headers } : {}),
+        cookies: await cookieHeaderFor(m.url, incognito),
+        pageUrl,
+        userAgent: userAgent(),
+      },
+      { timeoutMs: 8000 },
+    );
+    if (reply.variants.length < 2) return [base()];
+    return reply.variants
+      .slice()
+      .sort((a, b) => (b.height ?? 0) - (a.height ?? 0) || (b.bandwidth ?? 0) - (a.bandwidth ?? 0))
+      .map((v) => ({
+        id: `s:${m.key}:${v.index}`,
+        label: variantLabel(v),
+        detail: variantDetail(v, m.kind as 'hls' | 'dash'),
+        group,
+        stream: { ...streamOf(m), variantIndex: v.index },
+      }));
+  } catch {
+    // Network error, timeout, or the app declined (e.g. a live/DRM manifest) — the one raw
+    // entry still downloads correctly today, it just won't offer a quality choice.
+    return [base()];
+  }
+}
 
 function noticeFor(err: NativeError): string {
   switch (err.code) {
@@ -90,8 +146,12 @@ export async function videoOptions(
   const own = elementMedia(msg.sources ?? [], media, msg.pageUrl);
   const ownKeys = new Set(own.map((m) => m.key));
   const rest = media.filter((m) => !ownKeys.has(m.key)).sort((a, b) => rank(a) - rank(b) || (b.size ?? 0) - (a.size ?? 0));
-  const option = (m: MediaItem, group: VideoOption['group']): VideoOption => ({ id: `s:${m.key}`, label: mediaLabel(m), detail: mediaDetail(m), group, stream: streamOf(m) });
-  const options = [...own.map((m) => option(m, 'element')), ...rest.map((m) => option(m, 'stream'))];
+  const incognito = !!tab?.incognito;
+  const expanded = await Promise.all([
+    ...own.map((m) => expandStream(m, 'element', msg.pageUrl, incognito)),
+    ...rest.map((m) => expandStream(m, 'stream', msg.pageUrl, incognito)),
+  ]);
+  const options = expanded.flat();
   return { source: 'sniffed', options, ...(notice ? { notice } : {}) };
 }
 

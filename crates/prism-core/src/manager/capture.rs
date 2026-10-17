@@ -551,6 +551,49 @@ impl Core {
         jobs::probe_video(self, page_url, ctx).await
     }
 
+    /// Builds the `NewItem` for one video URL/format choice — shared by `confirm_video`'s
+    /// immediate-start path and the "video" IPC handler's dialog-confirmed path, so a chosen
+    /// quality is always named/categorized the same way regardless of which one starts it.
+    fn video_item(
+        &self,
+        settings: &Settings,
+        url: String,
+        choice: &serde_json::Value,
+        options: &serde_json::Value,
+        context: Option<serde_json::Value>,
+        title: Option<String>,
+        thumbnail: Option<String>,
+        duration: Option<f64>,
+    ) -> NewItem {
+        let media = MediaInfo {
+            title: title.clone(),
+            thumbnail,
+            duration,
+            quality: choice.get("label").and_then(|v| v.as_str()).map(String::from),
+            site: url::Url::parse(&url).ok().and_then(|u| u.host_str().map(String::from)),
+            page_url: Some(url.clone()),
+        };
+        let title = media.title.clone().unwrap_or_else(|| "Video".into());
+        let ext = jobs::video_ext(choice, options, settings);
+        let stem = render_name_template(&settings.video.file_template, &title, video_id(&url).as_deref());
+        let file_name = format!("{}.{ext}", super::sanitize_name(&stem));
+        NewItem {
+            url: url.clone(),
+            kind: Some(ItemKind::Video),
+            file_name: Some(file_name),
+            category: Some(if jobs::choice_is_audio(choice) { "music".into() } else { "video".into() }),
+            media: Some(media),
+            request: Some(serde_json::json!({
+                "pageUrl": url, "choice": choice, "options": options, "context": context,
+            })),
+            ..Default::default()
+        }
+    }
+
+    /// Starts a video download right away, without a "Download File" confirmation dialog
+    /// (used for playlist/batch entries, where showing one dialog per entry would be
+    /// impractical). The single-video "video" IPC handler goes through `capture()` instead,
+    /// so the user can still rename/relocate before it starts.
     pub fn confirm_video(&self, d: VideoDecision) -> Result<Vec<DownloadItem>> {
         if !d.capture_id.is_empty() {
             self.0.state.lock().videos.remove(&d.capture_id);
@@ -565,30 +608,18 @@ impl Core {
         let entries: Vec<NewItem> = urls
             .into_iter()
             .map(|url| {
-                let media = MediaInfo {
-                    title: if single { d.title.clone() } else { None },
-                    thumbnail: if single { d.thumbnail.clone() } else { None },
-                    duration: if single { d.duration } else { None },
-                    quality: d.choice.get("label").and_then(|v| v.as_str()).map(String::from),
-                    site: url::Url::parse(&url).ok().and_then(|u| u.host_str().map(String::from)),
-                    page_url: Some(url.clone()),
-                };
-                let title = media.title.clone().unwrap_or_else(|| "Video".into());
-                let ext = jobs::video_ext(&d.choice, &d.options, &settings);
-                let stem = render_name_template(&settings.video.file_template, &title, video_id(&url).as_deref());
-                let file_name = format!("{}.{ext}", super::sanitize_name(&stem));
-                NewItem {
-                    url: url.clone(),
-                    kind: Some(ItemKind::Video),
-                    file_name: Some(file_name),
-                    save_dir: d.save_dir.clone(),
-                    category: Some(if jobs::choice_is_audio(&d.choice) { "music".into() } else { "video".into() }),
-                    media: Some(media),
-                    request: Some(serde_json::json!({
-                        "pageUrl": url, "choice": d.choice, "options": d.options, "context": d.context,
-                    })),
-                    ..Default::default()
-                }
+                let mut n = self.video_item(
+                    &settings,
+                    url,
+                    &d.choice,
+                    &d.options,
+                    d.context.clone(),
+                    if single { d.title.clone() } else { None },
+                    if single { d.thumbnail.clone() } else { None },
+                    if single { d.duration } else { None },
+                );
+                n.save_dir = d.save_dir.clone();
+                n
             })
             .collect();
         self.add_items(entries, d.mode)
@@ -852,6 +883,44 @@ impl Core {
                     }
                 }
             }
+            "probeStream" => {
+                // A sniffed HLS/DASH manifest: list its declared variants (no download) so the
+                // page menu can show the real quality breakdown instead of one generic entry.
+                let Some(url) = s("url") else {
+                    return fail("bad_request", "missing url".into());
+                };
+                let Ok(parsed) = prism_engine::Url::parse(&url) else {
+                    return fail("bad_request", "invalid url".into());
+                };
+                let kind = match s("kind").as_deref() {
+                    Some("hls") => prism_engine::MediaKind::Hls,
+                    Some("dash") => prism_engine::MediaKind::Dash,
+                    _ => prism_engine::MediaKind::Auto,
+                };
+                let headers = header_list(msg.get("headers"));
+                let referer = headers
+                    .iter()
+                    .find(|(k, _)| k.eq_ignore_ascii_case("referer"))
+                    .map(|(_, v)| v.clone())
+                    .or_else(|| s("pageUrl"));
+                let probe = prism_engine::VariantProbeRequest {
+                    url: parsed,
+                    kind,
+                    headers: headers
+                        .into_iter()
+                        .filter(|(k, _)| !k.eq_ignore_ascii_case("referer"))
+                        .collect(),
+                    cookies: s("cookies"),
+                    referer,
+                    user_agent: s("userAgent"),
+                    proxy: None,
+                };
+                let cfg = jobs::engine_config(&self.settings());
+                match prism_engine::list_variants(&cfg, &probe).await {
+                    Ok(variants) => serde_json::json!({"ok": true, "variants": variants}),
+                    Err(e) => fail("app_error", e.to_string()),
+                }
+            }
             "video" => {
                 let Some(page_url) = s("pageUrl") else {
                     return fail("bad_request", "missing pageUrl".into());
@@ -882,25 +951,33 @@ impl Core {
                         })
                         .unwrap_or_else(|| serde_json::json!({"id": format_id}));
                     let info = cached.unwrap_or_default();
-                    let d = VideoDecision {
-                        page_url: page_url.clone(),
-                        choice,
-                        title: s("title").or_else(|| {
-                            info.get("title").and_then(|v| v.as_str()).map(String::from)
-                        }),
-                        thumbnail: info
-                            .get("thumbnail")
-                            .and_then(|v| v.as_str())
-                            .map(String::from),
-                        duration: info.get("duration").and_then(|v| v.as_f64()),
-                        context: Some(
-                            serde_json::json!({"cookies": s("cookies"), "userAgent": s("userAgent"), "referer": page_url}),
-                        ),
-                        ..Default::default()
-                    };
-                    return match self.confirm_video(d) {
-                        Ok(_) => serde_json::json!({"ok": true, "accepted": true}),
-                        Err(e) => fail("app_error", e.to_string()),
+                    let title = s("title").or_else(|| info.get("title").and_then(|v| v.as_str()).map(String::from));
+                    let thumbnail = info.get("thumbnail").and_then(|v| v.as_str()).map(String::from);
+                    let duration = info.get("duration").and_then(|v| v.as_f64());
+                    let context = serde_json::json!({"cookies": s("cookies"), "userAgent": s("userAgent"), "referer": page_url});
+                    let settings = self.settings();
+                    let n = self.video_item(
+                        &settings,
+                        page_url.clone(),
+                        &choice,
+                        &serde_json::Value::Null,
+                        Some(context),
+                        title,
+                        thumbnail,
+                        duration,
+                    );
+                    // Same "Download File" dialog (file name / save location / category) every
+                    // other capture goes through, same `showCaptureDialog` setting — matches
+                    // IDM's "Download File Info" confirmation instead of starting right away.
+                    return if settings.general.show_capture_dialog {
+                        let info = self.capture(n, CaptureSource::Browser);
+                        serde_json::json!({"ok": true, "accepted": true, "downloadId": info.id})
+                    } else {
+                        let mode = if settings.downloads.auto_start { StartMode::Now } else { StartMode::Later };
+                        match self.add_items(vec![n], mode) {
+                            Ok(items) => serde_json::json!({"ok": true, "accepted": true, "downloadId": items.first().map(|i| i.id.clone())}),
+                            Err(e) => fail("app_error", e.to_string()),
+                        }
                     };
                 }
                 // One sniffed stream (HLS/DASH/direct) chosen in the page menu or popup.
@@ -921,7 +998,12 @@ impl Core {
                         .find(|(k, _)| k.eq_ignore_ascii_case("referer"))
                         .map(|(_, v)| v.clone())
                         .or(Some(page_url.clone()));
-                    let n = NewItem {
+                    let variant_index = stream
+                        .get("variantIndex")
+                        .and_then(|v| v.as_u64())
+                        .map(|v| v as usize);
+                    let settings = self.settings();
+                    let mut n = NewItem {
                         url,
                         kind: Some(match kind.as_str() {
                             "hls" => ItemKind::Hls,
@@ -951,9 +1033,31 @@ impl Core {
                         conflict: Some(ConflictAction::Rename),
                         ..Default::default()
                     };
-                    return match self.add_items(vec![n], StartMode::Now) {
-                        Ok(_) => serde_json::json!({"ok": true, "accepted": true}),
-                        Err(e) => fail("app_error", e.to_string()),
+                    // A specific variant from the probeStream quality list: store it as a
+                    // sidecar key on the built request JSON so spawn_engine's HLS/DASH path
+                    // (jobs.rs) picks `VariantSelection::Index(i)` instead of the engine
+                    // default (`Best`).
+                    if let Some(idx) = variant_index {
+                        let mut req = jobs::request_json(&n, &settings);
+                        if let Some(obj) = req.as_object_mut() {
+                            obj.insert(
+                                "variant".into(),
+                                serde_json::json!({"type": "index", "value": idx}),
+                            );
+                        }
+                        n.request = Some(req);
+                    }
+                    // Same "Download File" dialog / `showCaptureDialog` setting as the formatId
+                    // path above, instead of always starting right away.
+                    return if settings.general.show_capture_dialog {
+                        let info = self.capture(n, CaptureSource::Browser);
+                        serde_json::json!({"ok": true, "accepted": true, "downloadId": info.id})
+                    } else {
+                        let mode = if settings.downloads.auto_start { StartMode::Now } else { StartMode::Later };
+                        match self.add_items(vec![n], mode) {
+                            Ok(items) => serde_json::json!({"ok": true, "accepted": true, "downloadId": items.first().map(|i| i.id.clone())}),
+                            Err(e) => fail("app_error", e.to_string()),
+                        }
                     };
                 }
                 self.open_video(page_url, s("title"), Vec::new(), None);
