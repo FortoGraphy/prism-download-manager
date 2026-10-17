@@ -73,14 +73,17 @@ async fn probe_is_shared_while_running_and_reused_afterwards() {
         .unwrap();
 
     let url = "https://example.com/watch/1";
-    let (a, b) = tokio::join!(core.probe_video(url), core.probe_video(url));
+    let (a, b) = tokio::join!(
+        core.probe_video(url, Default::default()),
+        core.probe_video(url, Default::default())
+    );
     let (a, b) = (a.unwrap(), b.unwrap());
     assert_eq!(a, b);
     assert_eq!(a["title"], "Big_Buck_Bunny_360_10s_1MB", "{a}");
     assert_eq!(runs(&bin), 1, "two requests at once ran yt-dlp once");
 
     let t = std::time::Instant::now();
-    core.probe_video(url).await.unwrap();
+    core.probe_video(url, Default::default()).await.unwrap();
     assert!(
         t.elapsed() < std::time::Duration::from_millis(500),
         "{:?}",
@@ -88,7 +91,7 @@ async fn probe_is_shared_while_running_and_reused_afterwards() {
     );
     assert_eq!(runs(&bin), 1, "a recent probe answers from memory");
 
-    core.probe_video("https://example.com/watch/2")
+    core.probe_video("https://example.com/watch/2", Default::default())
         .await
         .unwrap();
     assert_eq!(runs(&bin), 2, "another page is probed");

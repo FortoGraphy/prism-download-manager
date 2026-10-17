@@ -157,7 +157,11 @@ pub async fn open_video_url(core: State<'_, Core>, url: String) -> CmdResult<Vid
 
 #[tauri::command]
 pub async fn probe_video(core: State<'_, Core>, url: String) -> CmdResult<serde_json::Value> {
-    core.probe_video(&url).await.map_err(|e| format!("{e:#}"))
+    // Typed in the app: no browser context to bring (yt-dlp still reads the
+    // "Cookies from browser" setting itself).
+    core.probe_video(&url, Default::default())
+        .await
+        .map_err(|e| format!("{e:#}"))
 }
 
 #[tauri::command]

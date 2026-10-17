@@ -292,6 +292,7 @@ pub(crate) fn video_options(s: &Settings) -> VideoOptions {
         cookies_from_browser: (!s.video.cookies_from_browser.is_empty())
             .then(|| s.video.cookies_from_browser.clone()),
         proxy: proxy_url(s),
+        use_native_youtube: s.video.use_native_youtube,
         ..VideoOptions::default()
     }
 }
@@ -1318,7 +1319,11 @@ fn recent_probe(core: &Core, page_url: &str) -> Option<serde_json::Value> {
 
 /// Probe a video page for the quality picker: a recent result is reused and a probe of the
 /// same page that is already running is waited for.
-pub(crate) async fn probe_video(core: &Core, page_url: &str) -> Result<serde_json::Value> {
+pub(crate) async fn probe_video(
+    core: &Core,
+    page_url: &str,
+    ctx: RequestContext,
+) -> Result<serde_json::Value> {
     if let Some(p) = recent_probe(core, page_url) {
         return Ok(p);
     }
@@ -1334,7 +1339,7 @@ pub(crate) async fn probe_video(core: &Core, page_url: &str) -> Result<serde_jso
         match recent_probe(core, page_url) {
             Some(p) => Ok(p),
             None => {
-                let res = run_probe_video(core, page_url).await;
+                let res = run_probe_video(core, page_url, ctx).await;
                 if let Ok(p) = &res {
                     core.0
                         .state
@@ -1356,8 +1361,35 @@ pub(crate) async fn probe_video(core: &Core, page_url: &str) -> Result<serde_jso
     res
 }
 
-/// Resolve a page with yt-dlp for the quality picker (raw `prism_video::Probe` JSON).
-async fn run_probe_video(core: &Core, page_url: &str) -> Result<serde_json::Value> {
+/// Resolve a page for the quality picker (raw `prism_video::Probe` JSON).
+async fn run_probe_video(
+    core: &Core,
+    page_url: &str,
+    ctx: RequestContext,
+) -> Result<serde_json::Value> {
+    let video = &core.0.video;
+    // The native YouTube path inside `probe` needs no tools: a probe may succeed before the
+    // yt-dlp/deno install gate, so a fresh install's first probe can skip the downloads.
+    let status = video.tool_status().await;
+    let tools_ready = status.yt_dlp.path.is_some() && status.deno.path.is_some();
+    let probe = match video.probe(page_url, &ctx).await {
+        Ok(p) => p,
+        // With tools missing the failure may just be that (yt-dlp absent, or deno absent so
+        // yt-dlp can't solve signatures): install, then probe once more.
+        Err(_) if !tools_ready => {
+            ensure_probe_tools(core).await?;
+            video
+                .probe(page_url, &ctx)
+                .await
+                .map_err(|e| anyhow!("{e}"))?
+        }
+        Err(e) => return Err(anyhow!("{e}")),
+    };
+    Ok(serde_json::to_value(probe)?)
+}
+
+/// Download the missing video tools (yt-dlp/deno) with progress events.
+async fn ensure_probe_tools(core: &Core) -> Result<()> {
     let video = &core.0.video;
     let status = video.tool_status().await;
     if status.yt_dlp.path.is_none() || status.deno.path.is_none() {
@@ -1373,11 +1405,7 @@ async fn run_probe_video(core: &Core, page_url: &str) -> Result<serde_json::Valu
             .await
             .map_err(|e| anyhow!("{e}"))?;
     }
-    let probe = video
-        .probe(page_url, &RequestContext::default())
-        .await
-        .map_err(|e| anyhow!("{e}"))?;
-    Ok(serde_json::to_value(probe)?)
+    Ok(())
 }
 
 impl Core {

@@ -403,6 +403,8 @@ pub struct Video {
     pub sponsorblock: SponsorBlock,
     /// Use our multi-connection engine for plain HTTP formats.
     pub accelerate: bool,
+    /// Resolve YouTube formats natively from the browser session (fast); yt-dlp is the fallback.
+    pub use_native_youtube: bool,
     /// Browser to read cookies from for sites that need login ("" = none).
     pub cookies_from_browser: String,
     pub file_template: String,
@@ -424,6 +426,7 @@ impl Default for Video {
             embed_chapters: true,
             sponsorblock: SponsorBlock::Off,
             accelerate: true,
+            use_native_youtube: true,
             cookies_from_browser: String::new(),
             file_template: "%(title)s [%(id)s].%(ext)s".into(),
         }

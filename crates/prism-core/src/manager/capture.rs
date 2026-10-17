@@ -543,8 +543,12 @@ impl Core {
     }
 
     /// Resolve formats of a video page (yt-dlp).
-    pub async fn probe_video(&self, page_url: &str) -> Result<serde_json::Value> {
-        jobs::probe_video(self, page_url).await
+    pub async fn probe_video(
+        &self,
+        page_url: &str,
+        ctx: prism_video::RequestContext,
+    ) -> Result<serde_json::Value> {
+        jobs::probe_video(self, page_url, ctx).await
     }
 
     pub fn confirm_video(&self, d: VideoDecision) -> Result<Vec<DownloadItem>> {
@@ -829,8 +833,17 @@ impl Core {
                 if let Some(why) = not_a_single_video(&page_url) {
                     return fail("not_a_video_page", why.into());
                 }
+                // The extension sends the page's cookies + User-Agent: pass them on to the
+                // probe (the native YouTube resolver needs the session; yt-dlp gets better
+                // cookie coverage on the very first click).
+                let ctx = prism_video::RequestContext {
+                    cookies: s("cookies"),
+                    user_agent: s("userAgent"),
+                    referer: Some(page_url.clone()),
+                    ..Default::default()
+                };
                 // `probe_video` keeps the result for the "video" request (the chosen format).
-                match self.probe_video(&page_url).await {
+                match self.probe_video(&page_url, ctx).await {
                     Ok(probe) => video_formats_reply(&probe),
                     Err(e) => {
                         let raw = format!("{e:#}");

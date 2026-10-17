@@ -19,6 +19,8 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 sha2 = { workspace = true }
+# SAPISIDHASH authorization for the native YouTube resolver (also used by prism-engine).
+sha1 = { workspace = true }
 # Archive handling for managed tool installs (pure Rust, no C toolchain needed).
 zip = { version = "9", default-features = false, features = ["deflate"] }
 tar = "0.4"

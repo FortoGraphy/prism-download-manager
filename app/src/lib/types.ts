@@ -246,6 +246,7 @@ export interface Settings {
     embedChapters: boolean;
     sponsorblock: "off" | "mark" | "remove";
     accelerate: boolean;
+    useNativeYoutube: boolean;
     cookiesFromBrowser: string;
     fileTemplate: string;
   };

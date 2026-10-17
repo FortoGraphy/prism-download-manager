@@ -23,6 +23,7 @@ pub mod progress;
 pub mod sponsorblock;
 pub mod template;
 pub mod tools;
+mod youtube_native;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
@@ -259,6 +260,15 @@ impl VideoService {
     /// `ctx.want_playlist`) are listed flat.
     pub async fn probe(&self, url: &str, ctx: &RequestContext) -> Result<Probe> {
         let opts = self.options();
+        // Native YouTube fast path: formats straight from the Innertube API as the
+        // logged-in session, no yt-dlp + deno. Declines silently per-format-risk.
+        if opts.use_native_youtube
+            && probe::is_youtube(url)
+            && let Some(json) = youtube_native::try_resolve(url, ctx, &opts).await
+            && let Ok(probe) = model::parse_probe_json(&json)
+        {
+            return Ok(probe);
+        }
         match self.probe_with(url, ctx, &opts).await {
             Err(e) if e.is_cookie_read_failure() && opts.cookies_from_browser.is_some() => self
                 .probe_with(url, ctx, &without_browser_cookies(&opts, &e))

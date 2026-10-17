@@ -658,6 +658,7 @@ function Video({ s }: { s: Settings }) {
           />
         </Row>
         <Toggle title="Accelerate with Prism’s engine" hint="Multi-connection download of direct formats, then merge with ffmpeg" value={s.video.accelerate} onChange={(v) => save({ video: { accelerate: v } })} />
+        <Toggle title="Fast YouTube format lookup" hint="Reads formats directly from your signed-in YouTube session; falls back to yt-dlp for anything it can’t handle" value={s.video.useNativeYoutube} onChange={(v) => save({ video: { useNativeYoutube: v } })} />
         <Row title="Cookies from browser" hint="Lets yt-dlp access age-restricted / member videos. On Windows, Chrome and Edge lock their cookies while open: Firefox works best">
           <Select
             label="Cookies from browser"

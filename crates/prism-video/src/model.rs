@@ -46,6 +46,9 @@ pub struct VideoOptions {
     pub proxy: Option<String>,
     /// Use an ffmpeg found on PATH instead of downloading a managed copy.
     pub prefer_system_ffmpeg: bool,
+    /// Resolve YouTube formats natively via the Innertube API (logged-in session)
+    /// before falling back to yt-dlp + deno.
+    pub use_native_youtube: bool,
     /// `-N` for yt-dlp fragment downloads.
     pub concurrent_fragments: u8,
     /// Delete post-processing inputs (temp streams) after a successful ffmpeg run.
@@ -65,6 +68,7 @@ impl Default for VideoOptions {
             user_agent: None,
             proxy: None,
             prefer_system_ffmpeg: true,
+            use_native_youtube: true,
             concurrent_fragments: 8,
             delete_temp_inputs: true,
             extra_ytdlp_args: Vec::new(),
