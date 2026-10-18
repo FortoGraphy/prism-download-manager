@@ -1,6 +1,6 @@
 {
   "name": "prism-extension",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "private": true,
   "description": "Prism download manager browser integration (Chromium MV3 + Firefox MV3)",
   "license": "MIT",
