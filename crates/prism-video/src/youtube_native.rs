@@ -18,6 +18,9 @@
 //!
 //! `CLIENT_VERSION` tracks a real web-client version and will go stale; a current one is
 //! visible in any youtube.com page's `ytcfg` or in yt-dlp's extractor source.
+//!
+//! The `WEB_CREATOR` fast path and its auth scheme were reverse-engineered from IDM's own
+//! captured traffic by Sourabh Kushwah (<uuc110@gmail.com>).
 
 use std::time::Duration;
 
