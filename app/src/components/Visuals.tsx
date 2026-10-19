@@ -106,9 +106,11 @@ export function Sparkline({ samples, width = 196, height = 38 }: { samples: numb
 
 const spectrum = (i: number) => `var(--spectrum-${(i % 8) + 1})`;
 
-/** Whole-file map: each segment occupies its byte range; the filled part is coloured per connection. */
-export function FileMap({ segments, size }: { segments: SegmentInfo[]; size: number }) {
-  if (!size || !segments.length) return <div className="segbar" />;
+/** Whole-file map: each segment occupies its range (bytes, or — for HLS/DASH — a position
+ *  among the media segments); the filled part is coloured per connection. */
+export function FileMap({ segments, size, unit = "bytes" }: { segments: SegmentInfo[]; size: number; unit?: "bytes" | "segments" }) {
+  const total = unit === "segments" ? segments.length : size;
+  if (!total || !segments.length) return <div className="segbar" />;
   return (
     <div className="segbar" role="img" aria-label={`${segments.length} segments`}>
       {segments.map((s, i) => {
@@ -119,8 +121,8 @@ export function FileMap({ segments, size }: { segments: SegmentInfo[]; size: num
             className="segbar__seg"
             data-active={s.state === "active" && s.pos < s.end}
             style={{
-              ["--a" as string]: s.start / size,
-              ["--b" as string]: s.end / size,
+              ["--a" as string]: s.start / total,
+              ["--b" as string]: s.end / total,
               ["--p" as string]: Math.min(1, (s.pos - s.start) / span),
               ["--c" as string]: spectrum(i),
             }}
@@ -131,31 +133,30 @@ export function FileMap({ segments, size }: { segments: SegmentInfo[]; size: num
   );
 }
 
-/** One lane per connection: own progress, byte range and speed. */
-export function ConnectionLanes({ segments, max }: { segments: SegmentInfo[]; max?: number }) {
-  const shown = max ? segments.slice(0, max) : segments;
-  if (!segments.length) return <p className="lanes__empty">No active connections.</p>;
+/** One lane per connection — the segments actually being transferred right now, never the
+ *  whole (for HLS/DASH, hundreds-strong) segment list. */
+export function ConnectionLanes({ segments, max, unit = "bytes" }: { segments: SegmentInfo[]; max?: number; unit?: "bytes" | "segments" }) {
+  const active = segments.filter((s) => s.state === "active");
+  const shown = max ? active.slice(0, max) : active;
+  if (!active.length) return <p className="lanes__empty">No active connections.</p>;
   return (
     <div className="lanes">
       {shown.map((s, i) => {
         const span = Math.max(1, s.end - s.start);
         const f = Math.min(1, (s.pos - s.start) / span);
-        const done = s.pos >= s.end || s.state === "done";
         return (
-          <div key={i} className={`lane${done ? " is-done" : ""}`} style={{ ["--c" as string]: spectrum(i) }}>
+          <div key={i} className="lane" style={{ ["--c" as string]: spectrum(i) }}>
             <span className="lane__id">{String(i + 1).padStart(2, "0")}</span>
             <span className="lane__track">
               <span className="lane__fill" style={{ transform: `scaleX(${f})` }} />
-              {!done && <span className="lane__head" style={{ left: `calc(${f * 100}% - 1px)` }} />}
+              <span className="lane__head" style={{ left: `calc(${f * 100}% - 1px)` }} />
             </span>
-            <span className="lane__range">
-              {formatBytes(s.start)}–{formatBytes(s.end)}
-            </span>
-            <span className="lane__speed">{done ? "done" : s.state === "active" ? formatSpeed(s.speed) : s.state}</span>
+            <span className="lane__range">{unit === "segments" ? `Segment ${s.start + 1}` : `${formatBytes(s.start)}–${formatBytes(s.end)}`}</span>
+            <span className="lane__speed">{formatSpeed(s.speed)}</span>
           </div>
         );
       })}
-      {max && segments.length > max && <p className="lanes__more">+ {segments.length - max} more connections</p>}
+      {max && active.length > max && <p className="lanes__more">+ {active.length - max} more connections</p>}
     </div>
   );
 }

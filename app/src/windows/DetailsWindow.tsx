@@ -36,6 +36,7 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
   const status = progress?.status ?? item.status;
   const segments = details?.segments ?? [];
   const active = segments.filter((s) => s.state === "active" && s.pos < s.end).length;
+  const unit = item.kind === "hls" || item.kind === "dash" ? "segments" : "bytes";
   const history = details?.speedHistory.slice(-60) ?? [];
   const limit = limitDraft ?? item.speedLimit;
   const speed = progress?.speed ?? 0;
@@ -122,7 +123,7 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
         <ProgressBar value={p.fraction} state={sv.bar} size="thick" label="Progress" />
         <div className="map">
           <span>File map</span>
-          <FileMap segments={segments} size={item.size ?? 0} />
+          <FileMap segments={segments} size={item.size ?? 0} unit={unit} />
           <span className="tnum">{segments.length} segments</span>
         </div>
         {status === "failed" && item.error && (
@@ -136,7 +137,7 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
       <div className={`panel${simple ? " panel--single" : ""}`}>
         <div className="panel__conn">
           <div className="ph">Connections</div>
-          {status === "completed" ? <p className="lanes__empty">Download complete.</p> : <ConnectionLanes segments={segments} max={12} />}
+          {status === "completed" ? <p className="lanes__empty">Download complete.</p> : <ConnectionLanes segments={segments} max={12} unit={unit} />}
         </div>
         {!simple && (
           <div className="panel__speed">

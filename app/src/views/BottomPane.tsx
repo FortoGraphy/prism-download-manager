@@ -80,14 +80,15 @@ function ConnectionsTab({ details, done }: { details: ItemDetails | null; done: 
   if (done) return <p className="pane__hint">Download complete — no open connections.</p>;
   if (!details) return <p className="pane__hint">Loading…</p>;
   const size = details.item.size ?? 0;
+  const unit = details.item.kind === "hls" || details.item.kind === "dash" ? "segments" : "bytes";
   return (
     <div className="pane__conn">
       <div className="pane__map">
         <span>File map</span>
-        <FileMap segments={details.segments} size={size} />
+        <FileMap segments={details.segments} size={size} unit={unit} />
         <span className="tnum">{details.segments.length} segments</span>
       </div>
-      <ConnectionLanes segments={details.segments} />
+      <ConnectionLanes segments={details.segments} unit={unit} />
     </div>
   );
 }
