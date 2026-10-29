@@ -218,6 +218,15 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
           <Row title={t("User agent")} hint={t("Empty = a current Chrome user agent")}>
             <TextField value={s.connection.userAgent} onCommit={(v) => save({ connection: { userAgent: v } })} label={t("User agent")} mono placeholder={t("Default")} />
           </Row>
+          <Row title={t("DNS overrides")} hint={t("Custom host-to-IP mappings (e.g. example.com=1.1.1.1 or host:ip)")} align="start">
+            <ListField
+              value={s.connection.dnsOverrides ?? []}
+              onCommit={(v) => save({ connection: { dnsOverrides: v } })}
+              label={t("DNS overrides")}
+              placeholder="example.com=1.1.1.1, cdn.site.com:8.8.8.8"
+              rows={2}
+            />
+          </Row>
         </Group>
       );
     case "proxy":

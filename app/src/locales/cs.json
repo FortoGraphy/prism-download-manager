@@ -1072,5 +1072,7 @@
   "The files download one after another in the Hugging Face queue": "Soubory se stáhnou jeden po druhém ve frontě Hugging Face",
   "Add an access token first": "Nejdřív přidejte přístupový token",
   "Background that matches the theme": "Pozadí podle motivu",
-  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "Na Linuxu už oknem neprosvítá plocha a na Windows se sklo přepne také, když Windows změní světlý a tmavý režim."
+  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "Na Linuxu už oknem neprosvítá plocha a na Windows se sklo přepne také, když Windows změní světlý a tmavý režim.",
+  "DNS overrides": "Přepsání DNS",
+  "Custom host-to-IP mappings (e.g. example.com=1.1.1.1 or host:ip)": "Vlastní mapování hostitele na IP (např. example.com=1.1.1.1 nebo host:ip)"
 }

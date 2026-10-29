@@ -1049,5 +1049,7 @@
   "The files download one after another in the Hugging Face queue": "Les fichiers se téléchargent l’un après l’autre dans la file « Hugging Face »",
   "Add an access token first": "Ajoutez d’abord un jeton d’accès",
   "Background that matches the theme": "Un fond assorti au thème",
-  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "Sous Linux, le bureau ne transparaît plus à travers la fenêtre, et sous Windows le verre change aussi quand Windows passe du clair au sombre."
+  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "Sous Linux, le bureau ne transparaît plus à travers la fenêtre, et sous Windows le verre change aussi quand Windows passe du clair au sombre.",
+  "DNS overrides": "Remplacements DNS",
+  "Custom host-to-IP mappings (e.g. example.com=1.1.1.1 or host:ip)": "Mappages hôte-IP personnalisés (par ex. example.com=1.1.1.1 ou host:ip)"
 }

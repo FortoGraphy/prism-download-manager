@@ -1049,5 +1049,7 @@
   "The files download one after another in the Hugging Face queue": "Los archivos se descargan uno tras otro en la cola Hugging Face",
   "Add an access token first": "Primero añade un token de acceso",
   "Background that matches the theme": "Fondo acorde al tema",
-  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "En Linux la ventana ya no deja ver el escritorio a través de ella, y en Windows el cristal también cambia cuando Windows pasa de claro a oscuro."
+  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "En Linux la ventana ya no deja ver el escritorio a través de ella, y en Windows el cristal también cambia cuando Windows pasa de claro a oscuro.",
+  "DNS overrides": "Anulaciones de DNS",
+  "Custom host-to-IP mappings (e.g. example.com=1.1.1.1 or host:ip)": "Asignaciones personalizadas de host a IP (p. ej. example.com=1.1.1.1 o host:ip)"
 }

@@ -145,7 +145,10 @@ for (const target of ['chromium', 'firefox']) {
     minify: !dev,
     sourcemap: dev ? 'inline' : false,
     legalComments: 'none',
-    define: { __TARGET__: JSON.stringify(target) },
+    define: {
+      __TARGET__: JSON.stringify(target),
+      __DEV__: JSON.stringify(dev || process.env.PRISM_E2E === '1'),
+    },
     logLevel: 'warning',
     charset: 'utf8',
   });

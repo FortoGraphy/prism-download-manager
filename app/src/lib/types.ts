@@ -212,6 +212,7 @@ export interface Settings {
     readTimeoutSecs: number;
     httpVersion: "http1" | "auto" | "http3";
     maxConnectionsPerHost: number;
+    dnsOverrides?: string[];
   };
   proxy: {
     mode: "none" | "system" | "http" | "socks5";

@@ -88,6 +88,11 @@ pub async fn fetch_small(
             message: format!("TLS setup failed: {e}"),
         })?,
         pool_max_idle: 1,
+        dns_overrides: if req.dns_overrides.is_empty() {
+            cfg.default_dns_overrides.clone()
+        } else {
+            req.dns_overrides.clone()
+        },
     };
     let client = build_client(&spec)?;
     let headers = base_headers(&req.headers, req.cookies.as_deref(), req.referer.as_deref())?;

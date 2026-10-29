@@ -50,6 +50,8 @@ pub struct EngineConfig {
     pub host_limit_ttl: Duration,
     /// ffmpeg executable for HLS/DASH remuxing (`None` = `ffmpeg` on `PATH`).
     pub ffmpeg_path: Option<PathBuf>,
+    /// Global host-to-IP resolution overrides (custom DNS / DoH fallback).
+    pub default_dns_overrides: Vec<(String, std::net::SocketAddr)>,
 }
 
 impl Default for EngineConfig {
@@ -72,6 +74,7 @@ impl Default for EngineConfig {
             max_connections_per_host: None,
             host_limit_ttl: Duration::from_secs(24 * 3600),
             ffmpeg_path: None,
+            default_dns_overrides: Vec::new(),
         }
     }
 }

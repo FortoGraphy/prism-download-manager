@@ -1118,5 +1118,7 @@
   "The files download one after another in the Hugging Face queue": "تُنزَّل الملفات واحدًا تلو الآخر في قائمة انتظار Hugging Face",
   "Add an access token first": "أضف رمز وصول أولًا",
   "Background that matches the theme": "خلفية تطابق السمة",
-  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "على Linux لم يعد سطح المكتب يظهر عبر النافذة، وعلى Windows يتبدّل الزجاج أيضًا عندما ينتقل Windows بين الوضعين الفاتح والداكن."
+  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "على Linux لم يعد سطح المكتب يظهر عبر النافذة، وعلى Windows يتبدّل الزجاج أيضًا عندما ينتقل Windows بين الوضعين الفاتح والداكن.",
+  "DNS overrides": "تجاوزات DNS",
+  "Custom host-to-IP mappings (e.g. example.com=1.1.1.1 or host:ip)": "تعيينات مخصصة من المضيف إلى IP (مثل example.com=1.1.1.1 أو host:ip)"
 }

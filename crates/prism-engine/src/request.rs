@@ -195,6 +195,9 @@ pub struct DownloadRequest {
     /// being saved under that name.
     #[serde(default)]
     pub expect_file: bool,
+    /// Host-to-IP resolution overrides (custom DNS / DoH fallback).
+    #[serde(default)]
+    pub dns_overrides: Vec<(String, std::net::SocketAddr)>,
 }
 
 impl DownloadRequest {
@@ -223,6 +226,7 @@ impl DownloadRequest {
             max_retries: None,
             max_request_size: None,
             expect_file: false,
+            dns_overrides: Vec::new(),
         }
     }
 }

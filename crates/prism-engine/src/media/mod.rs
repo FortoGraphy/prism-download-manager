@@ -155,6 +155,7 @@ pub async fn list_variants(
             message: format!("TLS setup failed: {e}"),
         })?,
         pool_max_idle: 1,
+        dns_overrides: cfg.default_dns_overrides.clone(),
     };
     let client = build_client(&spec)?;
     let headers = base_headers(
@@ -670,6 +671,7 @@ async fn run_inner(
             .unwrap_or_else(|| cfg.user_agent.clone()),
         tls: engine.tls().map_err(fail)?,
         pool_max_idle: connections,
+        dns_overrides: cfg.default_dns_overrides.clone(),
     };
     let client = build_client(&spec).map_err(fail)?;
     let headers =

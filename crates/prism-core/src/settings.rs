@@ -215,6 +215,8 @@ pub struct Connection {
     pub http_version: HttpVersion,
     /// Upper bound of simultaneous connections to one host across all downloads (0 = unlimited).
     pub max_connections_per_host: u32,
+    /// Custom DNS / host-to-IP overrides in "host:ip" or "host:ip:port" format.
+    pub dns_overrides: Vec<String>,
 }
 
 impl Default for Connection {
@@ -225,6 +227,7 @@ impl Default for Connection {
             read_timeout_secs: 30,
             http_version: HttpVersion::Http1,
             max_connections_per_host: 0,
+            dns_overrides: Vec::new(),
         }
     }
 }

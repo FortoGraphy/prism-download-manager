@@ -64,6 +64,11 @@ pub(crate) fn build_ctx(
             .unwrap_or_else(|| cfg.user_agent.clone()),
         tls: engine.tls()?,
         pool_max_idle: 1,
+        dns_overrides: if req.dns_overrides.is_empty() {
+            cfg.default_dns_overrides.clone()
+        } else {
+            req.dns_overrides.clone()
+        },
     };
     Ok(Arc::new(HttpCtx {
         spec,

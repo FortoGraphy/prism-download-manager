@@ -1003,5 +1003,7 @@
   "The files download one after another in the Hugging Face queue": "File diunduh satu per satu di antrean Hugging Face",
   "Add an access token first": "Tambahkan token akses terlebih dahulu",
   "Background that matches the theme": "Latar yang sesuai tema",
-  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "Di Linux, desktop tidak lagi terlihat menembus jendela, dan di Windows kacanya ikut berganti saat Windows beralih antara terang dan gelap."
+  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "Di Linux, desktop tidak lagi terlihat menembus jendela, dan di Windows kacanya ikut berganti saat Windows beralih antara terang dan gelap.",
+  "DNS overrides": "Pengalihan DNS",
+  "Custom host-to-IP mappings (e.g. example.com=1.1.1.1 or host:ip)": "Pemetaan host-ke-IP kustom (misal example.com=1.1.1.1 atau host:ip)"
 }

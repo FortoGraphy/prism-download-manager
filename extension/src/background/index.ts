@@ -71,9 +71,13 @@ api.runtime.onStartup.addListener(() => {
 });
 api.alarms?.create('prism-watchdog', { periodInMinutes: 1 });
 api.alarms?.onAlarm.addListener((a) => {
-  if (a.name === 'prism-watchdog') helloQuietly();
+  if (a.name === 'prism-watchdog') {
+    native.ensureConnected();
+    helloQuietly();
+  }
 });
 // Worker (re)start: open the port right away so the first capture is warm.
+native.ensureConnected();
 helloQuietly();
 
 // ---- internal messages ------------------------------------------------------------
@@ -137,17 +141,21 @@ api.runtime.onMessage.addListener((msg: InternalMessage, sender, sendResponse) =
   return true;
 });
 
-// ---- debugging / e2e hooks (service worker global) ------------------------------------
-Object.assign(globalThis, {
-  __prism: {
-    native,
-    lastCapture,
-    bypass,
-    getConnection,
-    collectAndSend,
-    sendSingleLink,
-    handleMenuClick,
-    hello,
-    actionTimeout,
-  },
-});
+declare const __DEV__: boolean;
+
+// ---- debugging / e2e hooks (service worker global in dev/test only) ------------------
+if (typeof __DEV__ !== 'undefined' && __DEV__) {
+  Object.assign(globalThis, {
+    __prism: {
+      native,
+      lastCapture,
+      bypass,
+      getConnection,
+      collectAndSend,
+      sendSingleLink,
+      handleMenuClick,
+      hello,
+      actionTimeout,
+    },
+  });
+}

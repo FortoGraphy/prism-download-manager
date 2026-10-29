@@ -9,6 +9,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::future::Future;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
@@ -148,7 +149,13 @@ fn authorized(state: &AppState, headers: &HeaderMap) -> bool {
 }
 
 fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+    let hash_a = Sha256::digest(a);
+    let hash_b = Sha256::digest(b);
+    let mut diff = 0u8;
+    for (&x, &y) in hash_a.iter().zip(hash_b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
 }
 
 async fn message(
@@ -179,6 +186,17 @@ mod tests {
         fn handle(&self, message: serde_json::Value) -> BoxFuture<serde_json::Value> {
             Box::pin(async move { serde_json::json!({"ok": true, "echo": message["type"]}) })
         }
+    }
+
+    #[test]
+    fn test_constant_time_eq() {
+        assert!(constant_time_eq(b"", b""));
+        assert!(constant_time_eq(b"secret", b"secret"));
+        assert!(!constant_time_eq(b"secret", b"secr"));
+        assert!(!constant_time_eq(b"secr", b"secret"));
+        assert!(!constant_time_eq(b"secret1", b"secret2"));
+        assert!(!constant_time_eq(b"", b"secret"));
+        assert!(!constant_time_eq(b"secret", b""));
     }
 
     #[tokio::test]

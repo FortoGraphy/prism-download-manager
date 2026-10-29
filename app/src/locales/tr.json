@@ -1026,5 +1026,7 @@
   "The files download one after another in the Hugging Face queue": "Dosyalar Hugging Face kuyruğunda sırayla indirilir",
   "Add an access token first": "Önce bir erişim belirteci ekleyin",
   "Background that matches the theme": "Temaya uyan arka plan",
-  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "Linux'ta masaüstü artık pencerenin arkasından görünmüyor; Windows'ta da Windows açık ve koyu mod arasında geçiş yaptığında cam da değişiyor."
+  "On Linux the window no longer shows the desktop through it, and on Windows the glass switches too when Windows changes between light and dark.": "Linux'ta masaüstü artık pencerenin arkasından görünmüyor; Windows'ta da Windows açık ve koyu mod arasında geçiş yaptığında cam da değişiyor.",
+  "DNS overrides": "DNS geçersiz kılmaları",
+  "Custom host-to-IP mappings (e.g. example.com=1.1.1.1 or host:ip)": "Özel ana bilgisayar-IP eşlemeleri (örn. example.com=1.1.1.1 veya host:ip)"
 }

@@ -12,6 +12,10 @@ $zip = Join-Path $root "packaging\out\Prism-$version-windows-x64-portable.zip"
 Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $stage | Out-Null
 Copy-Item (Join-Path $release "prism.exe") $stage
+$webview2 = Join-Path $release "WebView2Loader.dll"
+if (Test-Path $webview2) {
+  Copy-Item $webview2 $stage
+}
 Copy-Item (Join-Path $root "app\src-tauri\binaries\prism-native-host-$Target.exe") (Join-Path $stage "prism-native-host.exe")
 # portable.txt switches the data directory to .\data next to prism.exe
 Set-Content -Path (Join-Path $stage "portable.txt") -Value "Prism portable mode: settings and history are stored in the data folder next to prism.exe." -Encoding utf8

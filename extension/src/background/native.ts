@@ -40,6 +40,17 @@ export class NativeClient {
     return this.port !== null;
   }
 
+  /** Eagerly opens the port if not already connected (called when service worker wakes). */
+  ensureConnected(): void {
+    if (!this.port && Date.now() >= this.hostMissingUntil) {
+      try {
+        this.connect();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   private emit(ok: boolean, err?: NativeError, reply?: AnyReply): void {
     for (const l of this.listeners) {
       try {

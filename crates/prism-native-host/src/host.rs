@@ -136,18 +136,38 @@ fn watch_for_update(exe: PathBuf, out: Out) {
         });
 }
 
+const MAX_CONCURRENT_WORKERS: usize = 4;
+
 /// The loop, generic over its input (used by tests).
 pub fn run_with<R: io::Read>(client: Arc<AppClient>, mut input: R, out: Out) -> i32 {
-    let mut workers: Vec<thread::JoinHandle<()>> = Vec::new();
+    let (tx, rx) = std::sync::mpsc::channel::<Vec<u8>>();
+    let rx = Arc::new(Mutex::new(rx));
+    let mut workers = Vec::with_capacity(MAX_CONCURRENT_WORKERS);
+
+    for _ in 0..MAX_CONCURRENT_WORKERS {
+        let (c, o, r) = (client.clone(), out.clone(), rx.clone());
+        workers.push(thread::spawn(move || loop {
+            let msg = {
+                let Ok(guard) = r.lock() else { break };
+                guard.recv()
+            };
+            match msg {
+                Ok(body) => {
+                    let reply = handle_message(&c, &body);
+                    write_reply(&o, &reply);
+                }
+                Err(_) => break,
+            }
+        }));
+    }
+    drop(rx);
+
     let code = loop {
         match framing::read_frame(&mut input) {
             Ok(Some(body)) => {
-                let (c, o) = (client.clone(), out.clone());
-                workers.retain(|h| !h.is_finished());
-                workers.push(thread::spawn(move || {
-                    let reply = handle_message(&c, &body);
-                    write_reply(&o, &reply);
-                }));
+                if tx.send(body).is_err() {
+                    break 1;
+                }
             }
             Ok(None) => break 0,
             Err(FrameError::TooLarge(n)) => {
@@ -173,6 +193,7 @@ pub fn run_with<R: io::Read>(client: Arc<AppClient>, mut input: R, out: Out) -> 
             }
         }
     };
+    drop(tx);
     for w in workers {
         let _ = w.join();
     }
