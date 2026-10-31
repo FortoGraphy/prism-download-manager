@@ -37,6 +37,7 @@ export interface VideoOptionsResult {
 export type InternalMessage =
   | { kind: 'bypass'; url?: string; ts: number }
   | { kind: 'videoOptions'; pageUrl: string; title: string; sources?: ElementSource[]; postUrl?: string }
+  | { kind: 'playerManifest'; pageUrl: string; manifestUrl: string }
   | { kind: 'videoDownload'; pageUrl: string; title: string; option: VideoOption }
   | { kind: 'popupState'; tabId: number }
   | { kind: 'refreshStatus' }

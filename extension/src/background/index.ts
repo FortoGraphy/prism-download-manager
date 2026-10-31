@@ -15,7 +15,7 @@ import { EXTENSION_VERSION, actionTimeout, detectBrowser, tabInfo, userAgent } f
 import { createMenus, handleMenuClick, initMenus, sendSingleLink } from './menus';
 import { native } from './native';
 import { initRequestTracking } from './requests';
-import { getTabMedia, initSniffer } from './sniffer';
+import { getTabMedia, initSniffer, recordPlayerManifest } from './sniffer';
 import { applyAppSettings, getConnection, getState, markConnected, markFailure, onConnectionChange, updateState } from './state';
 import { downloadMedia, sendVideo, videoOptions } from './video';
 
@@ -85,6 +85,9 @@ async function handle(msg: InternalMessage, sender: chrome.runtime.MessageSender
       return { ok: true };
     case 'videoOptions':
       return videoOptions(msg, sender.tab);
+    case 'playerManifest':
+      if (sender.tab?.id !== undefined) void recordPlayerManifest(sender.tab.id, msg.pageUrl, msg.manifestUrl);
+      return { ok: true };
     case 'videoDownload':
       await sendVideo(msg.pageUrl, msg.title, msg.option, sender.tab);
       return { ok: true } satisfies ActionResult;
