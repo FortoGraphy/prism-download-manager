@@ -478,6 +478,8 @@ async fn setup_resume(
         etag: state.etag.clone(),
         ranged: true,
     });
+    // The link served this file in an earlier run: a 403/410 now means it expired.
+    ctx.mark_probed();
     {
         let mut m = job.meta();
         m.url = state.url.clone();
