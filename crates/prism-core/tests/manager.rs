@@ -1461,3 +1461,101 @@ async fn a_hugging_face_model_downloads_into_its_queue() {
     .await;
     core.shutdown().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_expired_link_is_refreshed_and_the_download_resumes_where_it_stopped() {
+    let server = TestServer::start(ServerConfig::default()).await.unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    let core = core_in(tmp.path()).await;
+    let size = 24u64 << 20;
+    let q = format!("size={size}&seed=70&throttle=4M");
+    // A signed link that stops working 1.5 s after its first use (410 Gone).
+    let url = server.url(&format!("/expiring/iso.bin?{q}&ttl_ms=1500"));
+    let items = core
+        .add_items(
+            vec![NewItem {
+                url,
+                ..Default::default()
+            }],
+            StartMode::Now,
+        )
+        .unwrap();
+    let id = &items[0].id;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+    while core
+        .item_details(id)
+        .unwrap()
+        .progress
+        .map_or(0, |p| p.downloaded)
+        < 4 << 20
+    {
+        assert!(tokio::time::Instant::now() < deadline, "no progress");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    // Paused (sleep, a restart, a dropped network) until the link has expired.
+    core.pause_items(std::slice::from_ref(id));
+    let paused = wait_paused(&core, id).await;
+    tokio::time::sleep(Duration::from_millis(1600)).await;
+
+    // Resuming tells the user the link expired, and keeps what was downloaded.
+    core.start_items(std::slice::from_ref(id));
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+    let failed = loop {
+        let d = core.item_details(id).unwrap();
+        if d.progress.is_none() && d.item.status == Status::Failed {
+            break d.item;
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "status {:?}",
+            d.item.status
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    };
+    eprintln!("after expiry: error {:?}", failed.error);
+    assert!(
+        failed
+            .error
+            .as_deref()
+            .unwrap_or("")
+            .to_lowercase()
+            .contains("expired"),
+        "error: {:?}",
+        failed.error
+    );
+    assert!(failed.downloaded >= paused.downloaded, "progress kept");
+    assert!(failed.resume.is_some(), "resume point kept");
+
+    // Refresh download address with a fresh link to the same file, then resume.
+    let fresh = format!("/file/iso.bin?{q}");
+    core.update_item(
+        id,
+        prism_core::manager::ItemPatch {
+            url: Some(server.url(&fresh)),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let mut rx = core.subscribe();
+    core.start_items(std::slice::from_ref(id));
+    let path = wait_completed(&mut rx, id).await;
+    assert_eq!(sha256_file(&path), expected_sha256(70, size));
+    // It went on from where it stopped: no data request on the fresh link starts at 0
+    // (only the 1-byte check that it is the same file).
+    let from_zero: Vec<_> = server
+        .stats()
+        .requests
+        .iter()
+        .filter(|r| r.uri.starts_with("/file/iso.bin"))
+        .filter(|r| {
+            r.range
+                .as_deref()
+                .is_none_or(|r| r.starts_with("bytes=0-") && r != "bytes=0-0")
+        })
+        .map(|r| r.range.clone())
+        .collect();
+    assert!(
+        from_zero.is_empty(),
+        "downloaded again from the start: {from_zero:?}"
+    );
+}
