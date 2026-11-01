@@ -54,14 +54,16 @@ async fn probe_is_shared_while_running_and_reused_afterwards() {
     std::fs::create_dir_all(&bin).unwrap();
     let ytdlp = fake_ytdlp(&bin);
     let data = tmp.path().join("data");
-    // A managed deno so the probe doesn't go and install the video tools.
+    // A managed deno and ffmpeg so the probe doesn't go and install the video tools.
     let tools = data.join("tools");
     std::fs::create_dir_all(&tools).unwrap();
-    std::fs::write(
-        tools.join(format!("deno{}", std::env::consts::EXE_SUFFIX)),
-        b"",
-    )
-    .unwrap();
+    for tool in ["deno", "ffmpeg", "ffprobe"] {
+        std::fs::write(
+            tools.join(format!("{tool}{}", std::env::consts::EXE_SUFFIX)),
+            b"",
+        )
+        .unwrap();
+    }
     let core = Core::start(CoreOptions {
         data_dir: data,
         ipc: false,

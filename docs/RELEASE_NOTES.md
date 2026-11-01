@@ -1,7 +1,26 @@
-# Prism 1.2.3 — One beam. Many rays.
+# Prism 1.2.4 — One beam. Many rays.
 
 A fast, open-source download manager for Windows, Linux and macOS, with browser integration
 and video downloads.
+
+## What's new in 1.2.4
+
+* **Linux: Prism's window no longer stops updating when a download finishes**
+  ([#41](https://github.com/FortoGraphy/prism-download-manager/issues/41)). Right when a download
+  finished or failed, or a queue ended, the window could freeze until it was opened again. Those
+  are the moments Prism plays a sound, which WebKitGTK played inside every open window. On Linux
+  the sounds now play once, through the system's own player (PipeWire, PulseAudio or ALSA).
+* **No more full disks when putting a video together**
+  ([#49](https://github.com/FortoGraphy/prism-download-manager/issues/49)). Joining a video's
+  picture and sound needs about as much free space again as the downloaded streams. Prism now
+  checks before it starts and says how much is needed, instead of filling the disk. The
+  downloaded streams stay, so *Retry* after making room only puts them together.
+* **A system ffmpeg that doesn't run is replaced**
+  ([#45](https://github.com/FortoGraphy/prism-download-manager/issues/45)). When the ffmpeg on
+  your system is missing or doesn't start, Prism downloads its own before a video download, so
+  the video doesn't stop at the end with "ffmpeg not found".
+* The bottom corners of the download list are rounded like the rest of the window
+  ([#47](https://github.com/FortoGraphy/prism-download-manager/issues/47)). Thanks to Eerye!
 
 ## What's new in 1.2.3
 

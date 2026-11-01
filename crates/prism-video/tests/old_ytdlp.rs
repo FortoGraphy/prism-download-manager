@@ -73,16 +73,33 @@ async fn an_old_ytdlp_gets_no_js_runtime_option() {
     assert!(has_js_runtimes(&current, dir.path()));
 }
 
+/// A stand-in ffmpeg (or ffprobe) that runs, or one that fails like a broken build (#45).
+fn ffmpeg(dir: &Path, name: &str, works: bool) {
+    let p = dir.join(name);
+    let body = if works {
+        "#!/bin/sh\necho 'ffmpeg version 7.1 Copyright (c) 2000-2026 the FFmpeg developers'\n"
+    } else {
+        "#!/bin/sh\necho 'error while loading shared libraries: libavdevice.so.61' >&2; exit 127\n"
+    };
+    std::fs::write(&p, body).unwrap();
+    std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+}
+
 #[tokio::test]
-async fn an_old_system_ytdlp_gets_prisms_own_installed() {
-    // The only yt-dlp is an old one on PATH (a distribution's package); Prism has none yet.
+async fn system_tools_that_cant_do_the_job_get_prisms_own_installed() {
+    // The tools come from PATH (a distribution's packages, /usr/local/bin); Prism has none yet.
     let dir = tempfile::tempdir().unwrap();
-    let old_bin = dir.path().join("old");
-    let new_bin = dir.path().join("new");
-    std::fs::create_dir_all(&old_bin).unwrap();
-    std::fs::create_dir_all(&new_bin).unwrap();
-    script(&old_bin, "yt-dlp", "2025.09.26");
-    script(&new_bin, "yt-dlp", "2025.11.12");
+    let bin = |name: &str, ytdlp: &str, ffmpeg_works: bool| {
+        let b = dir.path().join(name);
+        std::fs::create_dir_all(&b).unwrap();
+        script(&b, "yt-dlp", ytdlp);
+        ffmpeg(&b, "ffmpeg", ffmpeg_works);
+        ffmpeg(&b, "ffprobe", true);
+        b
+    };
+    let old_ytdlp = bin("old", "2025.09.26", true);
+    let broken_ffmpeg = bin("broken", "2026.10.29", false);
+    let good = bin("good", "2025.11.12", true);
     let deno = script(dir.path(), "deno", "2.5.6");
     let svc = VideoService::new(
         dir.path().join("tools"),
@@ -92,8 +109,16 @@ async fn an_old_system_ytdlp_gets_prisms_own_installed() {
         },
     );
     // SAFETY: the only test in this binary that reads PATH.
-    unsafe { std::env::set_var("PATH", &old_bin) };
-    assert!(svc.needs_tools().await, "an old yt-dlp is replaced");
-    unsafe { std::env::set_var("PATH", &new_bin) };
-    assert!(!svc.needs_tools().await, "a current one is used as it is");
+    unsafe { std::env::set_var("PATH", &old_ytdlp) };
+    assert!(svc.needs_tools().await, "#43: an old yt-dlp is replaced");
+    unsafe { std::env::set_var("PATH", &broken_ffmpeg) };
+    assert!(
+        svc.needs_tools().await,
+        "#45: an ffmpeg that doesn't run is replaced"
+    );
+    unsafe { std::env::set_var("PATH", &good) };
+    assert!(
+        !svc.needs_tools().await,
+        "current tools that run are used as they are"
+    );
 }

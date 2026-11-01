@@ -236,6 +236,7 @@ async fn core_with_fake_tools(dir: &Path, fixture: &str) -> Core {
     std::fs::write(tools.join(format!("deno{suffix}")), b"").unwrap();
     let ffmpeg = bin.join(format!("ffmpeg{suffix}"));
     std::fs::write(&ffmpeg, b"").unwrap();
+    std::fs::write(bin.join(format!("ffprobe{suffix}")), b"").unwrap();
     let core = core_in(dir).await;
     core.update_settings(
         &json!({"video": {"ytdlpPath": ytdlp, "ffmpegPath": ffmpeg, "autoUpdate": false}}),

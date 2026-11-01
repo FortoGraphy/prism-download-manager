@@ -261,7 +261,8 @@
   padding: 0 8px 0 14px;
   font-size: var(--text-xs);
   color: var(--text-tertiary);
-  border-radius: 0;
+  /* The sheet's own bottom corners: its overflow clip doesn't round a backdrop-filtered child (#47). */
+  border-radius: 0 0 12px 12px;
 }
 .sb { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .sb b { color: var(--text-secondary); font-weight: 500; font-variant-numeric: tabular-nums; }

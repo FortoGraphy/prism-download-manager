@@ -149,9 +149,10 @@ impl VideoService {
         }
     }
 
-    /// Whether [`Self::ensure_tools`] has something to install: yt-dlp or deno missing, or a
+    /// Whether [`Self::ensure_tools`] has something to install: yt-dlp, deno or ffmpeg missing, a
     /// yt-dlp from the system too old for YouTube (#43: a distribution's package without
-    /// `--js-runtimes`).
+    /// `--js-runtimes`), or an ffmpeg from the system that doesn't run (#45: yt-dlp then stopped
+    /// at the end of a video with "ffmpeg not found").
     pub async fn needs_tools(&self) -> bool {
         let o = self.options();
         let d = &self.inner.tools_dir;
@@ -162,7 +163,28 @@ impl VideoService {
             }
             _ => {}
         }
-        tools::resolve(Tool::Deno, d, &o).0.is_none()
+        tools::resolve(Tool::Deno, d, &o).0.is_none() || self.ffmpeg_unusable().await
+    }
+
+    /// ffmpeg or ffprobe is missing, or the system's ffmpeg doesn't run (a custom path stays the
+    /// user's choice).
+    async fn ffmpeg_unusable(&self) -> bool {
+        let o = self.options();
+        let d = &self.inner.tools_dir;
+        let (ff, source, _) = tools::resolve(Tool::Ffmpeg, d, &o);
+        if tools::resolve(Tool::Ffprobe, d, &o).0.is_none() {
+            return true;
+        }
+        match ff {
+            None => true,
+            Some(p) if source == ToolSource::System => self
+                .inner
+                .versions
+                .version(Tool::Ffmpeg, &p)
+                .await
+                .is_none(),
+            Some(_) => false,
+        }
     }
 
     fn require(&self, tool: Tool) -> Result<PathBuf> {
@@ -227,7 +249,8 @@ impl VideoService {
         let fp = tools::resolve(Tool::Ffprobe, &d, &o).0;
         let need_ffmpeg = ff.is_none()
             || fp.is_none()
-            || (!o.prefer_system_ffmpeg && ff_src == ToolSource::System);
+            || (!o.prefer_system_ffmpeg && ff_src == ToolSource::System)
+            || (ff_src == ToolSource::System && self.ffmpeg_unusable().await);
         if need_ffmpeg && let Err(e) = tools::install_ffmpeg(&http, &d, &progress).await {
             errors.push(format!("ffmpeg: {e}"));
         }

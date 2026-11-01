@@ -263,6 +263,8 @@ export const api = {
   openBrowser: (browser: string) => invoke<void>("open_browser", { browser }),
   /** Prism's Chrome Web Store page in that browser (the default browser if it can't start). */
   openExtensionStore: (browser: string) => invoke<void>("open_extension_store", { browser }),
+  /** Linux: a sound through the system's player (see NATIVE_SOUNDS). */
+  playSound: (kind: string, completeSound?: string) => invoke<void>("play_sound", { kind, completeSound: completeSound ?? null }),
 
   assignToQueue: (ids: string[], queueId: string | null) => invoke<void>("assign_to_queue", { ids, queueId }),
   moveInQueue: (ids: string[], delta: number) => invoke<void>("move_in_queue", { ids, delta }),

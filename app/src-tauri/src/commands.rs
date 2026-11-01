@@ -715,6 +715,25 @@ pub async fn open_browser(browser: String) -> CmdResult<()> {
 
 /// Opens Prism's Chrome Web Store page in `browser`, or in the default browser when that one
 /// can't be started.
+/// Linux: plays a sound through the system's player (Settings › Sounds' preview); elsewhere the
+/// window plays it itself.
+#[tauri::command]
+pub async fn play_sound(
+    core: State<'_, Core>,
+    kind: String,
+    complete_sound: Option<String>,
+) -> CmdResult<()> {
+    #[cfg(target_os = "linux")]
+    {
+        let s = core.settings().sounds;
+        let complete = complete_sound.unwrap_or(s.complete_sound);
+        crate::sound::play(&kind, &complete, s.volume);
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = (core, kind, complete_sound);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn open_extension_store(app: AppHandle, browser: String) -> CmdResult<()> {
     if crate::integration::open_extension_store(&browser).is_ok() {

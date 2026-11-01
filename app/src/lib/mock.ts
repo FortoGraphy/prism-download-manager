@@ -180,7 +180,7 @@ const settings: Settings = {
   huggingFace: { endpoint: "", token: "", folder: "" },
   shortcuts: {},
   // The demo bootstrap version: "What's new" opens with ?sheet=whatsnew, or by itself with ?lastseen=1.0.9 (an update).
-  lastSeenVersion: (typeof location === "undefined" ? null : new URLSearchParams(location.search).get("lastseen")) ?? "1.2.3",
+  lastSeenVersion: (typeof location === "undefined" ? null : new URLSearchParams(location.search).get("lastseen")) ?? "1.2.4",
   onboardingDone: typeof location === "undefined" || !new URLSearchParams(location.search).has("onboarding"),
 };
 
@@ -640,7 +640,7 @@ const CONVERT_RATIO: Record<string, number> = { mp3: 0.04, m4a: 0.035, wav: 0.3,
 
 const commands: Record<string, (args: Record<string, unknown>) => unknown> = {
   bootstrap: (): Bootstrap => ({
-    version: "1.2.3",
+    version: "1.2.4",
     items: Object.values(items),
     categories,
     queues,
@@ -1059,10 +1059,10 @@ const commands: Record<string, (args: Record<string, unknown>) => unknown> = {
   integration_status: () => ({
     hostPath: "C:\\Program Files\\Prism\\prism-native-host.exe",
     extensionConnected: mockExtSeen > 0,
-    extensionVersion: mockExtSeen > 0 ? (demoParam("oldext") ? "1.0.0" : "1.2.3") : null,
+    extensionVersion: mockExtSeen > 0 ? (demoParam("oldext") ? "1.0.0" : "1.2.4") : null,
     extensionInstallType: mockExtSeen > 0 ? (demoParam("exttype") ?? (mockExtFromStore ? "normal" : "development")) : null,
     extensionOutdated: mockExtSeen > 0 && !!demoParam("oldext") && !["normal", "admin"].includes(demoParam("exttype") ?? ""),
-    appVersion: "1.2.3",
+    appVersion: "1.2.4",
     lastSeen: mockExtSeen || null,
     browsers: (
       [
