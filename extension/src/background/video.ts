@@ -7,7 +7,7 @@ import { siteMatches } from '../shared/rules';
 import { variantOptions } from '../shared/variants';
 import { actionTimeout, cookieHeaderFor, tabInfo, userAgent } from './context';
 import { native } from './native';
-import { getTabMedia } from './sniffer';
+import { confirmCandidate, getTabCandidates, getTabMedia } from './sniffer';
 import { getState } from './state';
 
 export function isVideoSite(url: string | undefined, sites: string[]): boolean {
@@ -62,6 +62,17 @@ async function expandStream(m: MediaItem, group: VideoOption['group'], pageUrl: 
     // Timeout, an older app without probeStream, or a manifest the app declined (live, DRM).
     return [base];
   }
+}
+
+/**
+ * A candidate that looked disguised (image/* on an XHR/media fetch): checked only now, as the
+ * user opens the menu. On confirmation it's treated exactly like any other sniffed manifest
+ * (same expandStream, same cookie rules); on failure or timeout it contributes nothing — there
+ * was never a single-entry fallback for it since it was never real media to begin with.
+ */
+async function confirmAndExpand(tabId: number, url: string, group: VideoOption['group'], pageUrl: string, incognito: boolean): Promise<VideoOption[]> {
+  const m = await confirmCandidate(tabId, url);
+  return m ? expandStream(m, group, pageUrl, incognito) : [];
 }
 
 function noticeFor(err: NativeError): string {
@@ -128,11 +139,14 @@ export async function videoOptions(
   const own = elementMedia(msg.sources ?? [], media, msg.pageUrl);
   const ownKeys = new Set(own.map((m) => m.key));
   const rest = media.filter((m) => !ownKeys.has(m.key)).sort((a, b) => rank(a) - rank(b) || (b.size ?? 0) - (a.size ?? 0));
+  const candidateUrls = tab?.id !== undefined ? getTabCandidates(tab.id) : [];
   const incognito = !!tab?.incognito;
   let budget = EXPAND_MAX;
+  const take = () => budget-- > 0;
   const entries = (m: MediaItem, group: VideoOption['group']) =>
-    (m.kind === 'hls' || m.kind === 'dash') && budget-- > 0 ? expandStream(m, group, msg.pageUrl, incognito) : Promise.resolve([option(m, group)]);
-  const expanded = await Promise.all([...own.map((m) => entries(m, 'element')), ...rest.map((m) => entries(m, 'stream'))]);
+    (m.kind === 'hls' || m.kind === 'dash') && take() ? expandStream(m, group, msg.pageUrl, incognito) : Promise.resolve([option(m, group)]);
+  const candidateEntries = (c: { url: string }) => (take() ? confirmAndExpand(tab!.id!, c.url, 'stream', msg.pageUrl, incognito) : Promise.resolve([]));
+  const expanded = await Promise.all([...own.map((m) => entries(m, 'element')), ...rest.map((m) => entries(m, 'stream')), ...candidateUrls.map(candidateEntries)]);
   const options = expanded.flat();
   return { source: 'sniffed', options, ...(notice ? { notice } : {}) };
 }

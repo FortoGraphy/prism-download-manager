@@ -16,6 +16,7 @@ const GENERIC_MIMES = ['', 'application/octet-stream', 'binary/octet-stream', 't
 const VIDEO_EXTS = ['MP4', 'M4V', 'WEBM', 'MKV', 'MOV', 'FLV', 'AVI', 'OGV', '3GP', 'WMV'];
 const AUDIO_EXTS = ['MP3', 'M4A', 'AAC', 'OGG', 'OGA', 'OPUS', 'FLAC', 'WAV', 'WMA'];
 const SEGMENT_EXTS = ['TS', 'M4S', 'M4F', 'CMFV', 'CMFA'];
+const IMAGE_EXTS = ['PNG', 'JPG', 'JPEG', 'GIF', 'WEBP', 'BMP', 'SVG', 'ICO', 'AVIF'];
 
 /** Media we don't list because the page is resolved by the app instead (YouTube's chunked streams). */
 export function isIgnoredMediaUrl(url: string): boolean {
@@ -47,6 +48,26 @@ export function classifyMedia(input: { url: string; contentType?: string; resour
     if (VIDEO_EXTS.includes(ext)) return { kind: 'video', streamKind: 'direct' };
     if (AUDIO_EXTS.includes(ext)) return { kind: 'audio', streamKind: 'direct' };
   }
+  return null;
+}
+
+/**
+ * A response URL/MIME classification can't place, worth a click-time manifest check: some
+ * streaming embeds serve their master playlist as a fake image (`.png` URL, `image/*`
+ * Content-Type) specifically to dodge extension/MIME sniffers. Scoped to the one case real
+ * sites use it for — a player's own XHR/media fetch, not a page's actual `<img>` or a frame.
+ */
+export function disguiseCandidate(input: { url: string; contentType?: string; resourceType?: string }): boolean {
+  if (input.resourceType !== 'xmlhttprequest' && input.resourceType !== 'media') return false;
+  const mime = (input.contentType ?? '').split(';')[0]!.trim().toLowerCase();
+  return mime.startsWith('image/') || IMAGE_EXTS.includes(fileExtension(input.url));
+}
+
+/** What the start of a response body says a disguised manifest is: HLS playlists start with
+ *  the literal `#EXTM3U`; DASH is XML, so `<MPD` follows a possible prolog. */
+export function manifestKind(prefix: string): 'hls' | 'dash' | null {
+  if (/^\s*#EXTM3U/.test(prefix)) return 'hls';
+  if (/<MPD[\s>]/i.test(prefix)) return 'dash';
   return null;
 }
 
