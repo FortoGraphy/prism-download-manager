@@ -75,7 +75,14 @@ impl Core {
                 }
             }
             if config.fetch_sizes && !files.is_empty() {
-                files = grabber::fetch_sizes(files, &config.user_agent, &config.cookies).await;
+                let start = url::Url::parse(config.start_url.trim()).ok();
+                files = grabber::fetch_sizes(
+                    files,
+                    &config.user_agent,
+                    &config.cookies,
+                    start.as_ref(),
+                )
+                .await;
             }
             stored.results = serde_json::json!({"files": files, "pages": pages, "running": false});
             stored.updated_at = now_ms();
@@ -126,10 +133,19 @@ impl Core {
         let config: GrabberConfig =
             serde_json::from_value(project.config.clone()).unwrap_or_default();
         let wanted: std::collections::HashSet<&String> = urls.iter().collect();
+        let start = url::Url::parse(config.start_url.trim()).ok();
         let entries = files
             .into_iter()
             .filter(|f| wanted.contains(&f.url))
             .map(|f| {
+                // Keep the site's cookie and HTTP auth on the site's own hosts.
+                let with_credentials = match (&start, url::Url::parse(&f.url).ok()) {
+                    (Some(s), Some(u)) => grabber::credentials_allowed(s, &u),
+                    _ => false,
+                };
+                let auth = with_credentials
+                    .then(|| config.login.as_ref().filter(|l| l.form_url.is_none()))
+                    .flatten();
                 // Mirror the site's folder structure below the chosen directory.
                 let dir = save_dir.as_ref().map(|base| {
                     if !keep_structure {
@@ -156,17 +172,10 @@ impl Core {
                     save_dir: dir,
                     referer: Some(f.referer),
                     size: f.size,
-                    cookies: (!config.cookies.is_empty()).then(|| config.cookies.clone()),
-                    username: config
-                        .login
-                        .as_ref()
-                        .filter(|l| l.form_url.is_none())
-                        .map(|l| l.username.clone()),
-                    password: config
-                        .login
-                        .as_ref()
-                        .filter(|l| l.form_url.is_none())
-                        .map(|l| l.password.clone()),
+                    cookies: (!config.cookies.is_empty() && with_credentials)
+                        .then(|| config.cookies.clone()),
+                    username: auth.map(|l| l.username.clone()),
+                    password: auth.map(|l| l.password.clone()),
                     grabber_project: Some(project_id.to_string()),
                     conflict: Some(crate::settings::ConflictAction::Rename),
                     ..Default::default()
