@@ -28,6 +28,7 @@ const common = {
   options_ui: { page: 'options.html', open_in_tab: true },
   host_permissions: ['<all_urls>'],
   content_scripts: [{ matches: ['<all_urls>'], js: ['content.js'], run_at: 'document_start', all_frames: true }],
+  web_accessible_resources: [{ resources: ['player-hook.js'], matches: ['<all_urls>'] }],
 };
 const basePermissions = ['downloads', 'nativeMessaging', 'cookies', 'storage', 'contextMenus', 'scripting', 'webRequest', 'webNavigation', 'alarms'];
 
@@ -52,6 +53,7 @@ const manifests = {
 const entries = {
   background: 'src/background/index.ts',
   content: 'src/content/index.ts',
+  'player-hook': 'src/content/player-hook.ts',
   popup: 'src/popup/popup.ts',
   options: 'src/options/options.ts',
 };
