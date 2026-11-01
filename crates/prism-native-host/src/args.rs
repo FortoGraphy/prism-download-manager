@@ -51,7 +51,7 @@ USAGE (normally started by the browser through native messaging):
   prism-native-host status     [--browsers all|...] [--manifest-dir <dir>] [--host-path <exe>]
   prism-native-host --version | --help
 
-Browsers: chrome, chromium, edge, brave, vivaldi, opera, chrome-for-testing, firefox, all.
+Browsers: chrome, chromium, edge, brave, vivaldi, opera, chrome-for-testing, firefox, zen, waterfox, all.
 `status` prints a JSON array of per-browser registration states.";
 
 fn is_subcommand(s: &str) -> bool {

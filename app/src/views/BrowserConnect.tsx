@@ -8,7 +8,7 @@ import { toast } from "../lib/ui";
 import { copyText } from "../lib/win";
 
 /** Browsers the guide offers, in display order (ids match `prism_native_host::Browser::id`). */
-const ORDER = ["chrome", "edge", "brave", "opera", "vivaldi", "helium", "chromium", "firefox", "zen"] as const;
+const ORDER = ["chrome", "edge", "brave", "opera", "vivaldi", "helium", "chromium", "firefox", "zen", "waterfox"] as const;
 const SHORT: Record<string, string> = {
   chrome: "Chrome",
   edge: "Edge",
@@ -19,6 +19,7 @@ const SHORT: Record<string, string> = {
   chromium: "Chromium",
   firefox: "Firefox",
   zen: "Zen",
+  waterfox: "Waterfox",
 };
 const PAGE: Record<string, string> = {
   chrome: "chrome://extensions",
@@ -30,9 +31,10 @@ const PAGE: Record<string, string> = {
   chromium: "chrome://extensions",
   firefox: "about:debugging#/runtime/this-firefox",
   zen: "about:debugging#/runtime/this-firefox",
+  waterfox: "about:debugging#/runtime/this-firefox",
 };
 /** Firefox-based browsers: Firefox's extension, from Firefox Add-ons. */
-const FIREFOX_FAMILY = ["firefox", "zen"];
+const FIREFOX_FAMILY = ["firefox", "zen", "waterfox"];
 
 /** Prism's extension in the Chrome Web Store: Chrome, Edge, Brave, Opera, Vivaldi, Helium and Chromium install it from there. */
 export const EXTENSION_STORE_URL = "https://chromewebstore.google.com/detail/prism-download-manager/mmcdeiglkbfbicdjboocmhehodogilfl";

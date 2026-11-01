@@ -136,14 +136,14 @@ pub fn open_browser(browser: &str) -> Result<(), String> {
 /// Prism's extension in the Chrome Web Store (Chrome, Edge, Brave, Opera, Vivaldi, Chromium).
 pub const EXTENSION_STORE_URL: &str = "https://chromewebstore.google.com/detail/prism-download-manager/mmcdeiglkbfbicdjboocmhehodogilfl";
 
-/// Prism's add-on in Firefox Add-ons (Firefox, Zen).
+/// Prism's add-on in Firefox Add-ons (Firefox, Zen, Waterfox).
 pub const FIREFOX_ADDON_URL: &str =
     "https://addons.mozilla.org/firefox/addon/prism-download-manager/";
 
-/// Where `browser` gets Prism's extension: Firefox Add-ons for Firefox and Zen, else the Chrome
+/// Where `browser` gets Prism's extension: Firefox Add-ons for Firefox, Zen and Waterfox, else the Chrome
 /// Web Store.
 pub fn store_url(browser: &str) -> &'static str {
-    if matches!(browser, "firefox" | "zen") {
+    if matches!(browser, "firefox" | "zen" | "waterfox") {
         FIREFOX_ADDON_URL
     } else {
         EXTENSION_STORE_URL
@@ -191,6 +191,8 @@ fn launch(browser: &str, url: Option<&str>) -> std::io::Result<()> {
         "vivaldi" => app_path("vivaldi.exe"),
         "opera" => app_path("opera.exe"),
         "firefox" => app_path("firefox.exe"),
+        "waterfox" => app_path("waterfox.exe")
+            .or_else(|| under("ProgramFiles", r"Waterfox\waterfox.exe")),
         _ => app_path("chrome.exe"),
     }
     .ok_or_else(|| std::io::Error::other(format!("{browser} is not installed")))?;
@@ -210,6 +212,7 @@ fn launch(browser: &str, url: Option<&str>) -> std::io::Result<()> {
         "chromium" => &["Chromium"],
         "helium" => &["Helium"],
         "firefox" => &["Firefox"],
+        "waterfox" => &["Waterfox"],
         // Zen.app (older releases: "Zen Browser.app").
         "zen" => &["Zen", "Zen Browser"],
         _ => &["Google Chrome"],
@@ -236,6 +239,7 @@ fn launch(browser: &str, url: Option<&str>) -> std::io::Result<()> {
         "chromium" => &["chromium", "chromium-browser"],
         "helium" => &["helium", "helium-browser"],
         "firefox" => &["firefox"],
+        "waterfox" => &["waterfox", "waterfox-g"],
         "zen" => &["zen-browser", "zen"],
         _ => &["google-chrome", "google-chrome-stable"],
     };
@@ -302,6 +306,7 @@ mod tests {
     fn firefox_and_zen_get_firefox_add_ons() {
         assert_eq!(store_url("firefox"), FIREFOX_ADDON_URL);
         assert_eq!(store_url("zen"), FIREFOX_ADDON_URL);
+        assert_eq!(store_url("waterfox"), FIREFOX_ADDON_URL);
         for b in [
             "chrome", "edge", "brave", "opera", "vivaldi", "helium", "chromium",
         ] {
