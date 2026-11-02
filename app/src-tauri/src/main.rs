@@ -90,6 +90,7 @@ fn main() {
             let settings = core.settings();
             if let Some(main) = app.get_webview_window("main") {
                 apply_window_material(&main, &settings);
+                windows::restore_main(&handle, &main);
                 let show = !background && !settings.general.start_minimized;
                 if show && windows::SHOW_ON_CREATE {
                     // macOS: WKWebView doesn't paint into a hidden window. Linux (#30): a hidden

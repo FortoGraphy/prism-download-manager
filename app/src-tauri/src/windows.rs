@@ -310,6 +310,7 @@ pub fn show_main(app: &AppHandle) {
         // painting anything — invisible, though the desktop shows it as open (KDE Plasma). A new
         // window always paints, so a hidden main window is replaced instead of shown again.
         Some(w) if cfg!(target_os = "linux") && !w.is_visible().unwrap_or(true) => {
+            remember_main(&w);
             let _ = w.destroy();
             create_main(app);
         }
@@ -320,6 +321,140 @@ pub fn show_main(app: &AppHandle) {
         }
         None => create_main(app),
     }
+}
+
+/// The main window's rectangle in physical pixels.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Rect {
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+}
+
+fn rect_of(area: &tauri::PhysicalRect<i32, u32>) -> Rect {
+    Rect {
+        x: area.position.x,
+        y: area.position.y,
+        width: area.size.width,
+        height: area.size.height,
+    }
+}
+
+/// Shrinks `window` until it fits `work` and moves it inside, so its bottom edge cannot end up
+/// under the taskbar, nor its title bar above the screen, when the saved size or position no
+/// longer matches the display.
+fn fit_into_work_area(window: Rect, work: Rect) -> Rect {
+    let width = window.width.min(work.width);
+    let height = window.height.min(work.height);
+    let right = work.x + (work.width - width) as i32;
+    let bottom = work.y + (work.height - height) as i32;
+    Rect {
+        x: window.x.clamp(work.x, right.max(work.x)),
+        y: window.y.clamp(work.y, bottom.max(work.y)),
+        width,
+        height,
+    }
+}
+
+/// Where the main window was just before it was destroyed, so the window created in its place
+/// comes back at that size instead of from the restore that inflates it (see `restore_main`).
+static MAIN_RECT: Mutex<Option<Rect>> = Mutex::new(None);
+
+/// The window-state plugin restores the saved inner size before the window's own frame is in
+/// place: `set_size` then counts the decorated frame (39 px tall on Windows 11) where the window
+/// ends up with a shadow-only one (9 px), so the main window came back 30 px taller on every
+/// launch and its bottom edge drifted under the taskbar. The frame has settled by now, so the
+/// saved rectangle is applied again, pulled inside the monitor's work area. A maximized window is
+/// left alone, since `set_size` would unmaximize it.
+pub fn restore_main(app: &AppHandle, main: &WebviewWindow) {
+    if main.is_maximized().unwrap_or(false) || main.is_fullscreen().unwrap_or(false) {
+        return;
+    }
+    let saved = MAIN_RECT
+        .lock()
+        .unwrap()
+        .take()
+        .or_else(|| saved_main_rect(app));
+    let Some(saved) = saved else { return };
+    let Some(work) = work_area_around(main, saved) else {
+        return;
+    };
+    // The saved position is the window's outer corner, but the shadow is drawn around the content:
+    // fitting the outer rectangle would still leave the bottom edge a pixel or two under the
+    // taskbar, so the content rectangle is what gets kept inside the work area.
+    let (left, top) = content_offset(main);
+    let content = Rect {
+        x: saved.x + left,
+        y: saved.y + top,
+        ..saved
+    };
+    let fitted = fit_into_work_area(content, work);
+    let _ = main.set_position(PhysicalPosition::new(fitted.x - left, fitted.y - top));
+    let _ = main.set_size(tauri::PhysicalSize::new(fitted.width, fitted.height));
+}
+
+/// How far the window's content starts inside its outer rectangle, in physical pixels.
+fn content_offset(main: &WebviewWindow) -> (i32, i32) {
+    let (Ok(outer), Ok(inner)) = (main.outer_position(), main.inner_position()) else {
+        return (0, 0);
+    };
+    (inner.x - outer.x, inner.y - outer.y)
+}
+
+/// Remembers the main window before it is destroyed, so it can be brought back as it was.
+fn remember_main(window: &WebviewWindow) {
+    if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
+        return;
+    }
+    let (Ok(position), Ok(size)) = (window.outer_position(), window.inner_size()) else {
+        return;
+    };
+    *MAIN_RECT.lock().unwrap() = Some(Rect {
+        x: position.x,
+        y: position.y,
+        width: size.width,
+        height: size.height,
+    });
+}
+
+/// The size and position the plugin last saved. Its cache is private, so they are read from the
+/// state file it writes (its own public file name, in its own format).
+fn saved_main_rect(app: &AppHandle) -> Option<Rect> {
+    let path = app
+        .path()
+        .app_config_dir()
+        .ok()?
+        .join(tauri_plugin_window_state::DEFAULT_FILENAME);
+    let text = std::fs::read_to_string(path).ok()?;
+    let state: serde_json::Value = serde_json::from_str(&text).ok()?;
+    let main = state.get("main")?;
+    let number = |key: &str| main.get(key).and_then(|value| value.as_i64());
+    let (width, height) = (number("width")?, number("height")?);
+    if width <= 0 || height <= 0 {
+        return None;
+    }
+    Some(Rect {
+        x: number("x")? as i32,
+        y: number("y")? as i32,
+        width: width as u32,
+        height: height as u32,
+    })
+}
+
+/// The work area of the monitor the saved rectangle was on (the layout may have changed since:
+/// another monitor unplugged, the taskbar moved).
+fn work_area_around(main: &WebviewWindow, rect: Rect) -> Option<Rect> {
+    main.available_monitors()
+        .ok()?
+        .iter()
+        .map(|monitor| rect_of(monitor.work_area()))
+        .find(|work| {
+            rect.x < work.x + work.width as i32
+                && rect.x + rect.width as i32 > work.x
+                && rect.y < work.y + work.height as i32
+                && rect.y + rect.height as i32 > work.y
+        })
 }
 
 /// Creates the main window again from its configuration (it was closed while in the tray).
@@ -353,6 +488,7 @@ fn create_main(app: &AppHandle) {
             Ok(window) => {
                 tracing::info!("opened the main window again");
                 crate::apply_window_material(&window, &app.state::<Core>().settings());
+                restore_main(&app, &window);
                 // macOS and Linux show it now (see `SHOW_ON_CREATE`).
                 if SHOW_ON_CREATE {
                     let _ = window.show();
@@ -422,10 +558,94 @@ pub fn release_main_later(app: &AppHandle) {
                 && !w.is_visible().unwrap_or(true)
             {
                 tracing::info!("closed the hidden main window to free its memory");
+                remember_main(&w);
                 let _ = w.destroy();
             }
         });
     }
     #[cfg(target_os = "macos")]
     let _ = app;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Rect, fit_into_work_area};
+
+    fn work() -> Rect {
+        Rect {
+            x: 0,
+            y: 0,
+            width: 2560,
+            height: 1392,
+        }
+    }
+
+    #[test]
+    fn a_window_that_fits_is_left_alone() {
+        let window = Rect {
+            x: 100,
+            y: 100,
+            width: 1320,
+            height: 1000,
+        };
+        assert_eq!(fit_into_work_area(window, work()), window);
+    }
+
+    #[test]
+    fn a_saved_window_is_pulled_inside_the_work_area() {
+        // Taller than the work area: it is shrunk, and its bottom edge lands on the taskbar line.
+        assert_eq!(
+            fit_into_work_area(
+                Rect {
+                    x: -2167,
+                    y: 0,
+                    width: 1758,
+                    height: 1480
+                },
+                work()
+            ),
+            Rect {
+                x: 0,
+                y: 0,
+                width: 1758,
+                height: 1392
+            }
+        );
+        // Fits, but was last seen hanging under the taskbar: it is moved up.
+        assert_eq!(
+            fit_into_work_area(
+                Rect {
+                    x: 100,
+                    y: 900,
+                    width: 1320,
+                    height: 1000
+                },
+                work()
+            ),
+            Rect {
+                x: 100,
+                y: 392,
+                width: 1320,
+                height: 1000
+            }
+        );
+        // Wider than the work area, and to the left of it.
+        assert_eq!(
+            fit_into_work_area(
+                Rect {
+                    x: -500,
+                    y: -40,
+                    width: 3000,
+                    height: 700
+                },
+                work()
+            ),
+            Rect {
+                x: 0,
+                y: 0,
+                width: 2560,
+                height: 700
+            }
+        );
+    }
 }
