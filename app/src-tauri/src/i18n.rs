@@ -130,6 +130,18 @@ const TEXTS: &[[&str; 10]] = &[
         "拖放区",
     ],
     [
+        "Hide tray icon",
+        "Skrýt ikonu",
+        "Symbol ausblenden",
+        "Ocultar el icono",
+        "Masquer l’icône",
+        "Nascondi l’icona",
+        "Sembunyikan ikon",
+        "إخفاء الأيقونة",
+        "Simgeyi gizle",
+        "隐藏托盘图标",
+    ],
+    [
         "Quit Prism",
         "Ukončit Prism",
         "Prism beenden",

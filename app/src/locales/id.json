@@ -484,6 +484,8 @@
   "Close button hides to the tray": "Tombol Tutup menyembunyikan Prism ke baki sistem",
   "Hide the Dock icon": "Sembunyikan ikon Dock",
   "While Prism waits in the menu bar. The icon is back while its window is open": "Saat Prism menunggu di bilah menu. Ikonnya kembali saat jendelanya terbuka",
+  "Hide the tray icon": "Sembunyikan ikon baki sistem",
+  "No tray icon; start Prism again to open its window.": "Tanpa ikon baki sistem; jalankan Prism lagi untuk membuka jendelanya.",
   "Downloads keep running; quit from the tray menu": "Unduhan tetap berjalan; keluar lewat menu baki sistem",
   "Windows": "Jendela",
   "Show the Download File dialog": "Tampilkan dialog Unduh file",

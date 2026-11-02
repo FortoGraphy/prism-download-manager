@@ -518,6 +518,8 @@
   "Close button hides to the tray": "Tlačítko Zavřít skryje okno do oznamovací oblasti",
   "Hide the Dock icon": "Skrýt ikonu v Docku",
   "While Prism waits in the menu bar. The icon is back while its window is open": "Když Prism čeká v řádku nabídek. Ikona se vrátí, když je otevřené jeho okno",
+  "Hide the tray icon": "Skrýt ikonu v oznamovací oblasti",
+  "No tray icon; start Prism again to open its window.": "Bez ikony v oznamovací oblasti; okno otevřete opětovným spuštěním Prismu.",
   "Downloads keep running; quit from the tray menu": "Stahování poběží dál; ukončit lze z nabídky v oznamovací oblasti",
   "Windows": "Okna",
   "Show the Download File dialog": "Zobrazovat dialog Stáhnout soubor",

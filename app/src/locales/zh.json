@@ -479,6 +479,8 @@
   "Close button hides to the tray": "点击关闭按钮时隐藏到托盘",
   "Hide the Dock icon": "隐藏程序坞图标",
   "While Prism waits in the menu bar. The icon is back while its window is open": "当 Prism 在菜单栏中待命时。打开其窗口时图标会重新出现",
+  "Hide the tray icon": "隐藏托盘图标",
+  "No tray icon; start Prism again to open its window.": "托盘中没有图标；再次启动 Prism 即可打开窗口。",
   "Downloads keep running; quit from the tray menu": "下载会继续进行；可从托盘菜单退出",
   "Windows": "窗口",
   "Show the Download File dialog": "显示“下载文件”对话框",

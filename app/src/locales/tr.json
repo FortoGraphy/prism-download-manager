@@ -492,6 +492,8 @@
   "Close button hides to the tray": "Kapat düğmesi sistem tepsisine gizler",
   "Hide the Dock icon": "Dock simgesini gizle",
   "While Prism waits in the menu bar. The icon is back while its window is open": "Prism menü çubuğunda beklerken. Penceresi açıkken simge geri gelir",
+  "Hide the tray icon": "Sistem tepsisindeki simgeyi gizle",
+  "No tray icon; start Prism again to open its window.": "Tepside simge yok; pencereyi açmak için Prism'i yeniden başlatın.",
   "Downloads keep running; quit from the tray menu": "İndirmeler sürer; çıkmak için tepsi menüsünü kullanın",
   "Windows": "Pencereler",
   "Show the Download File dialog": "“Dosya indir” penceresini göster",

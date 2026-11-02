@@ -335,6 +335,7 @@ pub fn apply_shell_settings(app: &AppHandle, settings: &Settings) {
     }
     windows::update_dock(app, windows::main_is_open(app));
     tray::refresh(app);
+    tray::sync_visibility(app, settings.general.hide_tray_icon);
 }
 
 /// Whether the OS puts a material behind the window: Mica on Windows 11, vibrancy on macOS. On
