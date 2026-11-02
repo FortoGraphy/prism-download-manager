@@ -505,6 +505,8 @@
   "Close button hides to the tray": "El botón Cerrar oculta Prism en la bandeja del sistema",
   "Hide the Dock icon": "Ocultar el icono del Dock",
   "While Prism waits in the menu bar. The icon is back while its window is open": "Mientras Prism espera en la barra de menús. El icono vuelve cuando su ventana está abierta",
+  "Hide the tray icon": "Ocultar el icono de la bandeja",
+  "No tray icon; start Prism again to open its window.": "Sin icono en la bandeja; vuelve a iniciar Prism para abrir su ventana.",
   "Downloads keep running; quit from the tray menu": "Las descargas siguen en curso; para salir, usa el menú de la bandeja",
   "Windows": "Ventanas",
   "Show the Download File dialog": "Mostrar el diálogo Descargar archivo",

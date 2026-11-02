@@ -181,6 +181,8 @@ export interface Settings {
     launchAtStartup: boolean;
     startMinimized: boolean;
     closeToTray: boolean;
+    /** No icon in the notification area; starting Prism again brings the window back. */
+    hideTrayIcon: boolean;
     showCaptureDialog: boolean;
     showProgressWindow: boolean;
     showCompletionDialog: boolean;

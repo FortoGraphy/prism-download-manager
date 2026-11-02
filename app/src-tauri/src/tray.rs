@@ -47,6 +47,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     )?;
     let mini = item("mini", "Mini window")?;
     let drop = item("dropzone", "Drop zone")?;
+    let hide = item("hide_tray", "Hide tray icon")?;
     let quit = item("quit", "Quit Prism")?;
     let sep = || PredefinedMenuItem::separator(app);
     let menu = Menu::with_items(
@@ -62,6 +63,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
             &mini,
             &drop,
             &sep()?,
+            &hide,
             &quit,
         ],
     )?;
@@ -74,11 +76,12 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
             (resume.clone(), "Resume all"),
             (mini.clone(), "Mini window"),
             (drop.clone(), "Drop zone"),
+            (hide.clone(), "Hide tray icon"),
             (quit.clone(), "Quit Prism"),
         ],
     });
 
-    TrayIconBuilder::with_id(TRAY_ID)
+    let tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(Image::from_bytes(ICON_IDLE)?)
         .icon_as_template(cfg!(target_os = "macos"))
         .tooltip("Prism")
@@ -103,6 +106,17 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
                 "dropzone" => {
                     let _ = crate::windows::toggle_dropzone(&app);
                 }
+                "hide_tray" => {
+                    let _ = app.state::<Core>().update_settings(&serde_json::json!({
+                        "general": { "hideTrayIcon": true }
+                    }));
+                    // The menu that offered this is gone now: open the window so Prism is not left
+                    // running with nothing on screen to click.
+                    if !crate::windows::main_is_open(&app) {
+                        crate::windows::show_main(&app);
+                    }
+                    sync_visibility(&app, true);
+                }
                 "quit" => {
                     tauri::async_runtime::spawn(async move { crate::quit(&app).await });
                 }
@@ -119,7 +133,18 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
                 crate::windows::show_main(tray.app_handle());
             }
         })
-        .build(app)
+        .build(app)?;
+    if app.state::<Core>().settings().general.hide_tray_icon {
+        sync_visibility(app, true);
+    }
+    Ok(tray)
+}
+
+/// Show or hide the tray icon ("Hide the tray icon" in the settings or in the tray menu).
+pub fn sync_visibility(app: &AppHandle, hidden: bool) {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_visible(!hidden);
+    }
 }
 
 /// Sync the limiter check mark with settings.

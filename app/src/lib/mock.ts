@@ -166,7 +166,7 @@ function demoParam(name: string): string | null {
 }
 
 const settings: Settings = {
-  general: { launchAtStartup: true, startMinimized: false, closeToTray: true, showCaptureDialog: true, showProgressWindow: false, showCompletionDialog: true, notifications: true, confirmDelete: true, useTrash: true, checkUpdates: true, language: "", removeDeletedFiles: false, hideDockIcon: false },
+  general: { launchAtStartup: true, startMinimized: false, closeToTray: true, hideTrayIcon: false, showCaptureDialog: true, showProgressWindow: false, showCompletionDialog: true, notifications: true, confirmDelete: true, useTrash: true, checkUpdates: true, language: "", removeDeletedFiles: false, hideDockIcon: false },
   appearance: { theme: (demoParam("theme") as "dark" | "light" | null) ?? "system", accent: "prism", density: demoParam("density") === "compact" ? "compact" : "comfortable", motion: "system", reduceTransparency: false, windowMaterial: false, visibleColumns: ["name", "size", "status", "progress", "speed", "eta", "added"], compactView: demoParam("compact") === "1" },
   downloads: { defaultDir: "C:\\Users\\you\\Downloads", useCategoryFolders: true, defaultConnections: 8, maxConnections: 32, conflict: "ask", maxRetries: 20, speedLimit: 5 * MB, speedLimiterEnabled: false, verifyChecksums: true, autoStart: true },
   connection: { userAgent: "", connectTimeoutSecs: 15, readTimeoutSecs: 30, httpVersion: "http1", maxConnectionsPerHost: 0 },

@@ -505,6 +505,8 @@
   "Close button hides to the tray": "Il pulsante Chiudi riduce nell’area di notifica",
   "Hide the Dock icon": "Nascondi l’icona nel Dock",
   "While Prism waits in the menu bar. The icon is back while its window is open": "Mentre Prism attende nella barra dei menu. L’icona torna quando la sua finestra è aperta",
+  "Hide the tray icon": "Nascondi l’icona dell’area di notifica",
+  "No tray icon; start Prism again to open its window.": "Nessuna icona nell'area di notifica; avvia di nuovo Prism per aprire la finestra.",
   "Downloads keep running; quit from the tray menu": "I download continuano; per uscire usa il menu dell’area di notifica",
   "Windows": "Finestre",
   "Show the Download File dialog": "Mostra la finestra Scarica file",

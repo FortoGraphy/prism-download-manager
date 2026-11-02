@@ -492,6 +492,8 @@
   "Close button hides to the tray": "Schließen minimiert in den Infobereich",
   "Hide the Dock icon": "Dock-Symbol ausblenden",
   "While Prism waits in the menu bar. The icon is back while its window is open": "Solange Prism in der Menüleiste wartet. Das Symbol kommt zurück, wenn sein Fenster geöffnet ist",
+  "Hide the tray icon": "Infobereichssymbol ausblenden",
+  "No tray icon; start Prism again to open its window.": "Kein Symbol im Infobereich; starte Prism erneut, um sein Fenster zu öffnen.",
   "Downloads keep running; quit from the tray menu": "Downloads laufen weiter; Beenden über das Menü im Infobereich",
   "Windows": "Fenster",
   "Show the Download File dialog": "Dialog „Datei herunterladen“ anzeigen",

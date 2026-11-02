@@ -554,6 +554,8 @@
   "Close button hides to the tray": "زر الإغلاق يُخفي النافذة في منطقة الإعلام",
   "Hide the Dock icon": "إخفاء أيقونة Dock",
   "While Prism waits in the menu bar. The icon is back while its window is open": "أثناء انتظار Prism في شريط القوائم. تعود الأيقونة عندما تكون نافذته مفتوحة",
+  "Hide the tray icon": "إخفاء أيقونة منطقة الإعلام",
+  "No tray icon; start Prism again to open its window.": "لا أيقونة في منطقة الإعلام؛ شغّل Prism مجددًا لفتح نافذته.",
   "Downloads keep running; quit from the tray menu": "تستمر التنزيلات في العمل؛ للإنهاء استخدم قائمة منطقة الإعلام",
   "Windows": "النوافذ",
   "Show the Download File dialog": "إظهار نافذة «تنزيل ملف»",
