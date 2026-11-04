@@ -370,11 +370,12 @@ fn windows_build() -> Option<u32> {
 /// Dark or light Mica behind the window. With the theme following the system, it follows what
 /// Windows uses (#21: a light Windows used to get the dark Mica under the light theme).
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
-fn mica_dark(theme: prism_core::settings::Theme, system: Option<tauri::Theme>) -> bool {
+fn mica_dark(theme: &prism_core::settings::Theme, system: Option<tauri::Theme>) -> bool {
     match theme {
         prism_core::settings::Theme::Light => false,
-        prism_core::settings::Theme::Dark => true,
+        prism_core::settings::Theme::Dark | prism_core::settings::Theme::Dimmed => true,
         prism_core::settings::Theme::System => !matches!(system, Some(tauri::Theme::Light)),
+        prism_core::settings::Theme::Custom(_) => true,
     }
 }
 
@@ -398,7 +399,7 @@ pub(crate) fn apply_window_material(window: &tauri::WebviewWindow, settings: &Se
             }
         }
         if settings.appearance.window_material {
-            let dark = mica_dark(settings.appearance.theme, window.theme().ok());
+            let dark = mica_dark(&settings.appearance.theme, window.theme().ok());
             let _ = window_vibrancy::apply_mica(window, Some(dark));
         } else {
             let _ = window_vibrancy::clear_mica(window);
@@ -775,12 +776,14 @@ mod tests {
 
     #[test]
     fn mica_follows_the_theme() {
-        assert!(!mica_dark(Theme::Light, Some(tauri::Theme::Dark)));
-        assert!(mica_dark(Theme::Dark, Some(tauri::Theme::Light)));
+        assert!(!mica_dark(&Theme::Light, Some(tauri::Theme::Dark)));
+        assert!(mica_dark(&Theme::Dark, Some(tauri::Theme::Light)));
+        assert!(mica_dark(&Theme::Dimmed, Some(tauri::Theme::Light)));
+        assert!(mica_dark(&Theme::Custom("nord".into()), Some(tauri::Theme::Light)));
         // #21: following a light Windows gives the light Mica (it was always dark).
-        assert!(!mica_dark(Theme::System, Some(tauri::Theme::Light)));
-        assert!(mica_dark(Theme::System, Some(tauri::Theme::Dark)));
-        assert!(mica_dark(Theme::System, None), "unknown: dark, as before");
+        assert!(!mica_dark(&Theme::System, Some(tauri::Theme::Light)));
+        assert!(mica_dark(&Theme::System, Some(tauri::Theme::Dark)));
+        assert!(mica_dark(&Theme::System, None), "unknown: dark, as before");
     }
 
     fn args(list: &[&str]) -> Vec<String> {

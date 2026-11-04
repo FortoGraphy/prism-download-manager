@@ -90,5 +90,6 @@
   "{count} downloads and their files will be deleted. The files can't be restored.": {
     "one": "{count} download and its file will be deleted. The file can't be restored.",
     "other": "{count} downloads and their files will be deleted. The files can't be restored."
-  }
+  },
+  "Dark Dimmed": "Dark Dimmed"
 }
