@@ -1152,5 +1152,6 @@
   "What's inside a ZIP": "Was in einem ZIP steckt",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "Das Fenster „Datei herunterladen“ zeigt die Dateien eines ZIP schon vor dem Download und kann auch nur eine davon herunterladen.",
   "Finished means finished": "Fertig heißt fertig",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Ein Download, der bei geöffnetem Fenster fertig wurde, sah manchmal noch so aus, als würde er laufen."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Ein Download, der bei geöffnetem Fenster fertig wurde, sah manchmal noch so aus, als würde er laufen.",
+  "Dark Dimmed": "Dunkel gedimmt"
 }

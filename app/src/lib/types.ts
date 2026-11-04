@@ -173,7 +173,7 @@ export type GrabberEvent =
   | { type: "pageError"; url: string; error: string }
   | { type: "finished"; pages: number; files: number; cancelled: boolean };
 
-export type Theme = "system" | "dark" | "light";
+export type Theme = "system" | "dark" | "dimmed" | "light" | string;
 export type ConflictAction = "ask" | "rename" | "overwrite";
 
 export interface Settings {

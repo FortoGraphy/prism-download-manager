@@ -311,6 +311,115 @@
 }
 
 /* --------------------------------------------------------------------------
+   DARK DIMMED theme
+   "Charcoal / Deep Slate": Softer, muted dark palette with reduced eye strain.
+   -------------------------------------------------------------------------- */
+[data-theme="dimmed"] {
+  color-scheme: dark;
+
+  --bg-canvas: #161b22;
+  --ambient-1: rgb(var(--accent-rgb) / 0.28);
+  --ambient-2: rgb(56 189 248 / 0.14);
+  --ambient-3: rgb(244 114 182 / 0.07);
+  --bg-ambient:
+    radial-gradient(60% 55% at 0% 0%, var(--ambient-1) 0%, transparent 70%),
+    radial-gradient(45% 50% at 0% 100%, var(--ambient-2) 0%, transparent 70%),
+    radial-gradient(40% 40% at 55% 110%, var(--ambient-3) 0%, transparent 70%);
+
+  /* Solid surfaces, ordered by elevation */
+  --surface-sunken: #1a1f27;
+  --surface-base: #22272e;
+  --surface-raised: #2d333b;
+  --surface-overlay: #373e47;
+  --surface-inverse: #f0f3f6;
+
+  /* State layers */
+  --state-hover: rgb(255 255 255 / 0.05);
+  --state-pressed: rgb(255 255 255 / 0.085);
+  --state-selected: rgb(var(--accent-rgb) / 0.16);
+  --state-selected-hover: rgb(var(--accent-rgb) / 0.22);
+  --state-selected-border: rgb(var(--accent-rgb) / 0.36);
+  --state-disabled-opacity: 0.42;
+
+  /* Text */
+  --text-primary: #adbac7;
+  --text-secondary: #768390;
+  --text-tertiary: #636e7b;
+  --text-disabled: #444c56;
+  --text-inverse: #1c2128;
+  --text-link: var(--accent);
+
+  /* Lines */
+  --border-subtle: rgb(205 217 229 / 0.09);
+  --border-default: rgb(205 217 229 / 0.15);
+  --border-strong: rgb(205 217 229 / 0.24);
+  --border-focus: var(--accent);
+  --divider: rgb(205 217 229 / 0.08);
+
+  /* Controls */
+  --control-bg: rgb(205 217 229 / 0.08);
+  --control-bg-hover: rgb(205 217 229 / 0.12);
+  --control-bg-pressed: rgb(205 217 229 / 0.16);
+  --control-border: rgb(205 217 229 / 0.12);
+  --input-bg: rgb(22 27 34 / 0.65);
+  --input-border: rgb(205 217 229 / 0.14);
+  --track-bg: rgb(205 217 229 / 0.10);
+  --switch-off: rgb(205 217 229 / 0.20);
+  --scrollbar-thumb: rgb(205 217 229 / 0.18);
+  --scrollbar-thumb-hover: rgb(205 217 229 / 0.28);
+  --scrim: rgb(15 18 24 / 0.60);
+
+  /* Semantic status colours */
+  --success: #57ab5a;  --success-rgb: 87 171 90;
+  --warning: #e3b341;  --warning-rgb: 227 179 65;
+  --danger: #f47067;   --danger-rgb: 244 112 103;
+  --info: #539bf5;     --info-rgb: 83 155 245;
+  --neutral: #768390;  --neutral-rgb: 118 131 144;
+
+  /* Download status → colour mapping */
+  --status-downloading: var(--accent);
+  --status-completed: var(--success);
+  --status-paused: var(--warning);
+  --status-error: var(--danger);
+  --status-queued: var(--neutral);
+  --status-scheduled: var(--info);
+
+  /* File-type tints */
+  --type-video: #9b8bf8;
+  --type-audio: #f4708c;
+  --type-image: #38c89b;
+  --type-archive: #e6b445;
+  --type-document: #539bf5;
+  --type-program: #768390;
+  --type-other: #636e7b;
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.25);
+  --shadow-2: 0 2px 4px rgb(0 0 0 / 0.22), 0 8px 20px -6px rgb(0 0 0 / 0.35);
+  --shadow-3: 0 4px 10px rgb(0 0 0 / 0.22), 0 18px 40px -10px rgb(0 0 0 / 0.45);
+  --shadow-4: 0 8px 20px rgb(0 0 0 / 0.25), 0 32px 80px -16px rgb(0 0 0 / 0.55);
+  --shadow-sheet: 0 0 0 1px rgb(205 217 229 / 0.08), 0 10px 30px -10px rgb(0 0 0 / 0.45);
+  --highlight-top: inset 0 1px 0 rgb(255 255 255 / 0.07);
+
+  /* Glass materials */
+  --glass-tint: rgb(34 39 46 / 0.68);
+  --glass-tint-strong: rgb(45 51 59 / 0.86);
+  --glass-tint-subtle: rgb(28 33 40 / 0.46);
+  --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.05) 0%, rgb(255 255 255 / 0.01) 38%, rgb(255 255 255 / 0) 100%);
+  --glass-rim: linear-gradient(165deg,
+      rgb(255 255 255 / 0.22) 0%,
+      rgb(255 255 255 / 0.08) 22%,
+      rgb(255 255 255 / 0.02) 55%,
+      rgb(255 255 255 / 0.06) 85%,
+      rgb(255 255 255 / 0.12) 100%);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px rgb(255 255 255 / 0.02);
+  --glass-shadow: 0 1px 1px rgb(0 0 0 / 0.20), 0 16px 48px -12px rgb(0 0 0 / 0.45);
+  --glass-caustic: radial-gradient(120% 60% at 15% -10%, rgb(255 255 255 / 0.06) 0%, transparent 55%);
+  --glass-fallback: rgb(34 39 46 / 0.98);
+  --glass-fallback-strong: rgb(45 51 59 / 0.99);
+}
+
+/* --------------------------------------------------------------------------
    3. LIGHT theme
    "Porcelain": cool off-white sheets, frosted milk glass, ink typography.
    -------------------------------------------------------------------------- */

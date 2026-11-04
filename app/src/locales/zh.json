@@ -1129,5 +1129,6 @@
   "What's inside a ZIP": "查看 ZIP 内容",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "“下载文件”窗口会在下载前显示 ZIP 中的文件，并且可以只下载其中一个。",
   "Finished means finished": "完成就是完成",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "修复了窗口打开时已完成的下载有时仍显示为正在下载的问题。"
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "修复了窗口打开时已完成的下载有时仍显示为正在下载的问题。",
+  "Dark Dimmed": "暗淡深色"
 }

@@ -17,6 +17,20 @@ import type { Settings } from "../../lib/types";
 import { attempt, toast, useUi } from "../../lib/ui";
 import { pickFile, pickFolder, pickSavePath } from "../../lib/win";
 import { scheduleSummary } from "./SchedulerSheet";
+import {
+  BASE_DARK_COLORS,
+  BASE_DIMMED_COLORS,
+  BASE_LIGHT_COLORS,
+  createNewCustomTheme,
+  deleteUserTheme,
+  getUserThemes,
+  hexToRgbTriplet,
+  saveUserTheme,
+  THEME_PRESETS,
+  type CustomTheme,
+} from "../../lib/customThemes";
+
+const str = (s: string) => s;
 
 export const SECTIONS: { id: string; label: string; icon: IconName; group?: boolean }[] = [
   { id: "general", label: tk("General"), icon: "settings" },
@@ -78,10 +92,15 @@ export function SettingsSheet({ section }: { section?: string }) {
   );
 }
 
-function Group({ title, children }: { title?: string; children: ReactNode }) {
+function Group({ title, action, children }: { title?: string; action?: ReactNode; children: ReactNode }) {
   return (
     <div className="group">
-      {title && <div className="group__t">{title}</div>}
+      {title && (
+        <div className="group__hdr">
+          <div className="group__t">{title}</div>
+          {action}
+        </div>
+      )}
       <div className="card">{children}</div>
     </div>
   );
@@ -407,36 +426,266 @@ const ACCENTS = [
 
 function Appearance({ s }: { s: Settings }) {
   const light = document.documentElement.dataset.theme === "light";
+  const currentTheme = s.appearance.theme || "system";
+  const [userThemes, setUserThemes] = useState(() => getUserThemes());
+  const [editorTarget, setEditorTarget] = useState<{ open: boolean; theme?: CustomTheme } | null>(null);
+
+  useEffect(() => {
+    const handler = () => setUserThemes(getUserThemes());
+    window.addEventListener("prism:themes-changed", handler);
+    return () => window.removeEventListener("prism:themes-changed", handler);
+  }, []);
+
   const themes = [
-    ["light", t("Light"), "pv-light"],
-    ["dark", t("Dark"), "pv-dark"],
-    ["system", t("Match system"), "pv-sys"],
+    ["dark", t("Dark"), "Obsidian", "pv-dark"],
+    ["dimmed", t("Dark Dimmed"), "Deep slate", "pv-dimmed"],
+    ["light", t("Light"), "Porcelain", "pv-light"],
+    ["system", t("Match system"), "Auto follow", "pv-sys"],
   ] as const;
+
   return (
     <>
       <p className="lead">{t("Changes apply instantly. Prism follows your system theme unless you pick one.")}</p>
       <Group title={t("Theme")}>
         <div className="themes">
-          {themes.map(([v, label, cls]) => (
-            <button key={v} type="button" className={`tcard${s.appearance.theme === v ? " on" : ""}`} aria-pressed={s.appearance.theme === v} onClick={() => save({ appearance: { theme: v } })}>
-              <span className={`tprev ${cls}`}>
-                <span className="sb">
-                  <i />
-                  <i />
-                  <i />
+          {themes.map(([v, label, sub, cls]) => {
+            const on = currentTheme === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                className={`tcard${on ? " on" : ""}`}
+                aria-pressed={on}
+                onClick={() => save({ appearance: { theme: v } })}
+              >
+                <span className={`tprev ${cls}`}>
+                  {v === "system" ? (
+                    <div className="tprev-window tprev-split">
+                      <div className="tprev-half light">
+                        <div className="tprev-titlebar">
+                          <span className="tprev-dot r" />
+                          <span className="tprev-dot y" />
+                          <span className="tprev-dot g" />
+                        </div>
+                        <div className="tprev-body">
+                          <div className="tprev-side">
+                            <span className="tprev-nav-item active" />
+                            <span className="tprev-nav-item" />
+                          </div>
+                          <div className="tprev-content">
+                            <span className="tprev-line accent" />
+                            <span className="tprev-line" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="tprev-half dark">
+                        <div className="tprev-titlebar">
+                          <span className="tprev-dot r" />
+                          <span className="tprev-dot y" />
+                          <span className="tprev-dot g" />
+                        </div>
+                        <div className="tprev-body">
+                          <div className="tprev-side">
+                            <span className="tprev-nav-item active" />
+                            <span className="tprev-nav-item" />
+                          </div>
+                          <div className="tprev-content">
+                            <span className="tprev-line accent" />
+                            <span className="tprev-line" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="tprev-split-icon">
+                        <Icon name="monitor" size={12} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="tprev-window">
+                      <div className="tprev-titlebar">
+                        <span className="tprev-dot r" />
+                        <span className="tprev-dot y" />
+                        <span className="tprev-dot g" />
+                      </div>
+                      <div className="tprev-body">
+                        <div className="tprev-side">
+                          <span className="tprev-nav-item active" />
+                          <span className="tprev-nav-item" />
+                        </div>
+                        <div className="tprev-content">
+                          <span className="tprev-line accent" />
+                          <span className="tprev-line" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </span>
-                <span className="sh">
-                  <i className="a" />
-                  <i />
-                  <i />
-                  <i />
+                <span className="tcard__meta">
+                  <div className="tcard__title-row">
+                    <span className="tcard__title">{label}</span>
+                    {on && (
+                      <span className="tcard__check">
+                        <Icon name="check" size={10} strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <span className="tcard__sub">{sub}</span>
                 </span>
-              </span>
-              {label}
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </Group>
+
+      <Group title={str("Popular Themes")}>
+        <div className="popular-themes-grid">
+          {THEME_PRESETS.map((preset) => {
+            const on = currentTheme === preset.id;
+            const thAccent = preset.colors.accent || "var(--accent)";
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                className={`popular-theme-card${on ? " on" : ""}`}
+                aria-pressed={on}
+                onClick={() => save({ appearance: { theme: preset.id as any } })}
+                style={{ "--theme-accent": thAccent } as React.CSSProperties}
+              >
+                <div className="popular-theme-card__swatch">
+                  <span className="stripe bg" style={{ background: preset.colors.bgCanvas }} />
+                  <span className="stripe surface" style={{ background: preset.colors.surfaceRaised }} />
+                  <span className="stripe accent" style={{ background: thAccent }} />
+                </div>
+                <div className="popular-theme-card__info">
+                  <div className="popular-theme-card__header">
+                    <div className="popular-theme-card__title-row">
+                      <span className="popular-theme-card__title">{preset.name}</span>
+                      <span className="popular-theme-card__badge">{preset.base === "dark" ? "Dark" : "Light"}</span>
+                    </div>
+                    {on && (
+                      <span className="popular-theme-card__check">
+                        <Icon name="check" size={10} strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <span className="popular-theme-card__desc">{preset.description}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </Group>
+
+      {/* Custom User Themes Group */}
+      <Group
+        title={str("Custom Themes")}
+        action={
+          <button
+            type="button"
+            className="btn btn--sm"
+            onClick={() => setEditorTarget({ open: true })}
+          >
+            <Icon name="plus" size={13} /> {str("Create Theme")}
+          </button>
+        }
+      >
+        {userThemes.length === 0 ? (
+          <div className="custom-themes-empty">
+            <div className="custom-themes-empty__icon">
+              <Icon name="prism" size={22} />
+            </div>
+            <div className="custom-themes-empty__txt">
+              <h4>{str("Create your own custom theme")}</h4>
+              <p>{str("Design personalized palettes with custom canvas, surface, text, and accent colors.")}</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              onClick={() => setEditorTarget({ open: true })}
+            >
+              <Icon name="plus" size={12} /> {str("New Theme")}
+            </button>
+          </div>
+        ) : (
+          <div className="popular-themes-grid">
+            {userThemes.map((userTh) => {
+              const on = currentTheme === userTh.id;
+              const thAccent = userTh.colors.accent || "var(--accent)";
+              return (
+                <div
+                  key={userTh.id}
+                  className={`popular-theme-card${on ? " on" : ""}`}
+                  style={{ "--theme-accent": thAccent } as React.CSSProperties}
+                  onClick={() => save({ appearance: { theme: userTh.id as any } })}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      save({ appearance: { theme: userTh.id as any } });
+                    }
+                  }}
+                >
+                  <div className="popular-theme-card__swatch">
+                    <span className="stripe bg" style={{ background: userTh.colors.bgCanvas }} />
+                    <span className="stripe surface" style={{ background: userTh.colors.surfaceRaised }} />
+                    <span className="stripe accent" style={{ background: thAccent }} />
+                  </div>
+                  <div className="popular-theme-card__info">
+                    <div className="popular-theme-card__header">
+                      <div className="popular-theme-card__title-row">
+                        <span className="popular-theme-card__title">{userTh.name}</span>
+                        <span className="popular-theme-card__badge custom">{str("Custom")}</span>
+                      </div>
+                      <div className="popular-theme-card__actions" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="icon-action-btn"
+                          title={str("Edit theme")}
+                          onClick={() => setEditorTarget({ open: true, theme: userTh })}
+                        >
+                          <Icon name="rename" size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-action-btn icon-action-btn--del"
+                          title={str("Delete theme")}
+                          onClick={() => {
+                            deleteUserTheme(userTh.id);
+                            if (currentTheme === userTh.id) {
+                              save({ appearance: { theme: "system" } });
+                            }
+                            toast(str("Deleted custom theme"));
+                          }}
+                        >
+                          <Icon name="delete" size={13} />
+                        </button>
+                        {on && (
+                          <span className="popular-theme-card__check">
+                            <Icon name="check" size={10} strokeWidth={3} />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="popular-theme-card__desc">{userTh.description || str("Custom user theme")}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Group>
+
+      {editorTarget?.open && (
+        <CustomThemeModal
+          initialTheme={editorTarget.theme}
+          onClose={() => setEditorTarget(null)}
+          onSave={(saved) => {
+            saveUserTheme(saved);
+            save({ appearance: { theme: saved.id as any } });
+            setEditorTarget(null);
+            toast(str("Custom theme saved!"));
+          }}
+        />
+      )}
       <Group title={t("Accent colour")}>
         <div className="accents">
           {ACCENTS.map(([id, label, dark, lightC]) => {
@@ -489,6 +738,277 @@ function Appearance({ s }: { s: Settings }) {
         </Group>
       </div>
     </>
+  );
+}
+
+function CustomThemeModal({
+  initialTheme,
+  onClose,
+  onSave,
+}: {
+  initialTheme?: CustomTheme;
+  onClose: () => void;
+  onSave: (theme: CustomTheme) => void;
+}) {
+  const [name, setName] = useState(initialTheme?.name || "");
+  const [base, setBase] = useState<"dark" | "dimmed" | "light">(initialTheme?.base || "dark");
+  const baseDefaults = base === "light" ? BASE_LIGHT_COLORS : base === "dimmed" ? BASE_DIMMED_COLORS : BASE_DARK_COLORS;
+
+  const [bgCanvas, setBgCanvas] = useState(initialTheme?.colors.bgCanvas || baseDefaults.bgCanvas);
+  const [surfaceRaised, setSurfaceRaised] = useState(initialTheme?.colors.surfaceRaised || baseDefaults.surfaceRaised);
+  const [accent, setAccent] = useState(initialTheme?.colors.accent || baseDefaults.accent || "#6461f2");
+  const [textPrimary, setTextPrimary] = useState(initialTheme?.colors.textPrimary || baseDefaults.textPrimary);
+
+  const handleBaseChange = (newBase: "dark" | "dimmed" | "light") => {
+    setBase(newBase);
+    const d = newBase === "light" ? BASE_LIGHT_COLORS : newBase === "dimmed" ? BASE_DIMMED_COLORS : BASE_DARK_COLORS;
+    setBgCanvas(d.bgCanvas);
+    setSurfaceRaised(d.surfaceRaised);
+    setTextPrimary(d.textPrimary);
+    if (d.accent) setAccent(d.accent);
+  };
+
+  const handleApplyPresetColors = (cBg: string, cSurface: string, cAccent: string, cText?: string) => {
+    setBgCanvas(cBg);
+    setSurfaceRaised(cSurface);
+    setAccent(cAccent);
+    if (cText) setTextPrimary(cText);
+  };
+
+  const handleSave = () => {
+    const themeName = name.trim() || str("Custom Theme");
+    const themeToSave = initialTheme
+      ? {
+          ...initialTheme,
+          name: themeName,
+          base,
+          colors: {
+            ...initialTheme.colors,
+            bgCanvas,
+            surfaceBase: bgCanvas,
+            surfaceSunken: bgCanvas,
+            surfaceRaised,
+            surfaceOverlay: surfaceRaised,
+            accent,
+            accentRgb: hexToRgbTriplet(accent),
+            textPrimary,
+          },
+        }
+      : createNewCustomTheme(base, themeName, {
+          bgCanvas,
+          surfaceBase: bgCanvas,
+          surfaceSunken: bgCanvas,
+          surfaceRaised,
+          surfaceOverlay: surfaceRaised,
+          accent,
+          accentRgb: hexToRgbTriplet(accent),
+          textPrimary,
+        });
+
+    onSave(themeToSave);
+  };
+
+  return (
+    <div className="custom-theme-backdrop" onClick={onClose}>
+      <div className="custom-theme-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="custom-theme-dialog__header">
+          <div className="custom-theme-dialog__title-wrap">
+            <span className="custom-theme-dialog__icon">
+              <Icon name="prism" size={16} />
+            </span>
+            <h3>{initialTheme ? str("Edit Theme") : str("Create Custom Theme")}</h3>
+          </div>
+          <button type="button" className="close-btn" onClick={onClose} aria-label="Close">
+            <Icon name="close" size={14} />
+          </button>
+        </div>
+
+        <div className="custom-theme-dialog__body">
+          {/* Live Micro-Preview Window */}
+          <div className="custom-theme-preview-box" style={{ background: bgCanvas, color: textPrimary }}>
+            <div className="preview-topbar" style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
+              <div className="preview-dots">
+                <span className="dot" style={{ background: "#ff5f56" }} />
+                <span className="dot" style={{ background: "#ffbd2e" }} />
+                <span className="dot" style={{ background: "#27c93f" }} />
+              </div>
+              <span className="preview-title" style={{ opacity: 0.75 }}>
+                {name || "Custom Theme Preview"}
+              </span>
+              <span className="preview-badge" style={{ background: accent, color: "#fff" }}>
+                Active
+              </span>
+            </div>
+            <div className="preview-body">
+              <div
+                className="preview-sidebar"
+                style={{
+                  background: "rgba(0,0,0,0.18)",
+                  borderRight: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <span className="preview-nav-pill" style={{ background: accent, width: "65%" }} />
+                <span className="preview-nav-pill" style={{ background: "rgba(255,255,255,0.15)", width: "80%" }} />
+                <span className="preview-nav-pill" style={{ background: "rgba(255,255,255,0.15)", width: "70%" }} />
+              </div>
+              <div className="preview-content">
+                <div
+                  className="preview-card"
+                  style={{ background: surfaceRaised, border: "1px solid rgba(255,255,255,0.1)" }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600 }}>Prism Download</span>
+                    <span style={{ fontSize: 9.5, color: accent, fontWeight: 700 }}>88%</span>
+                  </div>
+                  <div className="preview-bar" style={{ background: "rgba(255,255,255,0.12)" }}>
+                    <span className="preview-fill" style={{ background: accent, width: "75%" }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Theme Name */}
+          <div className="custom-theme-field">
+            <label className="custom-theme-label">{str("Theme Name")}</label>
+            <input
+              type="text"
+              className="custom-theme-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Emerald Midnight"
+              autoFocus
+            />
+          </div>
+
+          {/* Base Contrast Mode */}
+          <div className="custom-theme-field">
+            <label className="custom-theme-label">{str("Base Contrast Mode")}</label>
+            <div className="custom-theme-base-tabs">
+              {(["dark", "dimmed", "light"] as const).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  className={`base-tab-btn${base === b ? " on" : ""}`}
+                  onClick={() => handleBaseChange(b)}
+                >
+                  {b === "dark" ? str("Dark (Obsidian)") : b === "dimmed" ? str("Dark Dimmed") : str("Light (Porcelain)")}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Tokens Form */}
+          <div className="custom-theme-tokens-grid">
+            <div className="token-picker-item">
+              <span className="token-picker-label">{str("Canvas Background")}</span>
+              <div className="token-picker-ctrl">
+                <input
+                  type="color"
+                  value={bgCanvas}
+                  onChange={(e) => setBgCanvas(e.target.value)}
+                  className="color-dot-picker"
+                />
+                <input
+                  type="text"
+                  value={bgCanvas}
+                  onChange={(e) => setBgCanvas(e.target.value)}
+                  className="hex-code-input"
+                />
+              </div>
+            </div>
+
+            <div className="token-picker-item">
+              <span className="token-picker-label">{str("Raised Card Surface")}</span>
+              <div className="token-picker-ctrl">
+                <input
+                  type="color"
+                  value={surfaceRaised}
+                  onChange={(e) => setSurfaceRaised(e.target.value)}
+                  className="color-dot-picker"
+                />
+                <input
+                  type="text"
+                  value={surfaceRaised}
+                  onChange={(e) => setSurfaceRaised(e.target.value)}
+                  className="hex-code-input"
+                />
+              </div>
+            </div>
+
+            <div className="token-picker-item">
+              <span className="token-picker-label">{str("Accent Brand Color")}</span>
+              <div className="token-picker-ctrl">
+                <input
+                  type="color"
+                  value={accent}
+                  onChange={(e) => setAccent(e.target.value)}
+                  className="color-dot-picker"
+                />
+                <input
+                  type="text"
+                  value={accent}
+                  onChange={(e) => setAccent(e.target.value)}
+                  className="hex-code-input"
+                />
+              </div>
+            </div>
+
+            <div className="token-picker-item">
+              <span className="token-picker-label">{str("Primary Text Color")}</span>
+              <div className="token-picker-ctrl">
+                <input
+                  type="color"
+                  value={textPrimary}
+                  onChange={(e) => setTextPrimary(e.target.value)}
+                  className="color-dot-picker"
+                />
+                <input
+                  type="text"
+                  value={textPrimary}
+                  onChange={(e) => setTextPrimary(e.target.value)}
+                  className="hex-code-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Palette Inspirations */}
+          <div className="custom-theme-field">
+            <label className="custom-theme-label">{str("Quick Palettes (Inspirations)")}</label>
+            <div className="custom-theme-presets-row">
+              {[
+                { name: "Emerald Slate", bg: "#0d1514", surf: "#152422", acc: "#10b981", txt: "#e2f8f0" },
+                { name: "Cyberpunk Cyan", bg: "#080b14", surf: "#121727", acc: "#06b6d4", txt: "#e0f2fe" },
+                { name: "Amber Gold", bg: "#141109", surf: "#211c10", acc: "#f59e0b", txt: "#fef3c7" },
+                { name: "Rose Velvet", bg: "#160b13", surf: "#261321", acc: "#f43f5e", txt: "#ffe4e6" },
+                { name: "Royal Purple", bg: "#110b1a", surf: "#1d142b", acc: "#a855f7", txt: "#f3e8ff" },
+              ].map((p) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  className="palette-inspiration-pill"
+                  onClick={() => handleApplyPresetColors(p.bg, p.surf, p.acc, p.txt)}
+                  title={p.name}
+                >
+                  <span className="pill-dot" style={{ background: p.acc }} />
+                  <span className="pill-name">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="custom-theme-dialog__footer">
+          <button type="button" className="btn" onClick={onClose}>
+            {t("Cancel")}
+          </button>
+          <button type="button" className="btn btn--primary" onClick={handleSave}>
+            <Icon name="check" size={13} strokeWidth={2.5} /> {str("Save & Apply Theme")}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
