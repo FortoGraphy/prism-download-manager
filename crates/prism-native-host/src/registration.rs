@@ -542,7 +542,17 @@ mod platform {
             let base = home.join("Library").join("Application Support");
             let nmh = |p: &str| base.join(p).join("NativeMessagingHosts");
             Ok(match b {
-                Browser::Chrome => (base.join("Google/Chrome"), vec![nmh("Google/Chrome")]),
+                // Every Chrome channel reads native messaging manifests from its own profile
+                // dir, so Chrome Dev/Beta/Canary need their own copy.
+                Browser::Chrome => {
+                    let google = base.join("Google");
+                    channel_dirs(vec![
+                        google.join("Chrome"),
+                        google.join("Chrome Dev"),
+                        google.join("Chrome Beta"),
+                        google.join("Chrome Canary"),
+                    ])
+                }
                 Browser::ChromeForTesting => (
                     base.join("Google/Chrome for Testing"),
                     vec![nmh("Google/Chrome for Testing")],
@@ -567,7 +577,12 @@ mod platform {
             let config = config_home(loc, &home);
             let nmh = |p: &str| config.join(p).join("NativeMessagingHosts");
             Ok(match b {
-                Browser::Chrome => (config.join("google-chrome"), vec![nmh("google-chrome")]),
+                // Chrome channels: stable, beta, dev (`google-chrome-unstable`).
+                Browser::Chrome => channel_dirs(vec![
+                    config.join("google-chrome"),
+                    config.join("google-chrome-beta"),
+                    config.join("google-chrome-unstable"),
+                ]),
                 Browser::ChromeForTesting => (
                     config.join("google-chrome-for-testing"),
                     vec![nmh("google-chrome-for-testing")],
@@ -616,6 +631,21 @@ mod platform {
             .map(|r| r.join("NativeMessagingHosts"))
             .collect();
         (found.swap_remove(0), nmh)
+    }
+
+    /// Chrome keeps one profile dir per channel and reads native messaging manifests only
+    /// from the channel the user runs. Register into every channel that exists (stable, Dev,
+    /// Beta, Canary); when none exists, return the stable dir so `status` still has a path.
+    fn channel_dirs(roots: Vec<PathBuf>) -> (PathBuf, Vec<PathBuf>) {
+        let mut found: Vec<PathBuf> = roots.iter().filter(|r| r.exists()).cloned().collect();
+        if found.is_empty() {
+            found.push(roots[0].clone());
+        }
+        let nmh = found
+            .iter()
+            .map(|r| r.join("NativeMessagingHosts"))
+            .collect();
+        (found.remove(0), nmh)
     }
 
     /// `$XDG_CONFIG_HOME` when set and absolute, else `~/.config` (always the latter in tests,
@@ -1054,5 +1084,47 @@ mod tests {
         register(&opts).unwrap();
         assert!(manifest(&brave).is_file());
         assert!(!origin.exists());
+    }
+
+    /// Chrome Dev (and Beta/Canary) read native messaging manifests from their own profile
+    /// dir, so a Dev-only install must be detected and get the manifest there.
+    #[cfg(not(windows))]
+    #[test]
+    fn chrome_dev_channel_is_detected_and_registered() {
+        let dir = tempfile::tempdir().unwrap();
+        let host = dir.path().join(crate::HOST_BINARY_NAME);
+        fs::write(&host, b"").unwrap();
+        let home = dir.path().join("home");
+        let loc = Locations {
+            manifest_dir: None,
+            home: Some(home.clone()),
+            registry_root: None,
+        };
+        let (stable, dev) = if cfg!(target_os = "macos") {
+            let google = home.join("Library/Application Support/Google");
+            (google.join("Chrome"), google.join("Chrome Dev"))
+        } else {
+            (
+                home.join(".config/google-chrome"),
+                home.join(".config/google-chrome-unstable"),
+            )
+        };
+        let manifest = |root: &Path| {
+            root.join("NativeMessagingHosts")
+                .join(format!("{HOST_NAME}.json"))
+        };
+        fs::create_dir_all(&dev).unwrap();
+        let mut opts = RegisterOptions::new(&host);
+        opts.locations = loc.clone();
+        register(&opts).unwrap();
+        assert!(manifest(&dev).is_file(), "Dev channel not registered");
+        assert!(!stable.exists(), "nothing created for absent stable Chrome");
+        let st = &status(&[Browser::Chrome], &host, &loc)[0];
+        assert!(
+            st.installed && st.registered && st.points_to_this_host,
+            "{st:?}"
+        );
+        unregister(&[Browser::Chrome], &loc).unwrap();
+        assert!(!manifest(&dev).exists());
     }
 }
