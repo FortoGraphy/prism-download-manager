@@ -224,6 +224,7 @@ fn main() {
             commands::item_details,
             commands::open_item,
             commands::reveal_item,
+            commands::start_file_drag,
             commands::open_path,
             commands::assign_to_queue,
             commands::move_in_queue,

@@ -878,6 +878,8 @@
   "finished in {duration} · average {speed}": "{duration} içinde tamamlandı · ortalama {speed}",
   "Don’t show again": "Bir daha gösterme",
   "Path copied": "Yol kopyalandı",
+  "Drag the file into a chat, an e-mail or a folder": "Dosyayı bir sohbete, e-postaya veya klasöre sürükleyin",
+  "Could not drag the file": "Dosya sürüklenemedi",
   "Download complete.": "İndirme tamamlandı.",
   "last 60 s": "son 60 sn",
   "Also shares the global {speed} limit (Settings → Speed & queues)": "Genel {speed} sınırı da geçerlidir (Ayarlar → Hız ve kuyruklar)",

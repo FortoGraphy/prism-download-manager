@@ -31,10 +31,20 @@ export default function CompleteWindow({ id }: { id: string }) {
   const path = item ? fullPath(item.saveDir, item.fileName) : "";
   const media = mediaPath(item);
 
+  // Native drag-out: the webview starts an HTML drag, we cancel it and hand the
+  // still-pressed mouse to the OS with the real file, so it drops into WhatsApp,
+  // a mail, Explorer… exactly like dragging it from a folder.
+  const canDrag = !!item && item.status === "completed";
+  const onDragStart = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (canDrag) void attempt(api.startFileDrag(id), t("Could not drag the file"));
+  };
+  const dragProps = canDrag ? { draggable: true, onDragStart, "data-tip": t("Drag the file into a chat, an e-mail or a folder") } : {};
+
   return (
     <WindowFrame kind="complete" title={t("Download complete")} onClose={() => void close()} className="complete">
       <div className="complete__top">
-        <div className="burst">
+        <div className={canDrag ? "burst is-draggable" : "burst"} {...dragProps}>
           <span>
             <Icon name="check" size={28} strokeWidth={2} />
           </span>
@@ -50,11 +60,12 @@ export default function CompleteWindow({ id }: { id: string }) {
         </div>
       </div>
       {item && (
-        <div className="complete__path">
+        <div className={canDrag ? "complete__path is-draggable" : "complete__path"} {...dragProps}>
           <FileTile item={item} size={24} thumbWidth={36} />
-          <span className="t-mono ellipsis selectable" title={path}>
+          <span className="t-mono ellipsis" title={path}>
             {path}
           </span>
+          {canDrag && <Icon name="drag-handle" size={15} className="complete__grip" />}
         </div>
       )}
       {media && (

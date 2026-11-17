@@ -860,6 +860,8 @@
   "finished in {duration} · average {speed}": "用时 {duration} · 平均 {speed}",
   "Don’t show again": "不再显示",
   "Path copied": "路径已复制",
+  "Drag the file into a chat, an e-mail or a folder": "将文件拖到聊天、电子邮件或文件夹中",
+  "Could not drag the file": "无法拖动文件",
   "Download complete.": "下载完成。",
   "last 60 s": "最近 60 秒",
   "Also shares the global {speed} limit (Settings → Speed & queues)": "同时受全局 {speed} 限制（设置 → 速度和队列）",
