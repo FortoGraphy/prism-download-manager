@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type MediaItem, addMedia, classifyMedia, elementMedia, elementSources, humanSize, isIgnoredMediaUrl, linkedinCommentaryPath, linkedinPostPath, mediaDetail, mediaKey, mediaLabel, postUrl, qualityFromUrl, totalSize, visibleMedia } from '../src/shared/media';
+import { type MediaItem, addMedia, classifyMedia, disguiseCandidate, elementMedia, elementSources, humanSize, isIgnoredMediaUrl, linkedinCommentaryPath, linkedinPostPath, manifestKind, mediaDetail, mediaKey, mediaLabel, postUrl, qualityFromUrl, totalSize, visibleMedia } from '../src/shared/media';
 
 const LI = 'https://dms.licdn.com/playlist/vid/v2/D5610AQFKo9M0zqY2_g';
 
@@ -36,6 +36,27 @@ describe('classifyMedia', () => {
     expect(isIgnoredMediaUrl('https://rr1---sn-abc.googlevideo.com/videoplayback?x=1')).toBe(true);
     expect(isIgnoredMediaUrl('blob:https://x/1')).toBe(true);
     expect(isIgnoredMediaUrl('https://cdn.x/v.mp4')).toBe(false);
+  });
+});
+
+describe('disguiseCandidate / manifestKind (click-time manifest check)', () => {
+  it('flags only a player XHR/media fetch disguised as an image', () => {
+    expect(disguiseCandidate({ url: 'https://x/playlist.png', contentType: 'image/png', resourceType: 'xmlhttprequest' })).toBe(true);
+    expect(disguiseCandidate({ url: 'https://x/playlist.png', contentType: 'image/png', resourceType: 'media' })).toBe(true);
+    expect(disguiseCandidate({ url: 'https://x/a', contentType: 'image/jpeg', resourceType: 'xmlhttprequest' })).toBe(true);
+    expect(disguiseCandidate({ url: 'https://x/a.webp', contentType: '', resourceType: 'media' })).toBe(true);
+  });
+  it('ignores a real <img>/frame load and anything not image-shaped', () => {
+    expect(disguiseCandidate({ url: 'https://x/playlist.png', contentType: 'image/png', resourceType: 'object' })).toBe(false);
+    expect(disguiseCandidate({ url: 'https://x/playlist.png', contentType: 'image/png', resourceType: 'main_frame' })).toBe(false);
+    expect(disguiseCandidate({ url: 'https://x/a.json', contentType: 'application/json', resourceType: 'xmlhttprequest' })).toBe(false);
+    expect(disguiseCandidate({ url: 'https://x/a.txt', contentType: 'text/plain', resourceType: 'xmlhttprequest' })).toBe(false);
+  });
+  it('reads the manifest magic bytes from a body prefix', () => {
+    expect(manifestKind('#EXTM3U\n#EXT-X-VERSION:3')).toBe('hls');
+    expect(manifestKind('  \n#EXTM3U')).toBe('hls');
+    expect(manifestKind('<?xml version="1.0"?>\n<MPD xmlns="urn:mpeg:dash:schema:mpd:2011">')).toBe('dash');
+    expect(manifestKind('not a manifest')).toBeNull();
   });
 });
 
