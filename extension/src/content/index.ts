@@ -1,5 +1,5 @@
 /** Content script (all frames, document_start): bypass modifier + video button. */
-import { api } from '../shared/api';
+import { api, sendInternal } from '../shared/api';
 import { STATE_KEY, normalizeState } from '../shared/settings';
 import { initBypass, setBypassKey } from './bypass';
 import { VideoButton } from './video-button';
@@ -10,8 +10,34 @@ declare global {
   }
 }
 
+/** Runs player-hook.js in the page's own JS context (not our isolated world) so it can see
+ *  `window.Hls` — the only way to read a manifest URL the page itself never exposed to a
+ *  network listener (see player-hook.ts). */
+function injectPlayerHook(): void {
+  try {
+    const script = document.createElement('script');
+    script.src = api.runtime.getURL('player-hook.js');
+    script.addEventListener('load', () => script.remove());
+    (document.head || document.documentElement).appendChild(script);
+  } catch {
+    /* best effort — the regular network sniffer still covers the common case */
+  }
+}
+
+/** player-hook.js found an hls.js manifest URL the network sniffer may never have seen. */
+function listenForPlayerManifest(): void {
+  window.addEventListener('message', (e) => {
+    if (e.source !== window) return;
+    const data = e.data as { source?: string; manifestUrl?: string } | undefined;
+    if (data?.source !== 'prism-player-hook' || typeof data.manifestUrl !== 'string') return;
+    void sendInternal({ kind: 'playerManifest', pageUrl: location.href, manifestUrl: data.manifestUrl });
+  });
+}
+
 if (!window.__prismContentLoaded) {
   window.__prismContentLoaded = true;
+  injectPlayerHook();
+  listenForPlayerManifest();
   initBypass();
   const button = new VideoButton();
 

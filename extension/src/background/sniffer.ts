@@ -74,6 +74,26 @@ function header(headers: chrome.webRequest.HttpHeader[] | undefined, name: strin
   return headers?.find((h) => h.name.toLowerCase() === name)?.value;
 }
 
+/**
+ * A manifest URL player-hook.js read straight from an hls.js instance in the page — for the
+ * cases a disguised or inline-only manifest never reaches our own network listener at all (see
+ * player-hook.ts). No fetch of our own: by the time this arrives, hls.js already confirmed the
+ * URL parses as a real manifest, so it's recorded exactly like any other sniffed stream.
+ */
+export function recordPlayerManifest(tabId: number, pageUrl: string, manifestUrl: string): void {
+  if (isIgnoredMediaUrl(manifestUrl)) return;
+  const item: MediaItem = {
+    key: mediaKey(manifestUrl),
+    url: manifestUrl,
+    kind: 'hls',
+    streamKind: 'hls',
+    name: mediaName(manifestUrl, 'hls'),
+    ts: Date.now(),
+    frameUrl: pageUrl,
+  };
+  void record(tabId, item);
+}
+
 export function initSniffer(): void {
   api.webRequest.onHeadersReceived.addListener(
     (d) => {
