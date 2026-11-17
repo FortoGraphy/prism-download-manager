@@ -19,6 +19,7 @@ npm run build:dev    # unminified + inline source maps
 npm run typecheck    # tsc --noEmit (strict)
 npm test             # vitest: rules, media classification, cookies, correlation, NativeClient
 npm run e2e          # Playwright + real Chromium + real native host + mock app (see below)
+npm run e2e:dismiss  # Playwright dismissal regressions; no native host or desktop app needed
 ```
 
 Install for development:
@@ -65,6 +66,14 @@ of them can win, so disable them while using Prism.
   (`formatId: "best"`: the app picks the best format within the preferred quality). Elsewhere first *This video* — what the hovered element itself plays
   (`currentSrc`, `src`, `<source>` children, a `data-sources` quality list as on LinkedIn), best
   quality first — then the tab's other sniffed streams (other posts, autoplaying ads).
+  The **X** beside Download hides the button and its quality menu for that video/post until
+  the page is reloaded. Hovering again, scrolling or rerendering the same post does not undo
+  dismissal; other posts and new sources in recycled players retain their buttons. Choices
+  stay in memory for the page lifetime. The X supports keyboard activation, and hidden
+  controls leave the focus order. **Download with Prism** in the browser context menu remains
+  available for hidden videos (blob players can explicitly reopen the quality menu).
+  Before/after screenshots: [dark page](docs/screenshots/video-download-dismiss-dark.png),
+  [light page](docs/screenshots/video-download-dismiss-light.png).
 * **Popup** — connection state (with a fix hint), pause-capture toggle, media on the page with
   per-item Download, "All links / images / videos", Open Prism, Options. Follows the system theme.
 * **Context menus** — Download with Prism (link/image/video/audio; a video that plays a `blob:`

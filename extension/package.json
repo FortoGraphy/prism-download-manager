@@ -10,7 +10,8 @@
     "build:dev": "node build.mjs --dev",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "e2e": "node e2e/run.mjs"
+    "e2e": "node e2e/run.mjs",
+    "e2e:dismiss": "node e2e/dismiss.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.5",

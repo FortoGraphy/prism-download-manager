@@ -4,6 +4,7 @@ export const VIDEO_BUTTON_CSS = `
 * { box-sizing: border-box; }
 .wrap {
   position: fixed; top: 0; left: 0;
+  width: max-content;
   font: 500 12.5px/1.2 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: #f3f5fb;
   opacity: 0; transform: translate3d(var(--x, 0px), var(--y, 0px), 0) scale(.94);
@@ -13,7 +14,15 @@ export const VIDEO_BUTTON_CSS = `
   -webkit-font-smoothing: antialiased;
 }
 .wrap.show { opacity: 1; transform: translate3d(var(--x, 0px), var(--y, 0px), 0) scale(1); }
-.wrap.show .pill, .wrap.show .menu { pointer-events: auto; }
+.wrap.show .pill, .wrap.show .dismiss, .wrap.show .menu { pointer-events: auto; }
+.controls { display: flex; align-items: center; gap: 4px; }
+.dismiss {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0; border-radius: 50%;
+  cursor: pointer; color: inherit;
+}
+.dismiss:hover { background: rgba(58,64,86,.9); border-color: rgba(255,255,255,.35); }
+.dismiss:focus-visible { outline: 2px solid #b8c3ff; outline-offset: 2px; }
 .glass {
   background: linear-gradient(180deg, rgba(40,44,58,.62), rgba(18,20,28,.70));
   -webkit-backdrop-filter: blur(18px) saturate(170%);
