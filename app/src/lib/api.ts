@@ -105,6 +105,8 @@ export interface VideoDecision {
   oneAtATime?: boolean;
   /** A single video: only this part of it. */
   section?: VideoSection;
+  /** A single video: the name typed in the window (the format adds the extension). */
+  fileName?: string;
 }
 
 export interface VideoEntry {

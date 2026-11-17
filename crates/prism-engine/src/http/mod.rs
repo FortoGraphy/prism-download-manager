@@ -327,9 +327,39 @@ pub(crate) fn header_string(h: &HeaderMap, name: reqwest::header::HeaderName) ->
         .filter(|s| !s.is_empty())
 }
 
+/// A header that may carry text beyond ASCII (a Content-Disposition with a raw UTF-8 file name):
+/// read as UTF-8, else as Latin-1. [`header_string`] drops such a header altogether (#91).
+pub(crate) fn header_text(h: &HeaderMap, name: reqwest::header::HeaderName) -> Option<String> {
+    let bytes = h.get(name)?.as_bytes();
+    let text = match std::str::from_utf8(bytes) {
+        Ok(s) => s.to_string(),
+        Err(_) => bytes.iter().map(|&b| char::from(b)).collect(),
+    };
+    Some(text.trim().to_string()).filter(|s| !s.is_empty())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_raw_utf8_file_name_in_a_header_is_kept() {
+        use reqwest::header::{CONTENT_DISPOSITION, HeaderValue};
+        let mut h = HeaderMap::new();
+        let cd = "attachment; filename=\"อัพเดท.zip\"";
+        h.insert(
+            CONTENT_DISPOSITION,
+            HeaderValue::from_bytes(cd.as_bytes()).unwrap(),
+        );
+        assert_eq!(header_string(&h, CONTENT_DISPOSITION), None);
+        assert_eq!(header_text(&h, CONTENT_DISPOSITION).as_deref(), Some(cd));
+        let latin1 = HeaderValue::from_bytes(b"attachment; filename=\"caf\xe9.txt\"").unwrap();
+        h.insert(CONTENT_DISPOSITION, latin1);
+        assert_eq!(
+            header_text(&h, CONTENT_DISPOSITION).as_deref(),
+            Some("attachment; filename=\"café.txt\"")
+        );
+    }
 
     #[test]
     fn content_range_parsing() {

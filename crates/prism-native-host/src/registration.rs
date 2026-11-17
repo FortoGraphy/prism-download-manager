@@ -16,7 +16,8 @@
 //!   `Chromium`, Edge → `Microsoft\Edge`, Firefox → `Mozilla`.
 //! * **Linux** — `dev.prism.host.json` in each browser's `NativeMessagingHosts`
 //!   dir under `$XDG_CONFIG_HOME` (default `~/.config`), Firefox in
-//!   `~/.mozilla/native-messaging-hosts`. Flatpak browsers are detected and
+//!   `~/.mozilla/native-messaging-hosts`, Waterfox in `~/.waterfox/native-messaging-hosts`
+//!   (and Firefox's). Flatpak browsers are detected and
 //!   reported as unsupported.
 //! * **macOS** — `~/Library/Application Support/<browser>/NativeMessagingHosts`,
 //!   Firefox in `~/Library/Application Support/Mozilla/NativeMessagingHosts`.
@@ -46,10 +47,13 @@ pub enum Browser {
     Firefox,
     /// Zen Browser, Firefox-based: Firefox's extension and Firefox's native messaging locations.
     Zen,
+    /// Waterfox, Firefox-based: Firefox's extension, its own profile dir, and its own native
+    /// messaging dir (`~/.waterfox/native-messaging-hosts` on Linux) next to Firefox's.
+    Waterfox,
 }
 
 impl Browser {
-    pub const ALL: [Browser; 10] = [
+    pub const ALL: [Browser; 11] = [
         Browser::Chrome,
         Browser::Edge,
         Browser::Brave,
@@ -60,6 +64,7 @@ impl Browser {
         Browser::ChromeForTesting,
         Browser::Firefox,
         Browser::Zen,
+        Browser::Waterfox,
     ];
 
     /// Stable lowercase id (`chrome`, `chrome-for-testing`, ...).
@@ -75,6 +80,7 @@ impl Browser {
             Browser::Helium => "helium",
             Browser::Firefox => "firefox",
             Browser::Zen => "zen",
+            Browser::Waterfox => "waterfox",
         }
     }
 
@@ -90,12 +96,13 @@ impl Browser {
             Browser::Helium => "Helium",
             Browser::Firefox => "Mozilla Firefox",
             Browser::Zen => "Zen Browser",
+            Browser::Waterfox => "Waterfox",
         }
     }
 
     /// Firefox-family: Firefox's manifest format and extension ID.
     pub fn is_firefox(self) -> bool {
-        matches!(self, Browser::Firefox | Browser::Zen)
+        matches!(self, Browser::Firefox | Browser::Zen | Browser::Waterfox)
     }
 }
 
@@ -120,6 +127,7 @@ impl FromStr for Browser {
             "helium" => Browser::Helium,
             "firefox" | "mozilla" => Browser::Firefox,
             "zen" | "zen-browser" => Browser::Zen,
+            "waterfox" | "waterfox-g" => Browser::Waterfox,
             _ => return Err(format!("unknown browser: {s}")),
         })
     }
@@ -355,7 +363,9 @@ mod platform {
             Browser::Helium => &["imput\\Helium"],
             // Gecko reads `Software\Mozilla\NativeMessagingHosts` (NativeManifests.sys.mjs); Zen
             // doesn't change it (zen-browser/desktop#10622: it uses Firefox's locations).
-            Browser::Firefox | Browser::Zen => &["Mozilla"],
+            // Waterfox keeps Gecko's REGPATH "Software\Mozilla" (BrowserWorks/waterfox
+            // NativeManifests.sys.mjs).
+            Browser::Firefox | Browser::Zen | Browser::Waterfox => &["Mozilla"],
         }
     }
 
@@ -403,6 +413,7 @@ mod platform {
             Browser::Helium => local.map(|d| d.join("imput\\Helium\\User Data")),
             Browser::Firefox => roaming.map(|d| d.join("Mozilla\\Firefox")),
             Browser::Zen => roaming.map(|d| d.join("zen")),
+            Browser::Waterfox => roaming.map(|d| d.join("Waterfox")),
         };
         p.is_some_and(|p| p.exists())
     }
@@ -514,7 +525,7 @@ mod platform {
         if matches!(b, Browser::Brave | Browser::Vivaldi | Browser::Opera) {
             st.note = Some("uses Google Chrome's registry key on Windows".into());
         }
-        if b == Browser::Zen {
+        if matches!(b, Browser::Zen | Browser::Waterfox) {
             st.note = Some("uses Firefox's registry key".into());
         }
         st
@@ -542,7 +553,17 @@ mod platform {
             let base = home.join("Library").join("Application Support");
             let nmh = |p: &str| base.join(p).join("NativeMessagingHosts");
             Ok(match b {
-                Browser::Chrome => (base.join("Google/Chrome"), vec![nmh("Google/Chrome")]),
+                // Every Chrome channel reads native messaging manifests from its own profile
+                // dir, so Chrome Dev/Beta/Canary need their own copy.
+                Browser::Chrome => {
+                    let google = base.join("Google");
+                    channel_dirs(vec![
+                        google.join("Chrome"),
+                        google.join("Chrome Dev"),
+                        google.join("Chrome Beta"),
+                        google.join("Chrome Canary"),
+                    ])
+                }
                 Browser::ChromeForTesting => (
                     base.join("Google/Chrome for Testing"),
                     vec![nmh("Google/Chrome for Testing")],
@@ -562,12 +583,22 @@ mod platform {
                 Browser::Firefox => (base.join("Firefox"), vec![nmh("Mozilla")]),
                 // Zen keeps its profiles in "zen" but reads Firefox's NativeMessagingHosts.
                 Browser::Zen => (base.join("zen"), vec![nmh("Mozilla")]),
+                // Waterfox keeps its profiles in "Waterfox" (nsXREDirProvider.cpp) and reads its
+                // own NativeMessagingHosts and Firefox's (NativeManifests.sys.mjs).
+                Browser::Waterfox => (base.join("Waterfox"), vec![nmh("Waterfox"), nmh("Mozilla")]),
             })
         } else {
             let config = config_home(loc, &home);
             let nmh = |p: &str| config.join(p).join("NativeMessagingHosts");
             Ok(match b {
-                Browser::Chrome => (config.join("google-chrome"), vec![nmh("google-chrome")]),
+                // Chrome channels: stable, beta, dev (`google-chrome-unstable`) and canary
+                // (Chromium's docs/user_data_dir.md).
+                Browser::Chrome => channel_dirs(vec![
+                    config.join("google-chrome"),
+                    config.join("google-chrome-beta"),
+                    config.join("google-chrome-unstable"),
+                    config.join("google-chrome-canary"),
+                ]),
                 Browser::ChromeForTesting => (
                     config.join("google-chrome-for-testing"),
                     vec![nmh("google-chrome-for-testing")],
@@ -595,18 +626,34 @@ mod platform {
                     home.join(".zen"),
                     vec![home.join(".mozilla/native-messaging-hosts")],
                 ),
+                // Waterfox's dot-dir holds both its profiles and its own native-messaging-hosts
+                // (nsXREDirProvider.cpp); it reads Firefox's dir as well (NativeManifests.sys.mjs),
+                // where Firefox's copy is the same file.
+                Browser::Waterfox => (
+                    home.join(".waterfox"),
+                    vec![
+                        home.join(".waterfox/native-messaging-hosts"),
+                        home.join(".mozilla/native-messaging-hosts"),
+                    ],
+                ),
             })
         }
     }
 
     /// Brave and Brave Origin (a separate Brave build with its own folder, which reads native
-    /// messaging hosts from there): whichever of them exists, plain Brave's folder when neither
-    /// does, so nothing is created for a browser that isn't there.
+    /// messaging hosts from there).
     fn brave(base: &Path) -> (PathBuf, Vec<PathBuf>) {
-        let roots = [
+        channel_dirs(vec![
             base.join("BraveSoftware/Brave-Browser"),
             base.join("BraveSoftware/Brave-Origin"),
-        ];
+        ])
+    }
+
+    /// Browsers with one profile dir per channel or build (Chrome stable, Dev, Beta, Canary;
+    /// Brave and Brave Origin), each reading native messaging manifests only from its own dir:
+    /// every one that exists, or the first when none does, so `status` still has a path and
+    /// nothing is created for a browser that isn't there.
+    fn channel_dirs(roots: Vec<PathBuf>) -> (PathBuf, Vec<PathBuf>) {
         let mut found: Vec<PathBuf> = roots.iter().filter(|r| r.exists()).cloned().collect();
         if found.is_empty() {
             found.push(roots[0].clone());
@@ -615,7 +662,7 @@ mod platform {
             .iter()
             .map(|r| r.join("NativeMessagingHosts"))
             .collect();
-        (found.swap_remove(0), nmh)
+        (found.remove(0), nmh)
     }
 
     /// `$XDG_CONFIG_HOME` when set and absolute, else `~/.config` (always the latter in tests,
@@ -661,6 +708,7 @@ mod platform {
             Browser::Opera => "com.opera.Opera",
             Browser::Firefox => "org.mozilla.firefox",
             Browser::Zen => "app.zen_browser.zen",
+            Browser::Waterfox => "net.waterfox.waterfox",
             Browser::ChromeForTesting | Browser::Helium => return None,
         })
     }
@@ -914,6 +962,45 @@ mod tests {
         }
     }
 
+    /// Waterfox gets the Firefox manifest (and Firefox's extension IDs) in its own dir on
+    /// Linux; unregistering it alone keeps the shared Firefox registration.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn waterfox_registers_in_its_own_dir_and_keeps_firefox() {
+        let dir = tempfile::tempdir().unwrap();
+        let host = dir.path().join(crate::HOST_BINARY_NAME);
+        fs::write(&host, b"").unwrap();
+        let home = dir.path().join("home");
+        fs::create_dir_all(home.join(".waterfox")).unwrap();
+        let loc = Locations {
+            home: Some(home.clone()),
+            ..Default::default()
+        };
+        let mut opts = RegisterOptions::new(&host);
+        opts.browsers = vec![Browser::Waterfox, Browser::Firefox];
+        opts.locations = loc.clone();
+        let st = register(&opts).unwrap();
+        let wf = st.iter().find(|s| s.browser == Browser::Waterfox).unwrap();
+        assert!(
+            wf.installed && wf.registered && wf.points_to_this_host,
+            "{wf:?}"
+        );
+        assert_eq!(wf.allowed, crate::firefox_extension_ids());
+        assert!(
+            home.join(".waterfox/native-messaging-hosts/dev.prism.host.json")
+                .exists()
+        );
+        assert_eq!("waterfox".parse::<Browser>().unwrap(), Browser::Waterfox);
+
+        unregister(&[Browser::Waterfox], &loc).unwrap();
+        assert!(
+            !home
+                .join(".waterfox/native-messaging-hosts/dev.prism.host.json")
+                .exists()
+        );
+        assert!(status(&[Browser::Firefox], &host, &loc)[0].registered);
+    }
+
     /// Helium gets the Chromium manifest in its own place; Zen gets Firefox's manifest where
     /// Firefox reads it, and unregistering Zen alone keeps Firefox's registration.
     #[test]
@@ -1054,5 +1141,47 @@ mod tests {
         register(&opts).unwrap();
         assert!(manifest(&brave).is_file());
         assert!(!origin.exists());
+    }
+
+    /// Chrome Dev (and Beta/Canary) read native messaging manifests from their own profile
+    /// dir, so a Dev-only install must be detected and get the manifest there.
+    #[cfg(not(windows))]
+    #[test]
+    fn chrome_dev_channel_is_detected_and_registered() {
+        let dir = tempfile::tempdir().unwrap();
+        let host = dir.path().join(crate::HOST_BINARY_NAME);
+        fs::write(&host, b"").unwrap();
+        let home = dir.path().join("home");
+        let loc = Locations {
+            manifest_dir: None,
+            home: Some(home.clone()),
+            registry_root: None,
+        };
+        let (stable, dev) = if cfg!(target_os = "macos") {
+            let google = home.join("Library/Application Support/Google");
+            (google.join("Chrome"), google.join("Chrome Dev"))
+        } else {
+            (
+                home.join(".config/google-chrome"),
+                home.join(".config/google-chrome-unstable"),
+            )
+        };
+        let manifest = |root: &Path| {
+            root.join("NativeMessagingHosts")
+                .join(format!("{HOST_NAME}.json"))
+        };
+        fs::create_dir_all(&dev).unwrap();
+        let mut opts = RegisterOptions::new(&host);
+        opts.locations = loc.clone();
+        register(&opts).unwrap();
+        assert!(manifest(&dev).is_file(), "Dev channel not registered");
+        assert!(!stable.exists(), "nothing created for absent stable Chrome");
+        let st = &status(&[Browser::Chrome], &host, &loc)[0];
+        assert!(
+            st.installed && st.registered && st.points_to_this_host,
+            "{st:?}"
+        );
+        unregister(&[Browser::Chrome], &loc).unwrap();
+        assert!(!manifest(&dev).exists());
     }
 }

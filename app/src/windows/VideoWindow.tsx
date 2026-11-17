@@ -38,6 +38,46 @@ export const PLAYLIST_CHOICES: VideoChoice[] = [
 type Format = "mp4" | "mp3";
 type Extent = "whole" | "part";
 
+/** The video's id where its address has it (prism-core `video_id`: YouTube links). */
+function videoId(pageUrl: string): string | undefined {
+  let u: URL;
+  try {
+    u = new URL(pageUrl);
+  } catch {
+    return undefined;
+  }
+  const host = u.hostname.replace(/^(www\.)+/, "").replace(/^(m\.)+/, "");
+  const seg = u.pathname.split("/").slice(1);
+  let id: string | null | undefined;
+  if (host === "youtube.com" || host === "music.youtube.com") id = u.searchParams.has("v") ? u.searchParams.get("v") : ["shorts", "live", "embed"].includes(seg[0]) ? seg[1] : undefined;
+  else if (host === "youtu.be") id = seg[0];
+  return id || undefined;
+}
+
+/**
+ * The name a single video gets without one typed, minus the extension: the name template from
+ * Settings (prism-core `render_name_template` and `sanitize_name`). Only shown in the name
+ * field; an unchanged name isn't sent, so the core still decides it.
+ */
+function videoFileStem(template: string, title: string, pageUrl: string): string {
+  let tpl = template.trim();
+  if (tpl.endsWith(".%(ext)s")) tpl = tpl.slice(0, -".%(ext)s".length);
+  let out = title;
+  if (tpl) {
+    out = tpl.replaceAll("%(title)s", () => title).replaceAll("%(id)s", () => videoId(pageUrl) ?? "");
+    // Fields Prism doesn't know, and the brackets they leave empty.
+    for (let start = out.indexOf("%("); start >= 0; start = out.indexOf("%(")) {
+      const end = out.indexOf(")s", start);
+      if (end < 0) break;
+      out = out.slice(0, start) + out.slice(end + 2);
+    }
+    for (const empty of ["[]", "()", "{}"]) out = out.replaceAll(empty, "");
+    out = out.split(/\s+/).filter(Boolean).join(" ").replace(/^[-_\s]+|[-_\s]+$/g, "") || title;
+  }
+  const safe = (out.split(/[/\\]/).pop() ?? "").replace(/[<>:"|?*\u0000-\u001f]/g, "_").trim().replace(/[. ]+$/, "");
+  return safe || "download";
+}
+
 /** The simple model: MP4 at a chosen quality, or MP3 audio only. */
 function splitChoices(all: VideoChoice[]): { video: VideoChoice[]; mp3: VideoChoice | undefined } {
   const seen = new Set<string>();
@@ -71,6 +111,8 @@ export default function VideoWindow({ id }: { id: string }) {
   const [oneByOne, setOneByOne] = useState(false);
   const [extent, setExtent] = useState<Extent>("whole");
   const [range, setRange] = useState<VideoSection | null>(null);
+  // The file name as typed; `null` until the user changes it.
+  const [typedName, setTypedName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // The container set in Settings › Video & streams (MP4, MKV or WebM).
   const container = (["mp4", "mkv", "webm"] as const).find((c) => c === settings?.video.container) ?? "mp4";
@@ -108,6 +150,10 @@ export default function VideoWindow({ id }: { id: string }) {
   const named = (probe?.kind === "video" ? probe.title : probe?.kind === "playlist" ? probe.title : null) ?? cap?.title;
   // The English fallback goes to the core; only the shown one is translated.
   const title = named ?? "Video";
+  // A single video can be renamed (#94); the format decides the extension, as in the core.
+  const stem = cap ? videoFileStem(settings?.video.fileTemplate ?? "", title, cap.pageUrl) : "";
+  const ext = format === "mp3" ? (picked?.audioFormat ?? "mp3") : container;
+  const fileName = typedName?.trim();
 
   // "Only a part": a single video of known length that isn't live.
   const info = probe?.kind === "video" ? probe : null;
@@ -161,6 +207,7 @@ export default function VideoWindow({ id }: { id: string }) {
             : [],
         oneAtATime: probe?.kind === "playlist" && oneByOne,
         section: section ?? undefined,
+        fileName: probe?.kind === "video" && fileName && fileName !== stem ? fileName : undefined,
         mode,
       }),
       t("Could not add the video"),
@@ -260,6 +307,16 @@ export default function VideoWindow({ id }: { id: string }) {
 
         {probe && (
           <div className="vopts">
+            {probe.kind === "video" && (
+              <div className="vopt">
+                <span>
+                  <Icon name="file" size={15} /> {t("File name")}
+                </span>
+                <div className="withbtn">
+                  <TextField value={typedName ?? stem} onChange={setTypedName} label={t("File name")} placeholder={stem} trailing={<span className="input__suffix" dir="ltr">.{ext}</span>} />
+                </div>
+              </div>
+            )}
             <div className="vopt">
               <span>
                 <Icon name="folder" size={15} /> {t("Save to")}

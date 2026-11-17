@@ -200,8 +200,8 @@ cargo run --release -p prism-engine --example prism-get -- <url> -c 8 --limit 5M
 * Proxies: client construction is tested, but no test runs against a live HTTP or SOCKS
   proxy. The system proxy means environment variables, the Windows registry and macOS
   settings. PAC/WPAD is not supported.
-* HLS: no live playlists and no SAMPLE-AES. `EXT-X-MAP` init sections are assumed to be
-  unencrypted. Subtitles are ignored. `MediaRequest` has no credentials field (cookies and
+* HLS: no live playlists and no SAMPLE-AES. An `EXT-X-MAP` init section is decrypted with the
+  AES-128 key in effect at its tag (none if the MAP comes first). Subtitles are ignored. `MediaRequest` has no credentials field (cookies and
   headers are supported).
 * DASH: static, single-period, unencrypted manifests only. `SegmentBase` representations are
   fetched as one file (no `sidx` parsing).

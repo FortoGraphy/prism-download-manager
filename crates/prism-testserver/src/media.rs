@@ -16,7 +16,7 @@ pub struct HlsVariant {
     pub resolution: Option<(u32, u32)>,
     /// Plaintext segment payloads.
     pub segments: Vec<Bytes>,
-    /// Optional `EXT-X-MAP` initialization section (served unencrypted).
+    /// Optional `EXT-X-MAP` initialization section (plaintext; see `HlsFixture::encrypt_init`).
     pub init: Option<Bytes>,
 }
 
@@ -43,6 +43,9 @@ pub struct HlsFixture {
     pub explicit_iv: Option<[u8; 16]>,
     /// Serve segments as `EXT-X-BYTERANGE` slices of a single `all.ts` resource.
     pub byte_ranges: bool,
+    /// With a key: put `EXT-X-KEY` before `EXT-X-MAP` and serve the init section encrypted
+    /// (IV as for the first segment). Otherwise the MAP comes first and stays plain.
+    pub encrypt_init: bool,
 }
 
 impl HlsFixture {
@@ -67,6 +70,7 @@ impl HlsFixture {
             key: None,
             explicit_iv: None,
             byte_ranges: false,
+            encrypt_init: false,
         }
     }
 
@@ -110,6 +114,15 @@ impl HlsFixture {
         }
     }
 
+    /// Init section as served (encrypted when a key and `encrypt_init` are set).
+    pub(crate) fn served_init(&self, init: &Bytes) -> Bytes {
+        if self.encrypt_init {
+            self.served_segment(init, 0)
+        } else {
+            init.clone()
+        }
+    }
+
     /// Master playlist text.
     pub(crate) fn master_playlist(&self) -> String {
         let mut s = String::from("#EXTM3U\n#EXT-X-VERSION:4\n");
@@ -138,8 +151,9 @@ impl HlsFixture {
             self.segment_duration.ceil() as u64,
             self.media_sequence
         );
-        if init {
-            s.push_str("#EXT-X-MAP:URI=\"init.mp4\"\n");
+        const MAP: &str = "#EXT-X-MAP:URI=\"init.mp4\"\n";
+        if init && !self.encrypt_init {
+            s.push_str(MAP);
         }
         if self.key.is_some() {
             s.push_str("#EXT-X-KEY:METHOD=AES-128,URI=\"../key.bin\"");
@@ -147,6 +161,9 @@ impl HlsFixture {
                 s.push_str(&format!(",IV=0x{}", content::hex(&iv)));
             }
             s.push('\n');
+        }
+        if init && self.encrypt_init {
+            s.push_str(MAP);
         }
         let mut offset = 0u64;
         for (n, seg) in segments.iter().enumerate() {

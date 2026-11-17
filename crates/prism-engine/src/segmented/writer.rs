@@ -42,6 +42,8 @@ enum Msg {
         reply: oneshot::Sender<Result<Vec<SegmentState>, EngineError>>,
     },
     Close {
+        /// Every byte is written: the file can stop being sparse.
+        complete: bool,
         reply: oneshot::Sender<Result<(), EngineError>>,
     },
     /// The file is about to be deleted: drop what's buffered and close it without syncing.
@@ -169,13 +171,14 @@ impl Writer {
         rx.await.map_err(|_| self.closed_error())?
     }
 
-    /// Flushes, fsyncs, closes the file and joins the thread. Further submits fail.
-    pub(crate) async fn close(&self) -> Result<(), EngineError> {
+    /// Flushes, fsyncs, closes the file and joins the thread. Further submits fail. `complete`
+    /// is for a finished download only (see [`storage::finish_file`]).
+    pub(crate) async fn close(&self, complete: bool) -> Result<(), EngineError> {
         let Ok(tx) = self.sender() else {
             return self.error().map_or(Ok(()), Err);
         };
         let (reply, rx) = oneshot::channel();
-        let sent = tx.send(Msg::Close { reply }).is_ok();
+        let sent = tx.send(Msg::Close { complete, reply }).is_ok();
         drop(tx);
         self.tx.lock().expect("writer tx lock").take();
         let result = if sent {
@@ -271,11 +274,13 @@ impl WriterThread {
                     });
                     let _ = reply.send(r);
                 }
-                Ok(Msg::Close { reply }) => {
+                Ok(Msg::Close { complete, reply }) => {
                     self.flush_all();
                     let r = self.check().and_then(|()| {
                         self.file.sync_all().map_err(|e| self.fail(&e))?;
-                        storage::finish_file(&self.file);
+                        if complete {
+                            storage::finish_file(&self.file);
+                        }
                         Ok(())
                     });
                     let _ = reply.send(r);
@@ -410,7 +415,7 @@ mod tests {
         let states = w.flush(true).await.unwrap();
         assert_eq!(states[0].pos, total);
         assert_eq!(budget.available_permits(), 8 << 20, "budget fully returned");
-        w.close().await.unwrap();
+        w.close(true).await.unwrap();
         assert!(
             w.submit(
                 0,
@@ -454,5 +459,53 @@ mod tests {
         std::fs::remove_file(&path).expect("the file is closed and can be deleted");
         // Discarding twice (or after close) is harmless.
         w.discard().await;
+    }
+
+    /// #70: a paused (or failed, or kept) download stays sparse. Clearing the flag made NTFS
+    /// write zeros over everything not downloaded yet: minutes of disk writes on a big file.
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn a_paused_part_file_stays_sparse_and_a_finished_one_does_not() {
+        use std::os::windows::fs::MetadataExt;
+        const SPARSE: u32 = 0x200; // FILE_ATTRIBUTE_SPARSE_FILE
+        let sparse =
+            |p: &std::path::Path| std::fs::metadata(p).unwrap().file_attributes() & SPARSE != 0;
+        let dir = tempfile::tempdir().unwrap();
+
+        let path = dir.path().join("p.prismpart");
+        let total = 4u64 << 30;
+        let file = storage::create_part_file(&path, Some(total), true).unwrap();
+        if !sparse(&path) {
+            return; // A file system without sparse files (FAT): nothing to check.
+        }
+        let table = Arc::new(SegmentTable::new(Some(total), 1 << 20, true));
+        let budget = Arc::new(Semaphore::new(4 << 20));
+        let w = Writer::spawn(file, table.clone(), budget, 4 << 20, 1 << 20).unwrap();
+        let (a, _) = table.acquire(0, false).unwrap();
+        let permit = w.reserve(64 * 1024).await.unwrap();
+        w.submit(0, a.seg, 0, Bytes::from(vec![7u8; 64 * 1024]), permit)
+            .unwrap();
+        w.flush(true).await.unwrap();
+        let started = std::time::Instant::now();
+        w.close(false).await.unwrap();
+        assert!(sparse(&path), "a paused part file keeps its sparse flag");
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(5),
+            "closing wrote no zeros"
+        );
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), total);
+
+        let done = dir.path().join("d.prismpart");
+        let total = 1u64 << 20;
+        let file = storage::create_part_file(&done, Some(total), true).unwrap();
+        let table = Arc::new(SegmentTable::new(Some(total), 1 << 20, true));
+        let budget = Arc::new(Semaphore::new(4 << 20));
+        let w = Writer::spawn(file, table.clone(), budget, 4 << 20, 1 << 20).unwrap();
+        let (a, _) = table.acquire(0, false).unwrap();
+        let permit = w.reserve(total as usize).await.unwrap();
+        w.submit(0, a.seg, 0, Bytes::from(vec![1u8; total as usize]), permit)
+            .unwrap();
+        w.close(true).await.unwrap();
+        assert!(!sparse(&done), "a finished file is no longer sparse");
     }
 }

@@ -400,3 +400,32 @@ async fn a_part_of_a_video_keeps_its_range_across_a_restart() {
     assert!(args.contains("(1m23s"), "{args}");
     core.shutdown().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_video_named_in_the_window_is_saved_under_that_name() {
+    let tmp = tempfile::tempdir().unwrap();
+    let core = core_with_fake_tools(tmp.path(), "youtube_bbb.json").await;
+    let mut d = part_decision(json!({"start": 83, "end": 165}));
+    d.file_name = Some("Bunny intro".into());
+    let items = core.confirm_video(d).unwrap();
+    assert_eq!(names(&items), ["Bunny intro.mp4"]);
+    let id = items[0].id.clone();
+    // yt-dlp is told to write that name (not the title's, and without the range).
+    let args_file = tmp.path().join("bin").join("args.txt");
+    core.start_items(std::slice::from_ref(&id));
+    let args = tokio::time::timeout(Duration::from_secs(30), async {
+        loop {
+            let text = std::fs::read_to_string(&args_file).unwrap_or_default();
+            if let Some(line) = text.lines().find(|l| l.contains("--download-sections")) {
+                return line.to_string();
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    })
+    .await
+    .expect("yt-dlp was not asked for the part");
+    assert!(args.contains("Bunny intro."), "{args}");
+    assert!(!args.contains("Big Buck Bunny"), "{args}");
+    assert!(!args.contains("(1m23s"), "{args}");
+    core.shutdown().await;
+}

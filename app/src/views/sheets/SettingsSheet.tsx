@@ -1,6 +1,6 @@
 import { checkForUpdates } from "../UpdateBanner";
 import { BrowserConnect, useExtensionStatus } from "../BrowserConnect";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { ListField, NumberField, RateField, Row, Segmented, Select, Slider, Switch, TextField } from "../../components/Controls";
 import { BrandTile } from "../../components/LogoMark";
 import { Icon, type IconName } from "../../design/icons";
@@ -42,24 +42,111 @@ const save = (patch: DeepPartial<Settings>) => void patchSettings(patch);
 const DEFAULT_HUB = "https://huggingface.co";
 const MIRROR = "https://hf-mirror.com";
 
+/** The texts search looks at: group names, and each setting's title and hint. */
+const TEXTS = ".group__t, .srow__t1, .srow__t2";
+
+/** Lower case without accents, so "Zvuky" finds "zvuky" and "stazeni" finds "stažení". */
+const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** Each section's texts in the current language, from a static render of its body: the index
+ *  follows whatever the sections show, and no effects run (nothing is asked from the core). */
+async function buildIndex(s: Settings): Promise<Map<string, string[]>> {
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const parser = new DOMParser();
+  const index = new Map<string, string[]>();
+  for (const { id } of SECTIONS) {
+    try {
+      const doc = parser.parseFromString(renderToStaticMarkup(<SectionBody id={id} s={s} />), "text/html");
+      index.set(id, [...doc.querySelectorAll(TEXTS)].map((n) => fold(n.textContent ?? "")));
+    } catch {
+      // Found by its name only.
+    }
+  }
+  return index;
+}
+
+/** The search index, built once a search starts (again when the settings change). */
+function useSearchIndex(on: boolean, s: Settings | null) {
+  const [index, setIndex] = useState<{ s: Settings; texts: Map<string, string[]> } | null>(null);
+  useEffect(() => {
+    if (!on || !s || index?.s === s) return;
+    let alive = true;
+    void buildIndex(s).then(
+      (texts) => alive && setIndex({ s, texts }),
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, [on, s, index]);
+  return index?.texts;
+}
+
+/** Marks the open section's settings that match and scrolls to the first one. */
+function useSearchHits(body: RefObject<HTMLDivElement | null>, query: string, cur: string, s: Settings | null) {
+  const scrolled = useRef("");
+  useEffect(() => {
+    const el = body.current;
+    if (!el) return;
+    let first: Element | undefined;
+    for (const n of el.querySelectorAll(".group__t, .srow")) {
+      const texts = n.matches(".srow") ? [...n.querySelectorAll(".srow__t1, .srow__t2")] : [n];
+      const hit = !!query && texts.some((x) => fold(x.textContent ?? "").includes(query));
+      n.toggleAttribute("data-hit", hit);
+      if (hit) first ??= n;
+    }
+    // Into view once per section and query (not again when a setting changes).
+    const key = `${cur}\n${query}`;
+    if (first && scrolled.current !== key) {
+      const box = el.parentElement?.getBoundingClientRect();
+      const row = first.getBoundingClientRect();
+      if (!box || row.top < box.top || row.bottom > box.bottom) first.scrollIntoView({ block: "center" });
+    }
+    scrolled.current = key;
+  }, [body, query, cur, s]);
+}
+
 export function SettingsSheet({ section }: { section?: string }) {
   const [cur, setCur] = useState(section ?? "general");
   const [q, setQ] = useState("");
   const s = useApp((st) => st.settings);
+  const query = fold(q.trim());
+  const index = useSearchIndex(!!query, s);
+  const body = useRef<HTMLDivElement>(null);
+  useSearchHits(body, query, cur, s);
   if (!s) return null;
-  const list = SECTIONS.filter((x) => !q || t(x.label).toLowerCase().includes(q.toLowerCase()));
+  const list = query ? SECTIONS.filter((x) => fold(t(x.label)).includes(query) || index?.get(x.id)?.some((text) => text.includes(query))) : SECTIONS;
   const meta = SECTIONS.find((x) => x.id === cur) ?? SECTIONS[0];
   return (
     <div className="settings">
       <aside className="snav">
         <label className="input">
           <Icon name="search" size={15} />
-          <input placeholder={t("Search settings")} aria-label={t("Search settings")} value={q} onChange={(e) => setQ(e.target.value)} />
+          <input
+            placeholder={t("Search settings")}
+            aria-label={t("Search settings")}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && query && list.length) setCur(list[0].id);
+              // Esc clears the search first; the next one closes Settings.
+              if (e.key === "Escape" && q) {
+                e.stopPropagation();
+                setQ("");
+              }
+            }}
+          />
+          {q && (
+            <button type="button" className="search__clear" aria-label={t("Clear search")} onClick={() => setQ("")}>
+              <Icon name="close" size={13} />
+            </button>
+          )}
         </label>
         <nav aria-label={t("Settings sections")}>
+          {!list.length && <p className="snav__none">{t("No matches for “{search}”", { search: q.trim() })}</p>}
           {list.map((x) => (
             <div key={x.id}>
-              {x.group && !q && <div className="grp" />}
+              {x.group && !query && <div className="grp" />}
               <button type="button" className="side-item" aria-current={x.id === cur ? "true" : undefined} onClick={() => setCur(x.id)}>
                 <Icon name={x.icon} size={16} />
                 <span className="side-item__label">{t(x.label)}</span>
@@ -69,7 +156,7 @@ export function SettingsSheet({ section }: { section?: string }) {
         </nav>
       </aside>
       <section className="scontent" aria-label={t(meta.label)}>
-        <div className="sbody" key={cur}>
+        <div className="sbody" key={cur} ref={body}>
           <h1>{t(meta.label)}</h1>
           <SectionBody id={cur} s={s} />
         </div>

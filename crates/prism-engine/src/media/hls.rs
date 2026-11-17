@@ -51,6 +51,61 @@ fn sequence_iv(seq: u64) -> [u8; 16] {
     u128::from(seq).to_be_bytes()
 }
 
+/// An `EXT-X-KEY` with `METHOD=AES-128` as written in the playlist (URI and IV unresolved).
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RawKey {
+    uri: Option<String>,
+    iv: Option<String>,
+}
+
+/// Value of attribute `name` in an attribute list (`A=1,B="x,y"`), without quotes.
+fn attribute<'a>(list: &'a str, name: &str) -> Option<&'a str> {
+    let mut rest = list.trim();
+    while !rest.is_empty() {
+        let (key, after) = rest.split_once('=')?;
+        let after = after.trim_start();
+        let (value, tail) = match after.strip_prefix('"') {
+            Some(quoted) => {
+                let (v, t) = quoted.split_once('"')?;
+                (v, t.trim_start().strip_prefix(',').unwrap_or(t))
+            }
+            None => match after.split_once(',') {
+                Some((v, t)) => (v.trim(), t),
+                None => (after.trim(), ""),
+            },
+        };
+        if key.trim() == name {
+            return Some(value);
+        }
+        rest = tail.trim_start();
+    }
+    None
+}
+
+/// For every media segment (URI line) of a media playlist: `None` when no `EXT-X-MAP` precedes
+/// it since the previous segment, otherwise the AES-128 key in effect at that MAP tag's line
+/// (`Some(None)` = the init section is not encrypted). m3u8-rs attaches both tags to the next
+/// segment and loses their order, so the raw text is scanned in line order.
+fn scan_map_keys(text: &str) -> Vec<Option<Option<RawKey>>> {
+    let mut out = Vec::new();
+    let mut key: Option<RawKey> = None;
+    let mut pending: Option<Option<RawKey>> = None;
+    for line in text.lines().map(str::trim) {
+        if let Some(attrs) = line.strip_prefix("#EXT-X-KEY:") {
+            // Only AES-128 encrypts the whole resource; NONE (and anything else) does not.
+            key = (attribute(attrs, "METHOD") == Some("AES-128")).then(|| RawKey {
+                uri: attribute(attrs, "URI").map(str::to_owned),
+                iv: attribute(attrs, "IV").map(str::to_owned),
+            });
+        } else if line.starts_with("#EXT-X-MAP:") {
+            pending = Some(key.clone());
+        } else if !line.is_empty() && !line.starts_with('#') {
+            out.push(pending.take());
+        }
+    }
+    out
+}
+
 /// Picks a variant index according to `sel` (variants in manifest order).
 pub(crate) fn choose_variant(
     variants: &[&VariantStream],
@@ -144,10 +199,16 @@ fn extension_for(url: &Url, fmp4: bool, kind: TrackKind) -> &'static str {
     }
 }
 
-/// Converts a media playlist into a track.
+fn resolve_iv(iv: Option<&str>) -> Result<Option<[u8; 16]>, EngineError> {
+    iv.map(|v| parse_iv(v).ok_or_else(|| hls_err(format!("bad IV {v:?}"))))
+        .transpose()
+}
+
+/// Converts a media playlist (`text`, parsed as `media`) into a track.
 pub(crate) fn build_track(
     id: String,
     kind: TrackKind,
+    text: &str,
     media: &MediaPlaylist,
     base: &Url,
 ) -> Result<Track, EngineError> {
@@ -160,6 +221,10 @@ pub(crate) fn build_track(
         base.join(u)
             .map_err(|e| hls_err(format!("bad URI {u:?}: {e}")))
     };
+    let map_keys = scan_map_keys(text);
+    // Without a one-to-one match the scan can't be trusted; init sections are then taken as
+    // unencrypted.
+    let map_keys_usable = map_keys.len() == media.segments.len();
     let mut key: Option<(Url, Option<[u8; 16]>)> = None;
     let mut map: Option<(Url, Option<(u64, u64)>)> = None;
     let mut last_end: HashMap<Url, u64> = HashMap::new();
@@ -183,13 +248,7 @@ pub(crate) fn build_track(
                         .uri
                         .as_deref()
                         .ok_or_else(|| hls_err("AES-128 key without URI"))?;
-                    let iv = match &k.iv {
-                        Some(v) => {
-                            Some(parse_iv(v).ok_or_else(|| hls_err(format!("bad IV {v:?}")))?)
-                        }
-                        None => None,
-                    };
-                    Some((join(uri)?, iv))
+                    Some((join(uri)?, resolve_iv(k.iv.as_deref())?))
                 }
                 KeyMethod::SampleAES => {
                     return Err(EngineError::Unsupported {
@@ -211,12 +270,30 @@ pub(crate) fn build_track(
             });
             if map.as_ref() != Some(&(url.clone(), range)) {
                 map = Some((url.clone(), range));
-                // Initialization sections are stored unencrypted (see the crate README).
-                segments.push(MediaSegment {
-                    url,
-                    range,
-                    key: None,
-                });
+                // The init section is encrypted with the AES-128 key in effect at its MAP tag
+                // (RFC 8216 §4.3.2.5). Without an IV attribute, the sequence number of the
+                // following segment is used, as ffmpeg and yt-dlp do.
+                let raw = map_keys
+                    .get(i)
+                    .filter(|_| map_keys_usable)
+                    .cloned()
+                    .flatten()
+                    .flatten();
+                let key = match raw {
+                    Some(k) => {
+                        let uri = k
+                            .uri
+                            .as_deref()
+                            .ok_or_else(|| hls_err("AES-128 key without URI"))?;
+                        Some(KeyRef {
+                            uri: join(uri)?,
+                            iv: resolve_iv(k.iv.as_deref())?
+                                .unwrap_or_else(|| sequence_iv(media.media_sequence + i as u64)),
+                        })
+                    }
+                    None => None,
+                };
+                segments.push(MediaSegment { url, range, key });
             }
         }
         let url = join(&s.uri)?;
@@ -266,7 +343,15 @@ pub(crate) async fn plan(
     sel: VariantSelection,
 ) -> Result<MediaPlan, EngineError> {
     let tracks = match parse(text)? {
-        Playlist::MediaPlaylist(m) => vec![build_track(url.to_string(), TrackKind::Main, &m, url)?],
+        Playlist::MediaPlaylist(m) => {
+            vec![build_track(
+                url.to_string(),
+                TrackKind::Main,
+                text,
+                &m,
+                url,
+            )?]
+        }
         Playlist::MasterPlaylist(master) => {
             let variants: Vec<&VariantStream> =
                 master.variants.iter().filter(|v| !v.is_i_frame).collect();
@@ -278,6 +363,7 @@ pub(crate) async fn plan(
             let mut tracks = vec![build_track(
                 vurl.to_string(),
                 TrackKind::Main,
+                &vtext,
                 &media_of(&vtext)?,
                 &vfinal,
             )?];
@@ -293,6 +379,7 @@ pub(crate) async fn plan(
                 tracks.push(build_track(
                     aurl.to_string(),
                     TrackKind::Audio,
+                    &atext,
                     &media_of(&atext)?,
                     &afinal,
                 )?);
@@ -330,6 +417,162 @@ mod tests {
         assert!(decrypt_aes128(&[0u8; 16], &iv, ct).is_err());
     }
 
+    fn track(text: &str) -> Result<Track, EngineError> {
+        let base = Url::parse("http://h/v/media.m3u8").unwrap();
+        build_track("id".into(), TrackKind::Main, text, &media_of(text)?, &base)
+    }
+
+    const HEAD: &str = "#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-TARGETDURATION:2\n";
+
+    fn raw(uri: &str, iv: Option<&str>) -> Option<Option<RawKey>> {
+        Some(Some(RawKey {
+            uri: Some(uri.into()),
+            iv: iv.map(str::to_owned),
+        }))
+    }
+
+    #[test]
+    fn attribute_lists() {
+        let a = "METHOD=AES-128,URI=\"https://h/k?a=1,b=2\",IV=0x01, KEYFORMAT=\"identity\"";
+        assert_eq!(attribute(a, "METHOD"), Some("AES-128"));
+        assert_eq!(attribute(a, "URI"), Some("https://h/k?a=1,b=2"));
+        assert_eq!(attribute(a, "IV"), Some("0x01"));
+        assert_eq!(attribute(a, "KEYFORMAT"), Some("identity"));
+        assert_eq!(attribute(a, "KEY"), None);
+        assert_eq!(attribute("METHOD=NONE", "METHOD"), Some("NONE"));
+        assert_eq!(attribute("", "METHOD"), None);
+        assert_eq!(attribute("URI=\"unterminated", "URI"), None);
+    }
+
+    #[test]
+    fn map_key_scan_follows_line_order() {
+        // KEY before MAP: encrypted. CRLF line ends are fine.
+        let t = "#EXTM3U\r\n#EXT-X-KEY:METHOD=AES-128,URI=\"k.bin\",IV=0x10\r\n\
+            #EXT-X-MAP:URI=\"init.mp4\"\r\n#EXTINF:2,\r\na.m4s\r\n#EXTINF:2,\r\nb.m4s\r\n";
+        assert_eq!(scan_map_keys(t), vec![raw("k.bin", Some("0x10")), None]);
+        // MAP before KEY: plain.
+        let t = "#EXT-X-MAP:URI=\"i\"\n#EXT-X-KEY:METHOD=AES-128,URI=\"k\"\n#EXTINF:2,\na\n";
+        assert_eq!(scan_map_keys(t), vec![Some(None)]);
+        // METHOD=NONE switches encryption off again.
+        let t = "#EXT-X-KEY:METHOD=AES-128,URI=\"k\"\n#EXTINF:2,\na\n\
+            #EXT-X-KEY:METHOD=NONE\n#EXT-X-MAP:URI=\"i\"\n#EXTINF:2,\nb\n";
+        assert_eq!(scan_map_keys(t), vec![None, Some(None)]);
+        // Other methods are not whole-segment encryption.
+        let t = "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"k\"\n#EXT-X-MAP:URI=\"i\"\n#EXTINF:2,\na\n";
+        assert_eq!(scan_map_keys(t), vec![Some(None)]);
+        // The key stays in effect for a later MAP; a rotation applies to the MAP after it.
+        let t = "#EXT-X-KEY:METHOD=AES-128,URI=\"k1\"\n#EXT-X-MAP:URI=\"i1\"\n#EXTINF:2,\na\n\
+            #EXTINF:2,\nb\n#EXT-X-DISCONTINUITY\n#EXT-X-MAP:URI=\"i2\"\n#EXTINF:2,\nc\n\
+            #EXT-X-KEY:METHOD=AES-128,URI=\"k2\",IV=0x2\n#EXT-X-MAP:URI=\"i3\"\n#EXTINF:2,\nd\n";
+        assert_eq!(
+            scan_map_keys(t),
+            vec![
+                raw("k1", None),
+                None,
+                raw("k1", None),
+                raw("k2", Some("0x2"))
+            ]
+        );
+    }
+
+    #[test]
+    fn init_section_encrypted_by_key_before_map() {
+        // IV attribute: the init section and the segments share it.
+        let text = format!(
+            "{HEAD}#EXT-X-KEY:METHOD=AES-128,URI=\"k.bin\",IV=0x0000000000000000000000000000002a\n\
+            #EXT-X-MAP:URI=\"init.mp4\",BYTERANGE=\"720@0\"\n\
+            #EXTINF:2,\na.m4s\n#EXTINF:2,\nb.m4s\n#EXT-X-ENDLIST\n"
+        );
+        let t = track(&text).unwrap();
+        assert_eq!(t.ext, "mp4");
+        assert_eq!(t.segments.len(), 3);
+        assert_eq!(t.segments[0].url.as_str(), "http://h/v/init.mp4");
+        assert_eq!(t.segments[0].range, Some((0, 720)));
+        for s in &t.segments {
+            let k = s.key.as_ref().unwrap();
+            assert_eq!(k.uri.as_str(), "http://h/v/k.bin");
+            assert_eq!(k.iv, sequence_iv(0x2a));
+        }
+
+        // No IV attribute: the sequence number of the segment that follows the MAP.
+        let text = format!(
+            "{HEAD}#EXT-X-MEDIA-SEQUENCE:7\n#EXT-X-KEY:METHOD=AES-128,URI=\"k.bin\"\n\
+            #EXT-X-MAP:URI=\"init.mp4\"\n\
+            #EXTINF:2,\na.m4s\n#EXTINF:2,\nb.m4s\n#EXT-X-ENDLIST\n"
+        );
+        let t = track(&text).unwrap();
+        assert_eq!(t.segments[0].key.as_ref().unwrap().iv, sequence_iv(7));
+        assert_eq!(t.segments[1].key.as_ref().unwrap().iv, sequence_iv(7));
+        assert_eq!(t.segments[2].key.as_ref().unwrap().iv, sequence_iv(8));
+    }
+
+    #[test]
+    fn init_section_plain_without_key_in_effect() {
+        // MAP before KEY.
+        let text = format!(
+            "{HEAD}#EXT-X-MAP:URI=\"init.mp4\"\n#EXT-X-KEY:METHOD=AES-128,URI=\"k.bin\"\n\
+            #EXTINF:2,\na.m4s\n#EXT-X-ENDLIST\n"
+        );
+        let t = track(&text).unwrap();
+        assert!(t.segments[0].key.is_none());
+        assert!(t.segments[1].key.is_some());
+
+        // KEY switched off before the MAP.
+        let text = format!(
+            "{HEAD}#EXT-X-KEY:METHOD=AES-128,URI=\"k.bin\"\n#EXTINF:2,\na.ts\n\
+            #EXT-X-DISCONTINUITY\n#EXT-X-KEY:METHOD=NONE\n#EXT-X-MAP:URI=\"init.mp4\"\n\
+            #EXTINF:2,\nb.m4s\n#EXT-X-ENDLIST\n"
+        );
+        let t = track(&text).unwrap();
+        assert_eq!(t.segments.len(), 3);
+        assert!(t.segments[0].key.is_some());
+        assert_eq!(t.segments[1].url.as_str(), "http://h/v/init.mp4");
+        assert!(t.segments[1].key.is_none());
+        assert!(t.segments[2].key.is_none());
+
+        // No key at all.
+        let text =
+            format!("{HEAD}#EXT-X-MAP:URI=\"init.mp4\"\n#EXTINF:2,\na.m4s\n#EXT-X-ENDLIST\n");
+        let t = track(&text).unwrap();
+        assert!(t.segments.iter().all(|s| s.key.is_none()));
+    }
+
+    #[test]
+    fn several_maps_and_key_rotation() {
+        let text = format!(
+            "{HEAD}#EXT-X-MEDIA-SEQUENCE:100\n\
+            #EXT-X-KEY:METHOD=AES-128,URI=\"k1.bin\"\n#EXT-X-MAP:URI=\"init1.mp4\"\n\
+            #EXTINF:2,\na.m4s\n#EXTINF:2,\nb.m4s\n\
+            #EXT-X-DISCONTINUITY\n\
+            #EXT-X-KEY:METHOD=AES-128,URI=\"k2.bin\",IV=0x5\n#EXT-X-MAP:URI=\"init2.mp4\"\n\
+            #EXTINF:2,\nc.m4s\n\
+            #EXT-X-DISCONTINUITY\n\
+            #EXT-X-MAP:URI=\"init3.mp4\"\n#EXT-X-KEY:METHOD=AES-128,URI=\"k3.bin\"\n\
+            #EXTINF:2,\nd.m4s\n#EXT-X-ENDLIST\n"
+        );
+        let t = track(&text).unwrap();
+        let name = |u: &Url| u.path().trim_start_matches("/v/").to_owned();
+        let got: Vec<_> = t
+            .segments
+            .iter()
+            .map(|s| (name(&s.url), s.key.as_ref().map(|k| (name(&k.uri), k.iv))))
+            .collect();
+        let k = |uri: &str, iv: [u8; 16]| Some((uri.to_owned(), iv));
+        assert_eq!(
+            got,
+            vec![
+                ("init1.mp4".into(), k("k1.bin", sequence_iv(100))),
+                ("a.m4s".into(), k("k1.bin", sequence_iv(100))),
+                ("b.m4s".into(), k("k1.bin", sequence_iv(101))),
+                ("init2.mp4".into(), k("k2.bin", sequence_iv(5))),
+                ("c.m4s".into(), k("k2.bin", sequence_iv(5))),
+                // init3 comes before the k3 tag: still under k2.
+                ("init3.mp4".into(), k("k2.bin", sequence_iv(5))),
+                ("d.m4s".into(), k("k3.bin", sequence_iv(103))),
+            ]
+        );
+    }
+
     #[test]
     fn media_playlist_resolution() {
         let text = "#EXTM3U\n#EXT-X-VERSION:4\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:10\n\
@@ -339,14 +582,7 @@ mod tests {
             #EXTINF:2,\n#EXT-X-BYTERANGE:50\nall.m4s\n\
             #EXT-X-KEY:METHOD=NONE\n\
             #EXTINF:2,\nplain.m4s\n#EXT-X-ENDLIST\n";
-        let base = Url::parse("http://h/v/media.m3u8").unwrap();
-        let t = build_track(
-            "id".into(),
-            TrackKind::Main,
-            &media_of(text).unwrap(),
-            &base,
-        )
-        .unwrap();
+        let t = track(text).unwrap();
         assert_eq!(t.ext, "mp4");
         assert_eq!(t.segments.len(), 4);
         assert_eq!(t.segments[0].url.as_str(), "http://h/v/init.mp4");
@@ -360,18 +596,10 @@ mod tests {
         assert!(t.segments[3].key.is_none());
 
         let live = "#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXTINF:2,\na.ts\n";
-        assert!(matches!(
-            build_track("l".into(), TrackKind::Main, &media_of(live).unwrap(), &base),
-            Err(EngineError::Unsupported { .. })
-        ));
+        assert!(matches!(track(live), Err(EngineError::Unsupported { .. })));
         let sample = "#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"k\"\n#EXTINF:2,\na.ts\n#EXT-X-ENDLIST\n";
         assert!(matches!(
-            build_track(
-                "s".into(),
-                TrackKind::Main,
-                &media_of(sample).unwrap(),
-                &base
-            ),
+            track(sample),
             Err(EngineError::Unsupported { .. })
         ));
     }

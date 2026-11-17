@@ -166,6 +166,26 @@ fn in_scope(scope: Scope, start: &Url, candidate: &Url) -> bool {
     }
 }
 
+/// Whether the configured cookies and HTTP basic-auth may be sent to `url`: the start site's own
+/// domain only, like a `Domain=.example.com` cookie in a browser.
+pub(crate) fn credentials_allowed(start: &Url, url: &Url) -> bool {
+    let (Some(a), Some(b)) = (start.host_str(), url.host_str()) else {
+        return false;
+    };
+    if a.eq_ignore_ascii_case(b) {
+        return true;
+    }
+    // An IP or a bare name has no domain, so nothing else can share it.
+    if a.parse::<std::net::IpAddr>().is_ok()
+        || b.parse::<std::net::IpAddr>().is_ok()
+        || !a.contains('.')
+        || !b.contains('.')
+    {
+        return false;
+    }
+    registrable_domain(a).eq_ignore_ascii_case(&registrable_domain(b))
+}
+
 fn extension(url: &Url) -> String {
     let last = url
         .path_segments()
@@ -352,12 +372,15 @@ pub async fn crawl(
         // Fetch a batch of pages concurrently, then process their links in order.
         let batch: Vec<(Url, u32)> = (0..concurrency).filter_map(|_| queue.pop_front()).collect();
         let fetches = batch.into_iter().map(|(url, depth)| {
+            let with_credentials = credentials_allowed(&start, &url);
             let mut req = client.get(url.clone());
-            if !config.cookies.is_empty() {
-                req = req.header(reqwest::header::COOKIE, &config.cookies);
-            }
-            if let Some(l) = auth {
-                req = req.basic_auth(&l.username, Some(&l.password));
+            if with_credentials {
+                if !config.cookies.is_empty() {
+                    req = req.header(reqwest::header::COOKIE, &config.cookies);
+                }
+                if let Some(l) = auth {
+                    req = req.basic_auth(&l.username, Some(&l.password));
+                }
             }
             async move {
                 let result = async {
@@ -458,7 +481,14 @@ pub async fn crawl(
 }
 
 /// Fill in sizes/MIME types of found files with HEAD requests (bounded concurrency).
-pub async fn fetch_sizes(files: Vec<FoundFile>, user_agent: &str, cookies: &str) -> Vec<FoundFile> {
+///
+/// `start` scopes the cookie: files on other hosts (`files_any_host`) get a plain HEAD.
+pub async fn fetch_sizes(
+    files: Vec<FoundFile>,
+    user_agent: &str,
+    cookies: &str,
+    start: Option<&Url>,
+) -> Vec<FoundFile> {
     let ua = if user_agent.is_empty() {
         crate::DEFAULT_USER_AGENT
     } else {
@@ -475,11 +505,17 @@ pub async fn fetch_sizes(files: Vec<FoundFile>, user_agent: &str, cookies: &str)
     futures_util::stream::iter(files.into_iter().map(|mut f| {
         let client = client.clone();
         let cookies = cookies.to_string();
+        let start = start.cloned();
         async move {
             let mut req = client
                 .head(&f.url)
                 .header(reqwest::header::REFERER, &f.referer);
-            if !cookies.is_empty() {
+            let file_url = Url::parse(&f.url).ok();
+            let with_credentials = match (&start, &file_url) {
+                (Some(s), Some(u)) => credentials_allowed(s, u),
+                _ => false,
+            };
+            if with_credentials && !cookies.is_empty() {
                 req = req.header(reqwest::header::COOKIE, cookies);
             }
             if let Ok(resp) = req.send().await {
@@ -560,5 +596,132 @@ mod tests {
         }
         // Depth 1: start page (0) and p2 (1) are crawled, p3 is not.
         assert_eq!(found, vec!["f1.zip", "f2.zip"]);
+    }
+
+    #[test]
+    fn credentials_stay_with_the_start_site() {
+        let start = Url::parse("https://www.example.com/docs/").unwrap();
+        let same = Url::parse("https://www.example.com/secret.zip").unwrap();
+        let sub = Url::parse("https://files.example.com/secret.zip").unwrap();
+        let other = Url::parse("https://cdn.unrelated.net/secret.zip").unwrap();
+        let lookalike = Url::parse("https://example.com.evil.net/x").unwrap();
+        assert!(credentials_allowed(&start, &same));
+        assert!(credentials_allowed(&start, &sub));
+        assert!(!credentials_allowed(&start, &other));
+        assert!(!credentials_allowed(&start, &lookalike));
+    }
+
+    #[test]
+    fn credentials_never_cross_a_bare_host_or_an_ip() {
+        let ip = Url::parse("http://127.0.0.1:8080/a").unwrap();
+        let other_ip = Url::parse("http://10.0.0.5:8080/a").unwrap();
+        let name = Url::parse("http://localhost:8080/a").unwrap();
+        assert!(credentials_allowed(&ip, &ip));
+        assert!(!credentials_allowed(&ip, &other_ip));
+        assert!(!credentials_allowed(&ip, &name));
+        assert!(!credentials_allowed(&name, &ip));
+    }
+
+    /// `Cookie` header seen per path.
+    type Seen = Arc<std::sync::Mutex<std::collections::HashMap<String, Option<String>>>>;
+
+    /// Records the `Cookie` header of every request; serves `home` on `/`.
+    async fn cookie_recorder(home: impl FnOnce(u16) -> String) -> (u16, Seen) {
+        use axum::extract::State;
+        use axum::http::{HeaderMap, Uri};
+        use axum::response::Html;
+        async fn handle(
+            State((seen, home)): State<(Seen, String)>,
+            uri: Uri,
+            headers: HeaderMap,
+        ) -> Html<String> {
+            seen.lock().unwrap().insert(
+                uri.path().to_string(),
+                headers
+                    .get(reqwest::header::COOKIE)
+                    .and_then(|v| v.to_str().ok())
+                    .map(String::from),
+            );
+            Html(if uri.path() == "/" {
+                home
+            } else {
+                "<html>leaf</html>".to_string()
+            })
+        }
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let seen: Seen = Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
+        let app = axum::Router::new()
+            .fallback(handle)
+            .with_state((seen.clone(), home(port)));
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        (port, seen)
+    }
+
+    #[tokio::test]
+    async fn crawl_sends_cookies_only_to_the_start_host() {
+        let (port, seen) = cookie_recorder(|port| {
+            format!(
+                r#"<a href="/same.html">same</a><a href="http://localhost:{port}/other.html">other</a>"#
+            )
+        })
+        .await;
+        let (tx, rx) = mpsc::unbounded_channel();
+        let cfg = GrabberConfig {
+            start_url: format!("http://127.0.0.1:{port}/"),
+            depth: 1,
+            scope: Scope::Any,
+            cookies: "session=SECRET".into(),
+            fetch_sizes: false,
+            ..Default::default()
+        };
+        crawl(cfg, CancelFlag::default(), tx).await;
+        drop(rx);
+        let seen = seen.lock().unwrap();
+        assert_eq!(
+            seen.get("/").and_then(|c| c.as_deref()),
+            Some("session=SECRET")
+        );
+        assert_eq!(
+            seen.get("/same.html").and_then(|c| c.as_deref()),
+            Some("session=SECRET")
+        );
+        assert!(
+            seen.contains_key("/other.html"),
+            "the third-party host must have been crawled"
+        );
+        assert_eq!(seen.get("/other.html").and_then(|c| c.as_deref()), None);
+    }
+
+    #[tokio::test]
+    async fn fetch_sizes_sends_the_cookie_only_to_the_start_host() {
+        let (port, seen) = cookie_recorder(|_| String::new()).await;
+        let start = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+        let file = |host: &str, name: &str| FoundFile {
+            url: format!("http://{host}:{port}/{name}"),
+            file_name: name.into(),
+            size: None,
+            mime: None,
+            referer: format!("http://127.0.0.1:{port}/"),
+            depth: 0,
+        };
+        let out = fetch_sizes(
+            vec![file("127.0.0.1", "own.zip"), file("localhost", "third.zip")],
+            "",
+            "session=SECRET",
+            Some(&start),
+        )
+        .await;
+        assert_eq!(out.len(), 2);
+        let seen = seen.lock().unwrap();
+        assert_eq!(
+            seen.get("/own.zip").and_then(|c| c.as_deref()),
+            Some("session=SECRET")
+        );
+        assert!(
+            seen.contains_key("/third.zip"),
+            "the third-party host must have been reached"
+        );
+        assert_eq!(seen.get("/third.zip").and_then(|c| c.as_deref()), None);
     }
 }

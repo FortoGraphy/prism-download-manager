@@ -77,13 +77,18 @@ fn write(path: &Path, data: &[u8]) {
 
 /// Adds the torrent and waits until the session has checked the data on disk.
 async fn finished(engine: &TorrentEngine, source: &TorrentSource, out: &Path) -> bool {
+    added(engine, source, out).await.0
+}
+
+/// [`finished`], with the torrent's hash.
+async fn added(engine: &TorrentEngine, source: &TorrentSource, out: &Path) -> (bool, String) {
     let hash = engine.add(source, out, None, false).await.unwrap();
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(30) {
         if let Some(p) = engine.progress(&hash)
             && p.state != prism_torrent::TorrentState::Initializing
         {
-            return p.finished;
+            return (p.finished, hash);
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
@@ -172,4 +177,83 @@ fn folder_names_are_safe_everywhere() {
     ] {
         assert_eq!(content_path(out, &meta(name)), out.join(folder), "{name:?}");
     }
+}
+
+/// Waits up to 10 s for the session to know (or not know) a torrent.
+async fn managed(engine: &TorrentEngine, hash: &str, want: bool) -> bool {
+    let start = Instant::now();
+    while start.elapsed() < Duration::from_secs(10) {
+        if engine.is_managed(hash) == want {
+            return want;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    !want
+}
+
+/// #82: a finished torrent leaves the session with its file closed and kept, and a saved
+/// finished torrent isn't loaded again at the next start, so a deleted file stays deleted.
+#[tokio::test]
+async fn a_finished_torrent_lets_go_of_its_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("Downloads");
+    let state = dir.path().join("state");
+    let data = contents(4, 3 * PIECE + 11);
+    let bytes = torrent("song.flac", &[(&["song.flac"], data.clone())]);
+    let file = out.join("song.flac");
+    write(&file, &data);
+    let source = TorrentSource::File(bytes);
+    let keep_all = |_: &str| true;
+
+    // Finished and removed without deleting: the data stays and nothing holds the file.
+    let engine = TorrentEngine::start_offline_saved(&state, dir.path().join("d"), &keep_all)
+        .await
+        .unwrap();
+    let (done, hash) = added(&engine, &source, &out).await;
+    assert!(done);
+    engine.remove(&hash, false).await.unwrap();
+    assert_eq!(std::fs::read(&file).unwrap(), data, "the file stays");
+    let moved = out.join("moved.flac");
+    std::fs::rename(&file, &moved).expect("nothing holds the file open");
+    std::fs::rename(&moved, &file).unwrap();
+    engine.shutdown().await;
+    let engine = TorrentEngine::start_offline_saved(&state, dir.path().join("d"), &keep_all)
+        .await
+        .unwrap();
+    assert!(
+        !managed(&engine, &hash, false).await,
+        "a removed torrent stays removed"
+    );
+    engine.shutdown().await;
+
+    // A finished torrent saved by an older Prism (only paused): loaded again while kept...
+    let engine = TorrentEngine::start_offline_saved(&state, dir.path().join("d"), &keep_all)
+        .await
+        .unwrap();
+    assert!(finished(&engine, &source, &out).await);
+    engine.pause(&hash).await.unwrap();
+    engine.shutdown().await;
+    let engine = TorrentEngine::start_offline_saved(&state, dir.path().join("d"), &keep_all)
+        .await
+        .unwrap();
+    assert!(
+        managed(&engine, &hash, true).await,
+        "the saved state was read"
+    );
+    engine.shutdown().await;
+
+    // ...and forgotten when it isn't: its deleted file doesn't come back.
+    std::fs::remove_file(&file).unwrap();
+    let engine =
+        TorrentEngine::start_offline_saved(&state, dir.path().join("d"), &|h: &str| h != hash)
+            .await
+            .unwrap();
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    assert!(
+        !engine.is_managed(&hash),
+        "the finished torrent was forgotten"
+    );
+    assert!(!file.exists(), "the deleted file stays deleted");
+    assert!(!state.join(format!("{hash}.torrent")).exists());
+    engine.shutdown().await;
 }

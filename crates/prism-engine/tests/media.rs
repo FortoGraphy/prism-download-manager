@@ -100,6 +100,48 @@ async fn hls_aes128_byte_ranges_and_audio_rendition() {
     }
 }
 
+/// Issue #80: with `EXT-X-KEY` before `EXT-X-MAP` the fMP4 init section is encrypted too.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn hls_aes128_encrypted_init_section() {
+    for (explicit_iv, byte_ranges, encrypt_init) in [
+        (None, false, true),
+        (Some([9u8; 16]), false, true),
+        (None, true, true),
+        // MAP before KEY: the init section is served plain and must be left alone.
+        (None, false, false),
+    ] {
+        let mut fixture = HlsFixture::synthetic(1, 8, 20_000, 80);
+        // Starts like a real init section; 733 bytes is not a multiple of the block size.
+        let mut init = b"\0\0\0\x1cftypiso5\0\0\x02\0iso5iso6mp41".to_vec();
+        init.resize(733, 0x5a);
+        fixture.variants[0].init = Some(Bytes::from(init));
+        fixture.key = Some(*b"fedcba9876543210");
+        fixture.explicit_iv = explicit_iv;
+        fixture.byte_ranges = byte_ranges;
+        fixture.media_sequence = 3;
+        fixture.encrypt_init = encrypt_init;
+        let srv = server(ServerConfig {
+            hls: Some(fixture.clone()),
+            ..Default::default()
+        })
+        .await;
+        let dir = tempfile::tempdir().unwrap();
+        let h = engine().start_media(
+            media_request(&srv.url("/hls/master.m3u8"), dir.path(), false),
+            None,
+            vec![],
+        );
+        let done = wait(&h, 60).await.unwrap();
+        let case = format!("iv {explicit_iv:?} ranges {byte_ranges} encrypted {encrypt_init}");
+        let got = std::fs::read(&done.path).unwrap();
+        assert!(got.starts_with(b"\0\0\0\x1cftyp"), "{case}");
+        assert!(got == fixture.expected_variant_bytes(0), "{case}");
+        // The init section reuses the cached key.
+        assert_eq!(srv.stats().requests_to("/hls/key.bin"), 1, "{case}");
+        assert_eq!(srv.stats().requests_to("/hls/v0/init.mp4"), 1, "{case}");
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn hls_pause_and_resume_skips_completed_segments() {
     let fixture = HlsFixture::synthetic(1, 30, 64 * 1024, 3);
@@ -321,6 +363,7 @@ async fn hls_real_stream_encrypted_remux_with_ffmpeg() {
         key: Some([42u8; 16]),
         explicit_iv: None,
         byte_ranges: false,
+        encrypt_init: false,
     };
     let srv = server(ServerConfig {
         hls: Some(fixture),

@@ -1,7 +1,50 @@
-# Prism 1.2.4 — One beam. Many rays.
+# Prism 1.2.5 — One beam. Many rays.
 
 A fast, open-source download manager for Windows, Linux and macOS, with browser integration
 and video downloads.
+
+## What's new in 1.2.5
+
+* **Pausing a big download no longer keeps the disk busy**
+  ([#70](https://github.com/FortoGraphy/prism-download-manager/issues/70)). On Windows, pausing
+  made the system write zeros over the whole rest of the file: minutes of full disk activity
+  for a 10 GB file, with the download stuck between downloading and paused. Pause, Cancel and
+  errors now stop at once. Thanks to FarrelF for the precise report!
+* **Finished torrents let go of their files**
+  ([#82](https://github.com/FortoGraphy/prism-download-manager/issues/82)). A finished torrent's
+  files stayed open in Prism, so they couldn't be deleted, and a deleted file came back at the
+  next start. Torrents finished with an older version are cleaned up too.
+* **Encrypted HLS videos are put together**
+  ([#80](https://github.com/FortoGraphy/prism-download-manager/issues/80)). Some AES-128
+  streams (Gaia, other Brightcove players) encrypt the very start of the video too; Prism now
+  decrypts it, so the video no longer fails at 100 % with "moov atom not found". Thanks to
+  superflyin for the analysis!
+* **Thai and other non-Latin file names stay readable**
+  ([#91](https://github.com/FortoGraphy/prism-download-manager/issues/91)) when a download comes
+  from Firefox or the server sends the name without encoding it.
+* **Videos from the browser are named after their page**
+  ([#59](https://github.com/FortoGraphy/prism-download-manager/issues/59)), not "1080p.mp4".
+* **Rename a video before it downloads**: the Download video window has a file name field.
+* **Settings search finds the settings themselves**
+  ([#63](https://github.com/FortoGraphy/prism-download-manager/issues/63)), not only the names
+  of the sections.
+* **Right-click no longer opens the web view's menu**
+  ([#62](https://github.com/FortoGraphy/prism-download-manager/issues/62)) with Back, Save as and
+  Print. Text fields keep Cut, Copy and Paste.
+* **Windows: the main window keeps its size**
+  ([#53](https://github.com/FortoGraphy/prism-download-manager/issues/53)). It came back a little
+  taller at every start until it reached under the taskbar; a window that already grew is fitted
+  back on the screen. Thanks to karayelxyz for finding the cause (PR #61) and to Eerye!
+* **Windows: dialogs open where you last put them**
+  ([#92](https://github.com/FortoGraphy/prism-download-manager/issues/92)) instead of in the
+  middle of the screen.
+* **Waterfox** ([#51](https://github.com/FortoGraphy/prism-download-manager/issues/51)) works with
+  the browser extension, and **Chrome Beta, Dev and Canary** on macOS and Linux find Prism.
+  Thanks to vazw (PR #52) and rsmnarts (PR #90)!
+* A paused download whose link expired in the meantime says so and offers *Refresh address*,
+  instead of an HTTP error. Thanks to BiparJoy (PR #39)!
+* The site grabber sends a site's cookies and password only to that site, not to other hosts the
+  page links to. Thanks to vergiLgood1 (PR #38)!
 
 ## What's new in 1.2.4
 

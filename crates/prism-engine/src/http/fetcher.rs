@@ -644,7 +644,7 @@ pub(crate) fn probe_info(
     let h = resp.headers();
     let mime = header_string(h, header::CONTENT_TYPE)
         .map(|m| m.split(';').next().unwrap_or("").trim().to_string());
-    let cd = header_string(h, header::CONTENT_DISPOSITION);
+    let cd = super::header_text(h, header::CONTENT_DISPOSITION);
     ProbeInfo {
         final_url: resp.url().clone(),
         file_name: filename::derive_file_name(cd.as_deref(), resp.url(), mime.as_deref()),

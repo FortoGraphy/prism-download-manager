@@ -65,6 +65,26 @@ fn spec(kind: &str) -> Spec {
     }
 }
 
+/// Windows (#92): dialogs that open where they were last closed instead of in the middle of the
+/// screen. Only their position comes back: their size is the app's (a later version may change
+/// it). Elsewhere they open centered as before (shown at once, they would jump).
+pub const REMEMBER_POSITION: &[&str] = if cfg!(windows) {
+    &[
+        "capture", "batch", "video", "complete", "progress", "torrent", "model", "tools", "addurl",
+    ]
+} else {
+    &[]
+};
+
+/// The window-state plugin keeps one entry per kind of window: `capture-<id>` → `capture`.
+/// (Before, every Download Details window kept its own entry, forever.)
+pub fn state_label(label: &str) -> &str {
+    match label.split_once('-') {
+        Some((kind, _)) if kind == "details" || REMEMBER_POSITION.contains(&kind) => kind,
+        _ => label,
+    }
+}
+
 /// Windows are shown as soon as they are created, not after the page's first paint:
 /// * macOS: WKWebView doesn't render into a hidden window.
 /// * Linux (#30): a WebKitGTK window that goes from hidden to shown sometimes stays blank on KDE
@@ -196,6 +216,16 @@ fn create(app: &AppHandle, kind: &str, label: &str, route: &str) -> tauri::Resul
         builder.center()
     };
     let window = builder.build()?;
+    if REMEMBER_POSITION.contains(&kind) {
+        // Where this kind of dialog was last closed, if that monitor is still there. On the main
+        // thread: the plugin holds its state's lock while it moves the window, and its own event
+        // handlers take that lock on the main thread, so from here the two waited on each other.
+        let w = window.clone();
+        let _ = app.run_on_main_thread(move || {
+            use tauri_plugin_window_state::{StateFlags, WindowExt};
+            let _ = w.restore_state(StateFlags::POSITION);
+        });
+    }
     if matches!(kind, "mini" | "dropzone") {
         place_bottom_right(&window, kind == "dropzone");
         if SHOW_ON_CREATE {
@@ -322,6 +352,152 @@ pub fn show_main(app: &AppHandle) {
     }
 }
 
+/// A window's rectangle in physical pixels (only Windows fits windows into the work area).
+#[cfg_attr(not(windows), allow(dead_code))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Rect {
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+}
+
+#[cfg_attr(not(windows), allow(dead_code))]
+impl Rect {
+    fn overlap(&self, other: &Rect) -> u64 {
+        let w =
+            (self.x + self.width as i32).min(other.x + other.width as i32) - self.x.max(other.x);
+        let h =
+            (self.y + self.height as i32).min(other.y + other.height as i32) - self.y.max(other.y);
+        if w > 0 && h > 0 {
+            w as u64 * h as u64
+        } else {
+            0
+        }
+    }
+}
+
+/// Shrinks `window` until it fits `work` and moves it inside, so its bottom edge can't end up
+/// under the taskbar, nor its top above the screen.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn fit_into_work_area(window: Rect, work: Rect) -> Rect {
+    let width = window.width.min(work.width);
+    let height = window.height.min(work.height);
+    let right = work.x + (work.width - width) as i32;
+    let bottom = work.y + (work.height - height) as i32;
+    Rect {
+        x: window.x.clamp(work.x, right.max(work.x)),
+        y: window.y.clamp(work.y, bottom.max(work.y)),
+        width,
+        height,
+    }
+}
+
+/// Windows (#53): where the main window was just before it was closed to free memory, so the
+/// window created in its place comes back as it was (see [`restore_main`]).
+#[cfg(windows)]
+static MAIN_RECT: Mutex<Option<Rect>> = Mutex::new(None);
+
+/// Windows (#53): the window-state plugin gives the main window its saved size before the
+/// window's frame is final. The size then counts a title bar's frame, the window ends up with a
+/// shadow's, and it came back 30 px taller (at 100 %) on every start or reopening from the tray.
+/// The frame has settled by now, so the saved rectangle is applied again, inside the work area
+/// of the monitor it's mostly on. A maximized window is left alone. Idea and measurements from
+/// PR #61 by karayelxyz.
+pub fn restore_main(app: &AppHandle, main: &WebviewWindow) {
+    #[cfg(windows)]
+    {
+        if main.is_maximized().unwrap_or(false) || main.is_fullscreen().unwrap_or(false) {
+            return;
+        }
+        let remembered = MAIN_RECT.lock().unwrap_or_else(|e| e.into_inner()).take();
+        let Some(saved) = remembered.or_else(|| saved_main_rect(app)) else {
+            return;
+        };
+        // The saved position is the outer corner and the shadow sits around the content: the
+        // content is what has to stay inside the work area.
+        let (left, top) = match (main.outer_position(), main.inner_position()) {
+            (Ok(outer), Ok(inner)) => (inner.x - outer.x, inner.y - outer.y),
+            _ => (0, 0),
+        };
+        let content = Rect {
+            x: saved.x + left,
+            y: saved.y + top,
+            ..saved
+        };
+        let Some(work) = main.available_monitors().ok().and_then(|monitors| {
+            monitors
+                .iter()
+                .map(|m| {
+                    let a = m.work_area();
+                    Rect {
+                        x: a.position.x,
+                        y: a.position.y,
+                        width: a.size.width,
+                        height: a.size.height,
+                    }
+                })
+                .max_by_key(|work| content.overlap(work))
+                .filter(|work| content.overlap(work) > 0)
+        }) else {
+            return;
+        };
+        let fitted = fit_into_work_area(content, work);
+        let _ = main.set_position(PhysicalPosition::new(fitted.x - left, fitted.y - top));
+        let _ = main.set_size(tauri::PhysicalSize::new(fitted.width, fitted.height));
+    }
+    #[cfg(not(windows))]
+    let _ = (app, main);
+}
+
+/// Windows (#53): remembers the main window before it's closed to free memory.
+fn remember_main(window: &WebviewWindow) {
+    #[cfg(windows)]
+    {
+        if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
+            return;
+        }
+        if let (Ok(position), Ok(size)) = (window.outer_position(), window.inner_size()) {
+            *MAIN_RECT.lock().unwrap_or_else(|e| e.into_inner()) = Some(Rect {
+                x: position.x,
+                y: position.y,
+                width: size.width,
+                height: size.height,
+            });
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = window;
+}
+
+/// The main window's size and position as the plugin last saved them (its cache is private, so
+/// from the file it writes, in its own format). Nothing when there's none or it looks wrong.
+#[cfg(windows)]
+fn saved_main_rect(app: &AppHandle) -> Option<Rect> {
+    let path = app
+        .path()
+        .app_config_dir()
+        .ok()?
+        .join(tauri_plugin_window_state::DEFAULT_FILENAME);
+    let state: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+    let main = state.get("main")?;
+    if main.get("maximized").and_then(|v| v.as_bool()) == Some(true) {
+        return None;
+    }
+    let number = |key: &str| main.get(key).and_then(|v| v.as_i64());
+    let (width, height) = (number("width")?, number("height")?);
+    if width <= 0 || height <= 0 {
+        return None;
+    }
+    Some(Rect {
+        x: i32::try_from(number("x")?).ok()?,
+        y: i32::try_from(number("y")?).ok()?,
+        width: u32::try_from(width).ok()?,
+        height: u32::try_from(height).ok()?,
+    })
+}
+
 /// Creates the main window again from its configuration (it was closed while in the tray).
 fn create_main(app: &AppHandle) {
     if CREATING_MAIN.swap(true, Ordering::SeqCst) {
@@ -353,6 +529,7 @@ fn create_main(app: &AppHandle) {
             Ok(window) => {
                 tracing::info!("opened the main window again");
                 crate::apply_window_material(&window, &app.state::<Core>().settings());
+                restore_main(&app, &window);
                 // macOS and Linux show it now (see `SHOW_ON_CREATE`).
                 if SHOW_ON_CREATE {
                     let _ = window.show();
@@ -422,10 +599,112 @@ pub fn release_main_later(app: &AppHandle) {
                 && !w.is_visible().unwrap_or(true)
             {
                 tracing::info!("closed the hidden main window to free its memory");
+                remember_main(&w);
                 let _ = w.destroy();
             }
         });
     }
     #[cfg(target_os = "macos")]
     let _ = app;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Rect, fit_into_work_area};
+
+    const WORK: Rect = Rect {
+        x: 0,
+        y: 0,
+        width: 2560,
+        height: 1392,
+    };
+
+    #[test]
+    fn a_window_that_fits_is_left_alone() {
+        let window = Rect {
+            x: 100,
+            y: 100,
+            width: 1320,
+            height: 1000,
+        };
+        assert_eq!(fit_into_work_area(window, WORK), window);
+    }
+
+    #[test]
+    fn a_window_that_grew_is_pulled_back_inside() {
+        // Taller than the work area (#53): shrunk, its bottom edge on the taskbar line.
+        let grown = Rect {
+            x: 290,
+            y: 149,
+            width: 1980,
+            height: 1703,
+        };
+        assert_eq!(
+            fit_into_work_area(grown, WORK),
+            Rect {
+                x: 290,
+                y: 0,
+                width: 1980,
+                height: 1392
+            }
+        );
+        // Fits, but hangs under the taskbar: moved up.
+        let low = Rect {
+            x: 100,
+            y: 900,
+            width: 1320,
+            height: 1000,
+        };
+        assert_eq!(fit_into_work_area(low, WORK).y, 392);
+        // Wider than the work area and left of it.
+        let wide = Rect {
+            x: -500,
+            y: -40,
+            width: 3000,
+            height: 700,
+        };
+        assert_eq!(
+            fit_into_work_area(wide, WORK),
+            Rect {
+                x: 0,
+                y: 0,
+                width: 2560,
+                height: 700
+            }
+        );
+    }
+
+    #[test]
+    fn one_saved_state_per_kind_of_window() {
+        use super::state_label;
+        assert_eq!(state_label("main"), "main");
+        assert_eq!(state_label("details-82a9a65b"), "details");
+        assert_eq!(state_label("mini"), "mini");
+        if cfg!(windows) {
+            assert_eq!(state_label("capture-1f2e"), "capture");
+            assert_eq!(state_label("video-1f2e"), "video");
+            assert_eq!(state_label("addurl"), "addurl");
+        } else {
+            assert_eq!(state_label("capture-1f2e"), "capture-1f2e");
+        }
+    }
+
+    #[test]
+    fn the_monitor_a_window_is_mostly_on_wins() {
+        let left = Rect {
+            x: -1920,
+            y: 0,
+            width: 1920,
+            height: 1040,
+        };
+        // Mostly on the right monitor, a little on the left one.
+        let window = Rect {
+            x: -100,
+            y: 50,
+            width: 1300,
+            height: 800,
+        };
+        assert!(window.overlap(&WORK) > window.overlap(&left));
+        assert_eq!(window.overlap(&Rect { x: 5000, ..WORK }), 0);
+    }
 }

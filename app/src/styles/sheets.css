@@ -8,6 +8,7 @@
 .snav { width: 230px; flex: none; display: flex; flex-direction: column; gap: 10px; padding: 12px 10px; overflow-y: auto; }
 .snav .side-item { width: 100%; text-align: start; height: 30px; }
 .snav .grp { height: 1px; margin: 3px 2px; background: var(--divider); }
+.snav__none { padding: 4px 8px; font-size: 12px; line-height: 1.4; color: var(--text-tertiary); overflow-wrap: anywhere; }
 .scontent { flex: 1; min-width: 0; border-inline-start: 1px solid var(--divider); background: var(--surface-base); overflow-y: auto; }
 [data-theme="dark"] .scontent { background: rgb(12 13 18 / 0.9); }
 [data-theme="light"] .scontent { background: rgb(255 255 255 / 0.78); }
@@ -30,6 +31,11 @@
 .srow > .textarea { width: 340px; flex: none; }
 .srow .withbtn { width: 380px; flex: none; }
 .srow--actions { justify-content: flex-end; gap: 8px; }
+/* Settings that match the search. */
+.srow[data-hit] { background: var(--accent-softer); }
+.srow[data-hit]:first-child { border-start-start-radius: inherit; border-start-end-radius: inherit; }
+.srow[data-hit]:last-child { border-end-start-radius: inherit; border-end-end-radius: inherit; }
+.srow[data-hit] .srow__t1, .group__t[data-hit] { color: var(--accent); }
 .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .twocol .group { margin-bottom: 16px; }
 .themes { display: flex; gap: 14px; padding: 16px; }

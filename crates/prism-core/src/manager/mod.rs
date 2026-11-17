@@ -1029,12 +1029,17 @@ impl Core {
     pub(crate) async fn torrent_engine(&self) -> Result<&prism_torrent::TorrentEngine> {
         let data_dir = self.0.data_dir.clone();
         let default_dir = self.settings().downloads.default_dir;
+        let keep = self.torrents_to_keep();
         let engine = self
             .0
             .torrent
             .get_or_try_init(|| async move {
-                prism_torrent::TorrentEngine::start(&data_dir.join("torrent-session"), default_dir)
-                    .await
+                prism_torrent::TorrentEngine::start(
+                    &data_dir.join("torrent-session"),
+                    default_dir,
+                    &|hash| keep(hash),
+                )
+                .await
             })
             .await?;
         let s = self.settings();
@@ -1045,6 +1050,32 @@ impl Core {
         };
         engine.set_limits(global, global);
         Ok(engine)
+    }
+
+    /// Which saved torrents the session should load again: the ones of downloads that aren't
+    /// finished. A finished torrent loaded again holds its files open and brings deleted ones
+    /// back (#82). Torrents no download knows are dropped too, unless an unfinished torrent's
+    /// hash isn't known yet (it might be that one).
+    fn torrents_to_keep(&self) -> impl Fn(&str) -> bool + Send + Sync + 'static {
+        let mut active = std::collections::HashSet::new();
+        let mut finished = std::collections::HashSet::new();
+        let mut unknown = false;
+        for i in self.0.state.lock().items.values() {
+            if i.kind != ItemKind::Torrent {
+                continue;
+            }
+            match (jobs::torrent_hash(i), i.status == Status::Completed) {
+                (Some(h), false) => {
+                    active.insert(h.to_ascii_lowercase());
+                }
+                (Some(h), true) => {
+                    finished.insert(h.to_ascii_lowercase());
+                }
+                (None, false) => unknown = true,
+                (None, true) => {}
+            }
+        }
+        move |hash: &str| active.contains(hash) || (unknown && !finished.contains(hash))
     }
 
     fn start_clipboard_monitor(&self) {

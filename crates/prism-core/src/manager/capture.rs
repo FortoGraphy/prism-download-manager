@@ -59,6 +59,8 @@ pub(crate) struct PendingCapture {
     /// "What's inside" a ZIP: its files once listed, and the files downloaded on their own,
     /// which stop when the capture goes away.
     pub peek: super::peek::PeekSlot,
+    /// The name unless the server names the file (a stream named after its page, #59).
+    pub fallback_name: Option<String>,
 }
 
 /// The user's answer in the "Download File" dialog.
@@ -111,6 +113,8 @@ pub struct VideoDecision {
     pub one_at_a_time: bool,
     /// A single video: only this part of it ("from 1:23 to 2:45").
     pub section: Option<prism_video::Section>,
+    /// A single video: the name typed in the window (#94). The format decides the extension.
+    pub file_name: Option<String>,
 }
 
 /// One playlist entry picked in the video dialog. A plain URL string is accepted too.
@@ -217,6 +221,65 @@ pub(crate) fn name_from_url(url: &str) -> String {
     } else {
         super::sanitize_name(&decoded)
     }
+}
+
+/// Extensions of the media files pages play and the video window saves.
+const MEDIA_EXTS: &[&str] = &[
+    "mp4", "m4v", "webm", "mkv", "mov", "avi", "flv", "ts", "3gp", "ogv", "mp3", "m4a", "aac",
+    "ogg", "oga", "opus", "flac", "wav", "weba",
+];
+
+/// `name` without a media extension: `Clip.mp4` → `Clip`.
+fn without_media_ext(name: &str) -> &str {
+    match name.rsplit_once('.') {
+        Some((stem, ext)) if MEDIA_EXTS.contains(&ext.to_ascii_lowercase().as_str()) => stem,
+        _ => name,
+    }
+}
+
+/// A file name stem from a title or typed text (`None` if empty). Slashes become `_` instead
+/// of cutting the name to its last part.
+fn name_stem(text: &str) -> Option<String> {
+    let stem = without_media_ext(text.trim()).trim();
+    (!stem.is_empty()).then(|| super::sanitize_name(&stem.replace(['/', '\\'], "_")))
+}
+
+/// The name typed in the video window, with the chosen format's extension (a typed media
+/// extension is replaced by it).
+pub(crate) fn typed_video_name(typed: &str, ext: &str) -> Option<String> {
+    name_stem(typed).map(|stem| format!("{stem}.{ext}"))
+}
+
+/// The extension of a media file: from its address when that names a media file, else from
+/// the MIME type, else mp4.
+fn media_ext(url: &str, mime: Option<&str>) -> String {
+    let from_url = std::path::Path::new(&name_from_url(url))
+        .extension()
+        .map(|e| e.to_string_lossy().into_owned());
+    from_url
+        .into_iter()
+        .chain(mime.and_then(prism_engine::filename::extension_for_mime))
+        .map(|e| e.to_ascii_lowercase())
+        .find(|e| MEDIA_EXTS.contains(&e.as_str()))
+        .unwrap_or_else(|| "mp4".into())
+}
+
+/// `Page title.webm`: a direct media file a page plays, named after the page and keeping its
+/// own type (#59).
+pub(crate) fn direct_stream_name(title: &str, url: &str, mime: Option<&str>) -> Option<String> {
+    name_stem(title).map(|stem| format!("{stem}.{}", media_ext(url, mime)))
+}
+
+/// Whether the server named the file (Content-Disposition), not Prism from its address.
+fn server_named(probe: &jobs::ProbeResult, url: &str) -> bool {
+    let from_address = |u: &str| {
+        prism_engine::Url::parse(u)
+            .ok()
+            .map(|u| prism_engine::filename::derive_file_name(None, &u, probe.mime.as_deref()))
+    };
+    !probe.file_name.is_empty()
+        && from_address(&probe.final_url).as_deref() != Some(probe.file_name.as_str())
+        && from_address(url).as_deref() != Some(probe.file_name.as_str())
 }
 
 impl Core {
@@ -335,16 +398,17 @@ impl Core {
     /// Open the "Download File" flow for a URL. The server is probed in the background
     /// and the dialog updates when the real name/size arrive.
     pub fn capture(&self, n: NewItem, source: CaptureSource) -> CaptureInfo {
-        self.capture_probed(n, source, None)
+        self.capture_probed(n, source, None, None)
     }
 
     /// [`Self::capture`] with the link already tried (`probed`), so the dialog doesn't ask the
-    /// server again.
+    /// server again. `fallback_name` is the name unless the server names the file.
     fn capture_probed(
         &self,
         mut n: NewItem,
         source: CaptureSource,
         mut probed: Option<std::result::Result<jobs::ProbeResult, jobs::ProbeFailure>>,
+        fallback_name: Option<String>,
     ) -> CaptureInfo {
         let _rt = crate::rt::enter();
         // A link to a model on Hugging Face opens the model window, where its files are picked
@@ -402,6 +466,7 @@ impl Core {
             .file_name
             .clone()
             .map(|f| super::sanitize_name(&f))
+            .or_else(|| fallback_name.clone())
             .unwrap_or_else(|| name_from_url(&n.url));
         let category = {
             let st = self.0.state.lock();
@@ -434,6 +499,7 @@ impl Core {
                 info: info.clone(),
                 item: n,
                 peek: Default::default(),
+                fallback_name,
             },
         );
         self.emit(CoreEvent::CaptureRequested(info.clone()));
@@ -481,7 +547,10 @@ impl Core {
                 Ok(probe) => {
                     let user_named = p.item.file_name.is_some();
                     if !user_named && !probe.file_name.is_empty() {
-                        p.info.file_name = super::sanitize_name(&probe.file_name);
+                        p.info.file_name = match &p.fallback_name {
+                            Some(name) if !server_named(&probe, &p.item.url) => name.clone(),
+                            _ => super::sanitize_name(&probe.file_name),
+                        };
                         let cat = categories::classify(&categories_list, &p.info.file_name);
                         if cat != p.info.category {
                             p.info.category = cat.clone();
@@ -889,6 +958,15 @@ impl Core {
             if let Some(part) = d.section.and_then(|s| s.part_of(d.duration)) {
                 only_part(&mut n, part);
             }
+            // A name typed in the window, as typed (a part gets no range added to it).
+            let ext = jobs::video_ext(&d.choice, &d.options, &settings);
+            if let Some(name) = d
+                .file_name
+                .as_deref()
+                .and_then(|f| typed_video_name(f, &ext))
+            {
+                n.file_name = Some(name);
+            }
             n.save_dir = d.save_dir.clone();
             vec![n]
         };
@@ -948,7 +1026,11 @@ impl Core {
                 "{}.mp4",
                 super::sanitize_name(base.trim_end_matches(".m3u8").trim_end_matches(".mpd"))
             ),
-            _ => base,
+            // A direct file named after its page keeps its own type (#59).
+            _ => title
+                .as_deref()
+                .and_then(|t| direct_stream_name(t, &stream.url, stream.mime.as_deref()))
+                .unwrap_or_else(|| name_from_url(&stream.url)),
         };
         let n = NewItem {
             url: stream.url,
@@ -1095,7 +1177,7 @@ impl Core {
                     };
                     match mode {
                         None => {
-                            core.capture_probed(n, source, None);
+                            core.capture_probed(n, source, None, None);
                         }
                         Some(mode) => {
                             let n = NewItem {
@@ -1297,7 +1379,7 @@ impl Core {
                     return serde_json::json!({"ok": true, "accepted": true});
                 }
                 if settings.general.show_capture_dialog {
-                    let info = self.capture_probed(n, CaptureSource::Browser, probed);
+                    let info = self.capture_probed(n, CaptureSource::Browser, probed, None);
                     serde_json::json!({"ok": true, "accepted": true, "downloadId": info.id})
                 } else {
                     let mode = if settings.downloads.auto_start {
@@ -1520,16 +1602,25 @@ impl Core {
                         .and_then(|v| v.as_u64())
                         .map(|v| v as usize);
                     let settings = self.settings();
-                    let n = NewItem {
+                    // Named after the page: a manifest's video as mp4, a direct file with its own
+                    // type, unless the server names that file itself (#59).
+                    let direct = kind == "direct";
+                    let mime = stream.get("mime").and_then(|v| v.as_str());
+                    let titled = s("title").and_then(|t| {
+                        if direct {
+                            direct_stream_name(&t, &url, mime)
+                        } else {
+                            Some(format!("{}.mp4", super::sanitize_name(&t)))
+                        }
+                    });
+                    let mut n = NewItem {
                         url,
                         kind: Some(match kind.as_str() {
                             "hls" => ItemKind::Hls,
                             "dash" => ItemKind::Dash,
                             _ => ItemKind::Http,
                         }),
-                        file_name: s("title")
-                            .filter(|_| kind != "direct")
-                            .map(|t| format!("{}.mp4", super::sanitize_name(&t))),
+                        file_name: titled.clone().filter(|_| !direct),
                         referer,
                         headers: headers
                             .into_iter()
@@ -1556,10 +1647,20 @@ impl Core {
                     };
                     // Same "Download File" dialog / `showCaptureDialog` setting as the formatId
                     // path above, instead of always starting right away.
+                    let fallback = titled.filter(|_| direct);
                     return if settings.general.show_capture_dialog {
-                        let info = self.capture(n, CaptureSource::Browser);
+                        let info = self.capture_probed(n, CaptureSource::Browser, None, fallback);
                         serde_json::json!({"ok": true, "accepted": true, "downloadId": info.id})
                     } else {
+                        // No dialog to show the server's name in: ask the server first.
+                        if let Some(name) = fallback {
+                            n.file_name = Some(match self.try_link(&n, &settings).await {
+                                Some(Ok(p)) if server_named(&p, &n.url) => {
+                                    super::sanitize_name(&p.file_name)
+                                }
+                                _ => name,
+                            });
+                        }
                         let mode = if settings.downloads.auto_start {
                             StartMode::Now
                         } else {
@@ -2045,5 +2146,270 @@ mod probe_message_tests {
         assert!(!version_older("1.0.6", "1.0.6"));
         assert!(!version_older("1.0.7", "1.0.6"));
         assert!(!version_older("v1.0.6", "1.0.6"));
+    }
+}
+
+#[cfg(test)]
+mod file_name_tests {
+    use super::*;
+    use crate::manager::CoreOptions;
+    use serde_json::json;
+    use std::path::Path;
+    use std::time::Duration;
+
+    #[test]
+    fn a_name_typed_for_a_video_gets_the_formats_extension() {
+        let name = |typed: &str, ext: &str| typed_video_name(typed, ext);
+        assert_eq!(name("My clip", "mp4").as_deref(), Some("My clip.mp4"));
+        // A typed media extension is replaced by the format's.
+        assert_eq!(name(" My clip.MKV ", "mp4").as_deref(), Some("My clip.mp4"));
+        assert_eq!(name("My clip.mp3", "mp3").as_deref(), Some("My clip.mp3"));
+        // Other dots stay.
+        assert_eq!(
+            name("Episode 1.5", "m4a").as_deref(),
+            Some("Episode 1.5.m4a")
+        );
+        assert_eq!(
+            name("AC/DC: Live?", "mp3").as_deref(),
+            Some("AC_DC_ Live_.mp3")
+        );
+        for empty in ["", "   ", ".mp4"] {
+            assert_eq!(name(empty, "mp4"), None, "{empty:?}");
+        }
+    }
+
+    #[test]
+    fn a_direct_stream_is_named_after_its_page_with_its_own_type() {
+        let name =
+            |title: &str, url: &str, mime: Option<&str>| direct_stream_name(title, url, mime);
+        let cdn = "https://cdn.example.com/v";
+        assert_eq!(
+            name("Big Buck Bunny", &format!("{cdn}/1080p.mp4"), None).as_deref(),
+            Some("Big Buck Bunny.mp4")
+        );
+        assert_eq!(
+            name("Clip", &format!("{cdn}/720p.WEBM?sig=1"), Some("video/mp4")).as_deref(),
+            Some("Clip.webm")
+        );
+        assert_eq!(
+            name("Song", &format!("{cdn}/track.mp3"), None).as_deref(),
+            Some("Song.mp3")
+        );
+        // No extension in the address: the MIME type's.
+        assert_eq!(
+            name(
+                "Clip",
+                &format!("{cdn}/videoplayback?id=3"),
+                Some("video/webm")
+            )
+            .as_deref(),
+            Some("Clip.webm")
+        );
+        assert_eq!(
+            name(
+                "Song",
+                &format!("{cdn}/stream"),
+                Some("audio/mp4; codecs=mp4a")
+            )
+            .as_deref(),
+            Some("Song.m4a")
+        );
+        // Neither tells: mp4.
+        assert_eq!(
+            name(
+                "Clip",
+                &format!("{cdn}/get.php?id=3"),
+                Some("application/octet-stream")
+            )
+            .as_deref(),
+            Some("Clip.mp4")
+        );
+        // A tab showing the file itself is titled with the file's name.
+        assert_eq!(
+            name("1080p.mp4", &format!("{cdn}/1080p.mp4"), None).as_deref(),
+            Some("1080p.mp4")
+        );
+        assert_eq!(
+            name("Live 24/7", &format!("{cdn}/a.mp4"), None).as_deref(),
+            Some("Live 24_7.mp4")
+        );
+        assert_eq!(name("  ", &format!("{cdn}/1080p.mp4"), None), None);
+    }
+
+    #[test]
+    fn a_name_from_the_server_is_told_from_one_read_from_the_address() {
+        let probe = |name: &str, final_url: &str, mime: Option<&str>| jobs::ProbeResult {
+            final_url: final_url.into(),
+            file_name: name.into(),
+            size: None,
+            mime: mime.map(String::from),
+            resumable: true,
+        };
+        let url = "https://cdn.example.com/v/1080p.mp4";
+        assert!(!server_named(
+            &probe("1080p.mp4", url, Some("video/mp4")),
+            url
+        ));
+        assert!(server_named(
+            &probe("Trailer (2026).mp4", url, Some("video/mp4")),
+            url
+        ));
+        // Redirected: the name of the address it ended at isn't the server's either.
+        let edge = "https://edge.example.com/abc.mp4";
+        assert!(!server_named(&probe("abc.mp4", edge, None), url));
+        // An extension added for the MIME type.
+        let bare = "https://cdn.example.com/videoplayback";
+        assert!(!server_named(
+            &probe("videoplayback.webm", bare, Some("video/webm")),
+            bare
+        ));
+    }
+
+    async fn core_in(dir: &Path) -> Core {
+        let core = Core::start(CoreOptions {
+            data_dir: dir.join("data"),
+            ipc: false,
+            clipboard: false,
+        })
+        .await
+        .unwrap();
+        core.update_settings(&json!({
+            "downloads": {"defaultDir": dir.join("dl"), "useCategoryFolders": false, "autoStart": false},
+            "general": {"showCaptureDialog": false},
+            "antivirus": {"enabled": false},
+        }))
+        .unwrap();
+        core
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_video_is_saved_under_the_name_typed_in_the_window() {
+        let tmp = tempfile::tempdir().unwrap();
+        let core = core_in(tmp.path()).await;
+        let decide = |extra: serde_json::Value| -> VideoDecision {
+            let mut d = json!({
+                "pageUrl": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+                "title": "Big Buck Bunny",
+                "duration": 635,
+                "choice": {"id": "v1080", "kind": "video", "label": "1080p", "subLabel": "", "container": "mp4", "height": 1080},
+                "options": {"container": "mp4"},
+                "mode": {"type": "later"},
+            });
+            d.as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            serde_json::from_value(d).unwrap()
+        };
+        let add = |extra| core.confirm_video(decide(extra)).unwrap();
+        let name = |extra| add(extra)[0].file_name.clone();
+        // Nothing typed (or an older window): named after the title, as before.
+        assert_eq!(name(json!({})), "Big Buck Bunny [aqz-KE-bpKQ].mp4");
+        assert_eq!(
+            name(json!({"fileName": "  "})),
+            "Big Buck Bunny [aqz-KE-bpKQ].mp4"
+        );
+        assert_eq!(name(json!({"fileName": "Bunny"})), "Bunny.mp4");
+        assert_eq!(
+            name(json!({"fileName": "Bunny.mp4", "options": {"container": "mkv"}})),
+            "Bunny.mkv"
+        );
+        let mp3 = json!({
+            "fileName": "Bunny theme",
+            "choice": {"id": "a-mp3", "kind": "audio", "label": "MP3", "subLabel": "", "container": "mp4", "audioFormat": "mp3"},
+            "options": {"container": "mp4", "audioFormat": "mp3"},
+        });
+        assert_eq!(name(mp3), "Bunny theme.mp3");
+        // Only a part: the typed name, and the job keeps the range.
+        let part = add(json!({"fileName": "Intro", "section": {"start": 83, "end": 165}}));
+        assert_eq!(part[0].file_name, "Intro.mp4");
+        assert_eq!(
+            part[0].media.as_ref().unwrap().section,
+            Some(prism_video::Section::new(83.0, 165.0))
+        );
+        assert_eq!(
+            part[0].request.as_ref().unwrap()["section"],
+            json!({"start": 83.0, "end": 165.0})
+        );
+        // Playlist entries keep their own titles.
+        let list = add(json!({
+            "fileName": "Bunny",
+            "entries": [{"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa", "title": "First", "index": 1}],
+        }));
+        assert_eq!(list[0].file_name, "First [aaaaaaaaaaa].mp4");
+        core.shutdown().await;
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_direct_stream_from_the_page_menu_is_named_after_the_page() {
+        let server = prism_testserver::TestServer::start(Default::default())
+            .await
+            .unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        let core = core_in(tmp.path()).await;
+        let send = |url: String| {
+            core.handle_message(json!({
+                "type": "video",
+                "pageUrl": "https://example.com/watch/42",
+                "title": "Big Buck Bunny",
+                "streams": [{"url": url, "kind": "direct", "mime": "video/mp4"}],
+            }))
+        };
+        let cd = "&cd=attachment%3B%20filename%3D%22Bunny%20(2008).mp4%22";
+        let mp4 = server.url("/file/1080p.mp4?size=1000&type=video/mp4");
+        let webm = server.url("/file/1080p.webm?size=1000&type=video/webm");
+        let named = format!("{mp4}{cd}");
+        let cases = [
+            (&mp4, "Big Buck Bunny.mp4"),
+            (&webm, "Big Buck Bunny.webm"),
+            (&named, "Bunny (2008).mp4"),
+        ];
+
+        // Started without the dialog: the name is settled before it is added.
+        for (url, expected) in cases {
+            let reply = send(url.clone()).await;
+            let id = reply["downloadId"].as_str().expect("added").to_string();
+            assert_eq!(core.item(&id).unwrap().file_name, expected, "{url}");
+        }
+
+        // The Download File dialog shows the same names once the server answered.
+        core.update_settings(&json!({"general": {"showCaptureDialog": true}}))
+            .unwrap();
+        for (url, expected) in cases {
+            let reply = send(url.clone()).await;
+            let id = reply["downloadId"].as_str().expect("shown").to_string();
+            let info = tokio::time::timeout(Duration::from_secs(20), async {
+                loop {
+                    let info = core.pending_capture(&id).unwrap();
+                    if !info.probing {
+                        return info;
+                    }
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                }
+            })
+            .await
+            .expect("the server was not asked");
+            assert_eq!(info.probe_error, None, "{url}");
+            assert_eq!(info.file_name, expected, "{url}");
+        }
+
+        // A stream added in the Download video window.
+        let stream = |url: &str| SniffedStream {
+            url: url.into(),
+            kind: "direct".into(),
+            mime: None,
+            size: None,
+            label: None,
+        };
+        let page = Some("https://example.com/watch/42".to_string());
+        let title = Some("Big Buck Bunny".to_string());
+        let added = core
+            .add_stream(stream(&webm), page.clone(), title, StartMode::Later)
+            .unwrap();
+        assert_eq!(added.file_name, "Big Buck Bunny.webm");
+        let untitled = core
+            .add_stream(stream(&webm), page, None, StartMode::Later)
+            .unwrap();
+        assert_eq!(untitled.file_name, "1080p.webm");
+        core.shutdown().await;
     }
 }

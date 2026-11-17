@@ -42,9 +42,9 @@ open `chrome://extensions` (`edge://extensions`, `brave://extensions`, …), cli
 under Prism, then add it from the store. Prism keeps working with both, so nothing else
 changes.
 
-## Firefox and Zen
+## Firefox, Zen and Waterfox
 
-Zen is built on Firefox: the same steps work there. Prism isn't in Firefox Add-ons yet, and
+Zen and Waterfox are built on Firefox: the same steps work there. Prism isn't in Firefox Add-ons yet, and
 Firefox only keeps unsigned extensions until it restarts, so choose one of:
 
 * **Try it now (until restart):** open **`about:debugging#/runtime/this-firefox`** →

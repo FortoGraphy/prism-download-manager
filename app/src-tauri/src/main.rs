@@ -66,17 +66,25 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--background"]),
         ))
-        .plugin(
+        .plugin({
+            use tauri_plugin_window_state::StateFlags;
             // Position, size and maximized only: restoring "visible" would show the main window
-            // at login or with Start minimized whenever it was open when Prism last quit.
-            tauri_plugin_window_state::Builder::default()
-                .with_state_flags(
-                    tauri_plugin_window_state::StateFlags::all()
-                        - tauri_plugin_window_state::StateFlags::VISIBLE,
-                )
-                .with_filter(|label| label == "main" || label.starts_with("details-"))
-                .build(),
-        )
+            // at login or with Start minimized whenever it was open when Prism last quit, and
+            // "decorated" would put back a frame an older version saved (#79).
+            let mut state = tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::all() - StateFlags::VISIBLE - StateFlags::DECORATIONS)
+                .map_label(windows::state_label)
+                .with_filter(|label| {
+                    label == "main"
+                        || label == "details"
+                        || windows::REMEMBER_POSITION.contains(&label)
+                });
+            // Dialogs get only their position back, from `windows::create` (#92).
+            for kind in windows::REMEMBER_POSITION {
+                state = state.skip_initial_state(kind);
+            }
+            state.build()
+        })
         .setup(move |app| {
             let handle = app.handle().clone();
             let core = tauri::async_runtime::block_on(Core::start(CoreOptions::default()))
@@ -90,6 +98,7 @@ fn main() {
             let settings = core.settings();
             if let Some(main) = app.get_webview_window("main") {
                 apply_window_material(&main, &settings);
+                windows::restore_main(&handle, &main);
                 let show = !background && !settings.general.start_minimized;
                 if show && windows::SHOW_ON_CREATE {
                     // macOS: WKWebView doesn't paint into a hidden window. Linux (#30): a hidden

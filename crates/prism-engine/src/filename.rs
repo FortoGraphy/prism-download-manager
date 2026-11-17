@@ -182,13 +182,28 @@ pub fn derive_file_name(
     name
 }
 
+/// A UTF-8 name that was read one byte per character on its way here (as Latin-1, which is how
+/// Firefox hands over response headers) becomes readable again: `à¸­` → `อ` (#91). Only a name
+/// made of such characters that forms valid UTF-8 changes; `café` or `naïve` stay as they are.
+pub fn repair_mojibake(name: &str) -> std::borrow::Cow<'_, str> {
+    if name.is_ascii() || name.chars().any(|c| c as u32 > 0xFF) {
+        return name.into();
+    }
+    let bytes: Vec<u8> = name.chars().map(|c| c as u32 as u8).collect();
+    match String::from_utf8(bytes) {
+        Ok(fixed) => fixed.into(),
+        Err(_) => name.into(),
+    }
+}
+
 /// Makes `name` safe on Windows, Linux and macOS: strips directory components, replaces
 /// reserved characters and control characters with `_`, trims spaces and trailing dots,
 /// escapes reserved device names (`CON`, `COM1`, …) and limits the length (keeping the
-/// extension).
+/// extension). A UTF-8 name read as Latin-1 is repaired first ([`repair_mojibake`]).
 pub fn sanitize(name: &str) -> String {
+    let name = repair_mojibake(name);
     // Keep only the last path component (servers sometimes send paths).
-    let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
+    let base = name.rsplit(['/', '\\']).next().unwrap_or(&name);
     let mut s: String = base
         .chars()
         .map(|c| match c {
@@ -394,5 +409,29 @@ mod tests {
             unique_path(dir.path(), "f.bin", ".prismpart", false).unwrap(),
             dir.path().join("f (2).bin")
         );
+    }
+
+    #[test]
+    fn utf8_read_as_latin1_is_repaired() {
+        // A Thai name in UTF-8, one byte per character (#91).
+        let thai = "อัพเดท.zip";
+        let garbled: String = thai.bytes().map(char::from).collect();
+        assert_ne!(garbled, thai);
+        assert_eq!(repair_mojibake(&garbled), thai);
+        assert_eq!(sanitize(&garbled), thai);
+        let cafe: String = "café.txt".bytes().map(char::from).collect();
+        assert_eq!(sanitize(&cafe), "café.txt");
+        // Names that are fine stay as they are.
+        for ok in [
+            "café.txt",
+            "naïve résumé.pdf",
+            "Größe.zip",
+            "plain.bin",
+            "อัพเดท.zip",
+            "数据.7z",
+        ] {
+            assert_eq!(repair_mojibake(ok), ok);
+            assert_eq!(sanitize(ok), ok);
+        }
     }
 }

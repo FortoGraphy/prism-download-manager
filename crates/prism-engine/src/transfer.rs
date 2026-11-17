@@ -178,7 +178,7 @@ pub(crate) async fn finalize(
     run_started: Instant,
 ) -> Result<Completed, EngineError> {
     job.set_state(DownloadState::Finalizing);
-    writer.close().await?;
+    writer.close(true).await?;
     let size = std::fs::metadata(part_path)
         .map_err(|e| EngineError::from_io(&e, 0))?
         .len();
@@ -265,7 +265,7 @@ pub(crate) async fn end_job(
                 .await
                 .ok()
                 .and_then(|segs| job.build_resume(segs));
-            let closed = writer.close().await;
+            let closed = writer.close(false).await;
             match closed {
                 Ok(()) => (Err(EngineError::Paused), state),
                 Err(e) => (Err(e), state),
@@ -283,7 +283,7 @@ pub(crate) async fn end_job(
                 .await
                 .ok()
                 .and_then(|segs| job.build_resume(segs));
-            let _ = writer.close().await;
+            let _ = writer.close(false).await;
             (Err(EngineError::Cancelled), state)
         }
         Err(e) => {
@@ -296,7 +296,7 @@ pub(crate) async fn end_job(
                 .await
                 .ok()
                 .and_then(|segs| job.build_resume(segs));
-            let _ = writer.close().await;
+            let _ = writer.close(false).await;
             (Err(e), state)
         }
     }

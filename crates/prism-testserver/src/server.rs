@@ -784,8 +784,9 @@ async fn file_route(
     if let Ok(v) = HeaderValue::from_str(&opts.content_type) {
         h2.insert(header::CONTENT_TYPE, v);
     }
+    // Raw bytes: a file name in UTF-8 goes out unencoded, as some servers send it (#91).
     if let Some(cd) = &opts.content_disposition
-        && let Ok(v) = HeaderValue::from_str(cd)
+        && let Ok(v) = HeaderValue::from_bytes(cd.as_bytes())
     {
         h2.insert(header::CONTENT_DISPOSITION, v);
     }
@@ -928,7 +929,7 @@ fn hls_route(state: &State, req: &Request<Incoming>, rest: &str) -> Response<Bod
     }
     if file == "init.mp4" {
         return match init {
-            Some(b) => serve_bytes(req, b.clone(), "video/mp4"),
+            Some(b) => serve_bytes(req, hls.served_init(b), "video/mp4"),
             None => status(StatusCode::NOT_FOUND, "no init"),
         };
     }

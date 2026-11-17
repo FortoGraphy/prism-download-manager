@@ -1575,14 +1575,19 @@ impl TorrentJob {
                     core.with_item(&item.id, |i| i.file_name = name.clone());
                 }
                 if p.finished {
-                    // Personal use: stop seeding once complete.
-                    let _ = engine.pause(&hash).await;
                     let path = match engine.meta(&hash) {
                         Some(meta) => prism_torrent::content_path(&item.save_dir, &meta),
                         None => item
                             .save_dir
                             .join(p.name.clone().unwrap_or_else(|| item.file_name.clone())),
                     };
+                    // Personal use: stop seeding once complete. The torrent leaves the session
+                    // (its files stay): only pausing it kept the files open, and the session
+                    // loaded it again at the next start and brought deleted files back (#82).
+                    if engine.remove(&hash, false).await.is_err() {
+                        let _ = engine.pause(&hash).await;
+                    }
+                    *self.hash.lock() = None;
                     return Ok(Some((path, p.total)));
                 }
                 if p.state == prism_torrent::TorrentState::Error {

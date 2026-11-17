@@ -94,9 +94,16 @@ pub struct TorrentEngine {
 
 impl TorrentEngine {
     /// Start the session. `state_dir` holds persistence; `default_output` is used when
-    /// a torrent is added without an explicit folder.
-    pub async fn start(state_dir: &Path, default_output: PathBuf) -> Result<Self> {
+    /// a torrent is added without an explicit folder. Saved torrents for which `keep` says no
+    /// (finished or forgotten downloads) are dropped before the session loads them: loading one
+    /// opens its files and creates the ones that were deleted, full size (#82).
+    pub async fn start(
+        state_dir: &Path,
+        default_output: PathBuf,
+        keep: &(dyn Fn(&str) -> bool + Send + Sync),
+    ) -> Result<Self> {
         std::fs::create_dir_all(state_dir).context("create torrent state dir")?;
+        forget_saved(state_dir, keep);
         let opts = SessionOptions {
             fastresume: true,
             persistence: Some(SessionPersistenceConfig::Json {
@@ -118,6 +125,30 @@ impl TorrentEngine {
             disable_local_service_discovery: true,
             listen: None,
             persistence: None,
+            ..Default::default()
+        };
+        Self::with_options(default_output, opts).await
+    }
+
+    /// [`Self::start_offline`] with the state kept in `state_dir`, as [`Self::start`] does: for
+    /// tests of what survives a restart.
+    #[doc(hidden)]
+    pub async fn start_offline_saved(
+        state_dir: &Path,
+        default_output: PathBuf,
+        keep: &(dyn Fn(&str) -> bool + Send + Sync),
+    ) -> Result<Self> {
+        std::fs::create_dir_all(state_dir).context("create torrent state dir")?;
+        forget_saved(state_dir, keep);
+        let opts = SessionOptions {
+            dht: None,
+            disable_trackers: true,
+            disable_local_service_discovery: true,
+            listen: None,
+            fastresume: true,
+            persistence: Some(SessionPersistenceConfig::Json {
+                folder: Some(state_dir.to_path_buf()),
+            }),
             ..Default::default()
         };
         Self::with_options(default_output, opts).await
@@ -257,7 +288,8 @@ impl TorrentEngine {
         self.session.unpause(&handle).await
     }
 
-    /// Stop managing a torrent, optionally deleting its files.
+    /// Stop managing a torrent, optionally deleting its files. Without deleting, its files are
+    /// closed and stay where they are, and the session no longer remembers it.
     pub async fn remove(&self, info_hash: &str, delete_files: bool) -> Result<()> {
         let id = librqbit::dht::Id20::from_str(info_hash)?;
         self.session
@@ -281,6 +313,52 @@ impl TorrentEngine {
     pub fn default_limits() -> LimitsConfig {
         LimitsConfig::default()
     }
+}
+
+/// Drops the torrents `keep` says no to from the session's saved state (librqbit's
+/// `session.json` and its `<hash>.torrent` / `<hash>.bitv` files). Best effort: a state it can't
+/// read is left as it is.
+fn forget_saved(state_dir: &Path, keep: &dyn Fn(&str) -> bool) {
+    let db = state_dir.join("session.json");
+    let Ok(text) = std::fs::read_to_string(&db) else {
+        return;
+    };
+    let Ok(mut doc) = serde_json::from_str::<serde_json::Value>(&text) else {
+        tracing::warn!("unreadable torrent session state; left as it is");
+        return;
+    };
+    let Some(torrents) = doc.get_mut("torrents").and_then(|t| t.as_object_mut()) else {
+        return;
+    };
+    let gone: Vec<(String, String)> = torrents
+        .iter()
+        .filter_map(|(id, t)| {
+            let hash = t.get("info_hash")?.as_str()?.to_ascii_lowercase();
+            (!keep(&hash)).then(|| (id.clone(), hash))
+        })
+        .collect();
+    if gone.is_empty() {
+        return;
+    }
+    for (id, _) in &gone {
+        torrents.remove(id);
+    }
+    let tmp = state_dir.join("session.json.prism-tmp");
+    let written = serde_json::to_vec(&doc)
+        .map_err(std::io::Error::other)
+        .and_then(|bytes| std::fs::write(&tmp, bytes))
+        .and_then(|()| std::fs::rename(&tmp, &db));
+    if let Err(e) = written {
+        tracing::warn!("could not update the torrent session state: {e}");
+        let _ = std::fs::remove_file(&tmp);
+        return;
+    }
+    for (_, hash) in &gone {
+        for ext in ["torrent", "bitv"] {
+            let _ = std::fs::remove_file(state_dir.join(format!("{hash}.{ext}")));
+        }
+    }
+    tracing::info!("forgot {} finished torrents", gone.len());
 }
 
 /// Where a torrent's content ends up inside `output_folder`: its own folder (named after the

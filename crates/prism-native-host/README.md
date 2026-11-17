@@ -117,18 +117,26 @@ Firefox `prism@prismdl.site` (and `prism@prism.dev`, used before 1.1.6).
   default value of `HKCU\Software\<vendor>\NativeMessagingHosts\dev.prism.host`:
   Chrome, Brave, Vivaldi, Opera → `Google\Chrome` (they read Chrome's key); Edge →
   `Microsoft\Edge`; Chromium and Chrome for Testing → `Chromium` (verified with Playwright's
-  Chrome for Testing 156); Firefox → `Mozilla`. Unregistering a subset of browsers keeps a
+  Chrome for Testing 156); Firefox, Zen and Waterfox → `Mozilla`. Unregistering a subset of browsers keeps a
   key that a browser outside that subset shares (e.g. `--browsers brave` keeps Chrome's key).
 * **Linux**: `dev.prism.host.json` in `$XDG_CONFIG_HOME` (default `~/.config`)
-  `/google-chrome`, `/google-chrome-for-testing`, `/chromium`, `/microsoft-edge`,
-  `/BraveSoftware/Brave-Browser`, `/vivaldi`, `/opera` + `/google-chrome` (Opera; unverified)
-  `…/NativeMessagingHosts/`; Firefox `~/.mozilla/native-messaging-hosts/`. With no explicit
-  `--browsers`, only browsers whose profile dir exists are registered. Flatpak browsers
-  (`~/.var/app/<id>`) are reported `supported: false`; Snap Firefox works through the portal.
-* **macOS**: `~/Library/Application Support/{Google/Chrome, Google/Chrome for Testing,
-  Chromium, Microsoft Edge, BraveSoftware/Brave-Browser, Vivaldi}/NativeMessagingHosts/`,
-  Opera → Chrome's dir + `Opera/` (unverified), Firefox →
-  `~/Library/Application Support/Mozilla/NativeMessagingHosts/`.
+  `/google-chrome`, `/google-chrome-beta`, `/google-chrome-unstable` (Chrome Dev),
+  `/google-chrome-canary` (every Chrome channel reads only its own dir),
+  `/google-chrome-for-testing`, `/chromium`, `/microsoft-edge`, `/BraveSoftware/Brave-Browser`,
+  `/vivaldi`, `/opera` + `/google-chrome` (Opera; unverified) `…/NativeMessagingHosts/`;
+  Firefox and Zen `~/.mozilla/native-messaging-hosts/`; Waterfox
+  `~/.waterfox/native-messaging-hosts/` and Firefox's.
+  With no explicit `--browsers`, only browsers whose profile dir exists are registered.
+  Flatpak browsers (`~/.var/app/<id>`) are reported `supported: false`; Snap Firefox works
+  through the portal.
+* **macOS**: `~/Library/Application Support/{Google/Chrome, Google/Chrome Dev,
+  Google/Chrome Beta, Google/Chrome Canary, Google/Chrome for Testing, Chromium,
+  Microsoft Edge, BraveSoftware/Brave-Browser, Vivaldi}/NativeMessagingHosts/` — each existing
+  Chrome channel gets the manifest, because Chrome reads it only from the channel being run
+  (registering only `Google/Chrome` makes Chrome Dev fail with "Specified native messaging
+  host not found"). Opera → Chrome's dir + `Opera/` (unverified), Firefox and Zen →
+  `~/Library/Application Support/Mozilla/NativeMessagingHosts/`, Waterfox → `Waterfox/` and
+  Firefox's.
 
 ## Tests
 

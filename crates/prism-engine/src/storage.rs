@@ -2,7 +2,9 @@
 //!
 //! * Windows: the file is marked sparse (`FSCTL_SET_SPARSE`) before `set_len`, so writes at far
 //!   offsets do not trigger NTFS zero-filling from the valid-data length. The flag is cleared
-//!   (best effort) once the file is complete.
+//!   (best effort) only once the file is complete: clearing it on a part file makes NTFS
+//!   allocate and zero every range not downloaded yet, in one call (#70: minutes of disk
+//!   writes after Pause on a 10 GB file).
 //! * Linux: `fallocate` reserves the space (falls back to `set_len` when unsupported).
 //! * Elsewhere: `set_len` (sparse on APFS/most Unix file systems).
 
@@ -91,7 +93,8 @@ pub(crate) fn set_sparse(file: &File, sparse: bool) -> io::Result<()> {
     }
 }
 
-/// Clears the sparse flag after completion (cosmetic; best effort).
+/// Clears the sparse flag of a complete file (cosmetic; best effort). Never on a part file that
+/// is paused or kept: NTFS would write zeros over every range still missing.
 pub(crate) fn finish_file(file: &File) {
     #[cfg(windows)]
     {
