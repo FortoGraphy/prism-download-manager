@@ -961,6 +961,8 @@
   "finished in {duration} · average {speed}": "اكتمل خلال {duration} · المتوسط {speed}",
   "Don’t show again": "عدم الإظهار مجددًا",
   "Path copied": "تم نسخ المسار",
+  "Drag the file into a chat, an e-mail or a folder": "اسحب الملف إلى محادثة أو بريد أو أي مجلد",
+  "Could not drag the file": "تعذّر سحب الملف",
   "Download complete.": "اكتمل التنزيل.",
   "last 60 s": "آخر 60 ث",
   "Also shares the global {speed} limit (Settings → Speed & queues)": "يخضع أيضًا للحد العام {speed} (الإعدادات ← السرعة وقوائم الانتظار)",

@@ -866,6 +866,8 @@
   "finished in {duration} · average {speed}": "selesai dalam {duration} · rata-rata {speed}",
   "Don’t show again": "Jangan tampilkan lagi",
   "Path copied": "Jalur disalin",
+  "Drag the file into a chat, an e-mail or a folder": "Seret file ke obrolan, e-mail, atau folder",
+  "Could not drag the file": "Tidak dapat menyeret file",
   "Download complete.": "Unduhan selesai.",
   "last 60 s": "60 detik terakhir",
   "Also shares the global {speed} limit (Settings → Speed & queues)": "Juga berbagi batas global {speed} (Pengaturan → Kecepatan & antrean)",

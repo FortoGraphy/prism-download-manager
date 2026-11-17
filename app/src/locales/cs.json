@@ -914,6 +914,8 @@
   "finished in {duration} · average {speed}": "dokončeno za {duration} · průměr {speed}",
   "Don’t show again": "Příště nezobrazovat",
   "Path copied": "Cesta zkopírována",
+  "Drag the file into a chat, an e-mail or a folder": "Přetáhněte soubor do chatu, e-mailu nebo složky",
+  "Could not drag the file": "Soubor nelze přetáhnout",
   "Download complete.": "Stahování dokončeno.",
   "last 60 s": "posledních 60 s",
   "Also shares the global {speed} limit (Settings → Speed & queues)": "Sdílí také globální limit {speed} (Nastavení → Rychlost a fronty)",

@@ -896,6 +896,8 @@
   "finished in {duration} · average {speed}": "terminada en {duration} · promedio {speed}",
   "Don’t show again": "No volver a mostrar",
   "Path copied": "Ruta copiada",
+  "Drag the file into a chat, an e-mail or a folder": "Arrastra el archivo a un chat, un correo o una carpeta",
+  "Could not drag the file": "No se pudo arrastrar el archivo",
   "Download complete.": "Descarga completada.",
   "last 60 s": "últimos 60 s",
   "Also shares the global {speed} limit (Settings → Speed & queues)": "También comparte el límite global de {speed} (Ajustes → Velocidad y colas)",
