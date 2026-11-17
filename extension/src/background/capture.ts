@@ -71,7 +71,7 @@ export async function maybeHandOff({ candidate, req, incognito }: HandOffInput):
   const capture = { initiator: req?.referer || candidate.referrer || undefined };
   const [cookies, finalCookies] = await Promise.all([
     cookieHeaderFor(url, incognito, req && req.url === url ? req.cookie : undefined, capture),
-    finalUrl && !sameOrigin(url, finalUrl) ? cookieHeaderFor(finalUrl, incognito, req?.cookie, capture) : Promise.resolve(undefined),
+    finalUrl && !sameOrigin(url, finalUrl) ? cookieHeaderFor(finalUrl, incognito, req && req.url === finalUrl ? req.cookie : undefined, capture) : Promise.resolve(undefined),
   ]);
   const headers: Record<string, string> = {};
   if (req?.origin) headers.Origin = req.origin;
