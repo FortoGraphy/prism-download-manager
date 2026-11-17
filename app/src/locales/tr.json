@@ -1152,5 +1152,6 @@
   "What's inside a ZIP": "Bir ZIP'in içinde ne var",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "«Dosya indir» penceresi bir ZIP'teki dosyaları indirmeden önce gösterir ve yalnızca birini indirebilir.",
   "Finished means finished": "Bitti demek bitti",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Pencere açıkken biten bir indirme bazen hâlâ iniyormuş gibi görünüyordu."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Pencere açıkken biten bir indirme bazen hâlâ iniyormuş gibi görünüyordu.",
+  "Dark Dimmed": "Koyu loş"
 }

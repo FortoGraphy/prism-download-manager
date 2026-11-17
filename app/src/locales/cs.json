@@ -1198,5 +1198,6 @@
   "What's inside a ZIP": "Co je v ZIPu",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "Okno „Stáhnout soubor“ ukáže soubory v ZIPu ještě před stažením a umí stáhnout jen jeden z nich.",
   "Finished means finished": "Hotovo je hotovo",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Stahování, které skončilo při otevřeném okně, občas dál vypadalo, že se stahuje."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Stahování, které skončilo při otevřeném okně, občas dál vypadalo, že se stahuje.",
+  "Dark Dimmed": "Tmavý tlumený"
 }

@@ -1129,5 +1129,6 @@
   "What's inside a ZIP": "Isi sebuah ZIP",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "Jendela “Unduh file” menampilkan file di dalam ZIP sebelum diunduh dan bisa mengunduh satu file saja.",
   "Finished means finished": "Selesai berarti selesai",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Unduhan yang selesai saat jendela terbuka kadang masih terlihat seperti sedang diunduh."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Unduhan yang selesai saat jendela terbuka kadang masih terlihat seperti sedang diunduh.",
+  "Dark Dimmed": "Gelap redup"
 }

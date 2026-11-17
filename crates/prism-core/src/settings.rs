@@ -90,13 +90,45 @@ impl Default for General {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Theme {
     #[default]
     System,
     Dark,
     Light,
+    Dimmed,
+    Custom(String),
+}
+
+impl serde::Serialize for Theme {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Theme::System => serializer.serialize_str("system"),
+            Theme::Dark => serializer.serialize_str("dark"),
+            Theme::Light => serializer.serialize_str("light"),
+            Theme::Dimmed => serializer.serialize_str("dimmed"),
+            Theme::Custom(name) => serializer.serialize_str(name),
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Theme {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.to_lowercase().as_str() {
+            "system" => Ok(Theme::System),
+            "dark" => Ok(Theme::Dark),
+            "light" => Ok(Theme::Light),
+            "dimmed" => Ok(Theme::Dimmed),
+            _ => Ok(Theme::Custom(s)),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -509,5 +541,13 @@ mod tests {
         assert_eq!(s.appearance.theme, Theme::Light);
         assert!(s.downloads.speed_limiter_enabled);
         assert_eq!(s.appearance.accent, "prism");
+
+        s.apply_patch(&serde_json::json!({"appearance": {"theme": "dimmed"}}))
+            .unwrap();
+        assert_eq!(s.appearance.theme, Theme::Dimmed);
+
+        s.apply_patch(&serde_json::json!({"appearance": {"theme": "nord-frost"}}))
+            .unwrap();
+        assert_eq!(s.appearance.theme, Theme::Custom("nord-frost".into()));
     }
 }

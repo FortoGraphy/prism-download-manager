@@ -1244,5 +1244,6 @@
   "What's inside a ZIP": "ما بداخل ملف ZIP",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "تعرض نافذة «تنزيل ملف» الملفات الموجودة في ZIP قبل تنزيله، ويمكنها تنزيل ملف واحد منها فقط.",
   "Finished means finished": "المكتمل مكتمل",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "التنزيل الذي اكتمل والنافذة مفتوحة كان يبدو أحياناً كأنه ما زال قيد التنزيل."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "التنزيل الذي اكتمل والنافذة مفتوحة كان يبدو أحياناً كأنه ما زال قيد التنزيل.",
+  "Dark Dimmed": "داكن خافت"
 }
