@@ -291,7 +291,7 @@ function SideFooter() {
         <Icon name={resolved === "dark" ? "moon" : "sun"} size={16} />
       </button>
       <button type="button" className="tb-btn" aria-label={t("Settings")} data-tip={t("Settings")} data-kbd="Ctrl ," onClick={() => useUi.getState().openSheet({ kind: "settings" })}>
-        <Icon name="settings" size={16} />
+        <Icon name="options" size={16} />
       </button>
     </div>
   );
