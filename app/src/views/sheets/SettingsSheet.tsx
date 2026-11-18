@@ -182,7 +182,10 @@ const Toggle = ({ title, hint, value, onChange }: { title: string; hint?: string
 
 function SectionBody({ id, s }: { id: string; s: Settings }) {
   switch (id) {
-    case "general":
+    case "general": {
+      // macOS calls the notification area the menu bar, and the texts say so everywhere else.
+      const mac = document.documentElement.dataset.os === "mac";
+      const noTray = s.general.hideTrayIcon;
       return (
         <>
           <p className="lead">{t("How Prism starts and behaves in the background.")}</p>
@@ -208,8 +211,19 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
               }}
             />
             <Toggle title={t("Start minimized")} value={s.general.startMinimized} onChange={(v) => save({ general: { startMinimized: v } })} />
-            <Toggle title={t("Close button hides to the tray")} hint={t("Downloads keep running; quit from the tray menu")} value={s.general.closeToTray} onChange={(v) => save({ general: { closeToTray: v } })} />
-            {document.documentElement.dataset.os === "mac" && (
+            <Toggle
+              title={t("Close button hides to the tray")}
+              hint={noTray ? t("Downloads keep running; quit with the power button in the toolbar") : t("Downloads keep running; quit from the tray menu")}
+              value={s.general.closeToTray}
+              onChange={(v) => save({ general: { closeToTray: v } })}
+            />
+            <Toggle
+              title={mac ? t("Hide the menu bar icon") : t("Hide the tray icon")}
+              hint={mac ? t("No menu bar icon; start Prism again to open its window.") : t("No tray icon; start Prism again to open its window.")}
+              value={s.general.hideTrayIcon}
+              onChange={(v) => save({ general: { hideTrayIcon: v } })}
+            />
+            {mac && (
               <Toggle title={t("Hide the Dock icon")} hint={t("While Prism waits in the menu bar. The icon is back while its window is open")} value={s.general.hideDockIcon} onChange={(v) => save({ general: { hideDockIcon: v } })} />
             )}
           </Group>
@@ -239,6 +253,7 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
           </Group>
         </>
       );
+    }
     case "appearance":
       return <Appearance s={s} />;
     case "downloads":

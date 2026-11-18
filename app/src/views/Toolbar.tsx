@@ -55,7 +55,7 @@ export function Toolbar() {
       <IconButton icon="mini-mode" label={t("Mini window")} kbd="Ctrl Shift M" onClick={actions.toggleMini} />
       <span className="spacer" data-tauri-drag-region />
       <SearchBox />
-      <IconButton icon="options" label={t("Settings")} kbd="Ctrl ," onClick={() => ui().openSheet({ kind: "settings" })} />
+      <IconButton icon="power" label={t("Quit Prism")} onClick={() => void api.quit()} />
       <Caption />
     </header>
   );
