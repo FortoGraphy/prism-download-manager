@@ -443,6 +443,12 @@ impl Core {
             }
         }
         self.emit(CoreEvent::ItemsAdded(new_items));
+        let s = self.settings();
+        if s.sounds.enabled && s.sounds.on_added {
+            self.emit(CoreEvent::PlaySound {
+                kind: "added".into(),
+            });
+        }
         Ok(())
     }
 
@@ -1021,6 +1027,26 @@ impl Core {
         let item = self.item(&id);
         if let Some(item) = item {
             let _ = self.0.db.upsert_download(&item);
+            if item.queue_id.is_none() {
+                let no_pending = {
+                    let st = self.0.state.lock();
+                    st.jobs.is_empty()
+                        && !st.items.values().any(|i| {
+                            !i.trashed
+                                && (i.status.is_active()
+                                    || i.status == Status::Queued
+                                    || st.jobs.contains_key(&i.id))
+                        })
+                };
+                if no_pending {
+                    let s = self.settings();
+                    if s.sounds.enabled && s.sounds.on_queue_done {
+                        self.emit(CoreEvent::PlaySound {
+                            kind: "queue".into(),
+                        });
+                    }
+                }
+            }
         }
     }
 

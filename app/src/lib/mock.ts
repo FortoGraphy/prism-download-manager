@@ -172,7 +172,7 @@ const settings: Settings = {
   connection: { userAgent: "", connectTimeoutSecs: 15, readTimeoutSecs: 30, httpVersion: "http1", maxConnectionsPerHost: 0 },
   proxy: { mode: "system", address: "", username: "", password: "", bypass: [] },
   capture: { enabled: true, extensions: ["zip", "rar", "7z", "exe", "msi", "iso", "mp4", "mkv", "mp3", "pdf"], mimeTypes: ["application/octet-stream"], excludedSites: ["*.update.microsoft.com"], minSizeKb: 0, bypassKey: "alt", videoButton: true, videoMinDurationSecs: 0 },
-  sounds: { enabled: true, onComplete: true, onFailed: true, onQueueDone: true, volume: 0.6, completeSound: "classic" },
+  sounds: { enabled: true, onAdded: false, onComplete: true, onFailed: true, onQueueDone: true, volume: 0.6, completeSound: "classic", presetAdded: "classic", presetComplete: "classic", presetFailed: "classic", presetQueueDone: "classic", customAdded: "", customComplete: "", customFailed: "", customQueueDone: "" },
   clipboard: { monitor: true, ask: true },
   grabber: { defaultDepth: 2, maxPages: 2000, concurrentRequests: 6, respectRobots: true },
   antivirus: { enabled: false, kind: "auto", command: "", args: "", extensions: [] },

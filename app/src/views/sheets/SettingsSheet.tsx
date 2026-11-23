@@ -407,26 +407,37 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
           </Group>
           <Group title={t("Sounds")}>
             <Toggle title={t("Play sounds")} value={s.sounds.enabled} onChange={(v) => save({ sounds: { enabled: v } })} />
-            <Toggle title={t("Download complete")} value={s.sounds.onComplete} onChange={(v) => save({ sounds: { onComplete: v } })} />
-            <Row title={t("Download complete sound")} hint={t("Plays when you pick one")}>
-              <Select
-                label={t("Download complete sound")}
-                value={COMPLETE_SOUNDS.some((c) => c.id === s.sounds.completeSound) ? s.sounds.completeSound : "classic"}
-                onChange={(v) => {
-                  save({ sounds: { completeSound: v } });
-                  playSound("complete", v);
-                }}
-                options={COMPLETE_SOUNDS.map((c) => ({ value: c.id, label: t(c.name) }))}
-              />
+            <Row title={t("Downloads added")} hint={t("Play a sound when a download is added")}>
+              <div className="inline">
+                <EventSoundSelect preset={s.sounds.presetAdded} custom={s.sounds.customAdded} title={t("Downloads added sound file")} onChange={(preset, path) => save({ sounds: { presetAdded: preset, customAdded: path } })} />
+                <button type="button" className="btn btn--sm" onClick={() => playSound("added")}>{t("Test")}</button>
+                <Switch checked={s.sounds.onAdded} label={t("Downloads added")} onChange={(v) => save({ sounds: { onAdded: v } })} />
+              </div>
             </Row>
-            <Toggle title={t("Download failed")} value={s.sounds.onFailed} onChange={(v) => save({ sounds: { onFailed: v } })} />
-            <Toggle title={t("Queue finished")} value={s.sounds.onQueueDone} onChange={(v) => save({ sounds: { onQueueDone: v } })} />
+            <Row title={t("Downloads completed")} hint={t("Play a sound when a download completes")}>
+              <div className="inline">
+                <EventSoundSelect preset={s.sounds.presetComplete} custom={s.sounds.customComplete} onChange={(preset, path) => save({ sounds: { presetComplete: preset, customComplete: path } })} title={t("Downloads completed sound file")} />
+                <button type="button" className="btn btn--sm" onClick={() => playSound("complete")}>{t("Test")}</button>
+                <Switch checked={s.sounds.onComplete} label={t("Downloads completed")} onChange={(v) => save({ sounds: { onComplete: v } })} />
+              </div>
+            </Row>
+            <Row title={t("Downloads failed")} hint={t("Play a sound when a download fails")}>
+              <div className="inline">
+                <EventSoundSelect preset={s.sounds.presetFailed} custom={s.sounds.customFailed} onChange={(preset, path) => save({ sounds: { presetFailed: preset, customFailed: path } })} title={t("Downloads failed sound file")} />
+                <button type="button" className="btn btn--sm" onClick={() => playSound("failed")}>{t("Test")}</button>
+                <Switch checked={s.sounds.onFailed} label={t("Downloads failed")} onChange={(v) => save({ sounds: { onFailed: v } })} />
+              </div>
+            </Row>
+            <Row title={t("No active downloads")} hint={t("Play a sound when downloads are all inactive")}>
+              <div className="inline">
+                <EventSoundSelect preset={s.sounds.presetQueueDone} custom={s.sounds.customQueueDone} onChange={(preset, path) => save({ sounds: { presetQueueDone: preset, customQueueDone: path } })} title={t("No active downloads sound file")} />
+                <button type="button" className="btn btn--sm" onClick={() => playSound("queue")}>{t("Test")}</button>
+                <Switch checked={s.sounds.onQueueDone} label={t("No active downloads")} onChange={(v) => save({ sounds: { onQueueDone: v } })} />
+              </div>
+            </Row>
             <Row title={t("Volume")}>
               <div className="inline">
                 <Slider value={s.sounds.volume} label={t("Volume")} onChange={(v) => save({ sounds: { volume: v } })} />
-                <button type="button" className="btn btn--sm" onClick={() => playSound("complete")}>
-                  <Icon name="sound" size={14} /> {t("Test")}
-                </button>
               </div>
             </Row>
           </Group>
@@ -1053,5 +1064,27 @@ function About() {
       </button>
       <p className="t-small text-tertiary">{t("Inter and JetBrains Mono are used under the SIL Open Font License. yt-dlp, ffmpeg and librqbit are separate projects under their own licenses.")}</p>
     </div>
+  );
+}
+
+function EventSoundSelect({ preset, custom, onChange, title }: { preset: string; custom: string; onChange: (preset: string, custom: string) => void; title: string }) {
+  const pickCustom = () => {
+    void pickFile([{ name: t("Audio files"), extensions: ["wav", "mp3", "ogg", "m4a", "aac", "flac"] }]).then((path) => {
+      if (path) onChange("custom", path);
+    });
+  };
+  const value = custom ? "custom" : preset;
+  const options = [
+    ...COMPLETE_SOUNDS.map((sound) => ({ value: sound.id, label: t(sound.name) })),
+    { value: "custom", label: t("Custom"), hint: custom ? custom.split(/[\\/]/).pop() : undefined },
+  ];
+  return (
+    <Select
+      label={title}
+      value={options.some((option) => option.value === value) ? value : "classic"}
+      onChange={(next) => next === "custom" ? pickCustom() : onChange(next, "")}
+      options={options}
+      width={100}
+    />
   );
 }
