@@ -46,7 +46,7 @@
       "dmg"
     ],
     "publisher": "Prism",
-    "copyright": "Personal use",
+    "copyright": "Copyright (c) 2026 Jan Sechovec and Prism contributors",
     "category": "Utility",
     "shortDescription": "Fast multi-connection download manager",
     "longDescription": "Prism is a fast multi-segment download manager with browser integration, video downloading, queues, a scheduler and a site grabber.",
