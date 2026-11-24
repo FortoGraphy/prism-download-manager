@@ -6,7 +6,11 @@ use url::Url;
 use crate::config::EngineConfig;
 use crate::error::EngineError;
 use crate::http::base_headers;
-use crate::http::client::{ClientSpec, base_tls_config, build_client};
+use crate::http::client::{
+    ClientSpec, TlsBackend, base_tls_config, build_client_with, native_tls_available,
+    needs_native_tls, prefers_native_tls, remember_native_tls,
+};
+use crate::http::download::host_key;
 use crate::http::fetcher::error_chain;
 use crate::request::DownloadRequest;
 
@@ -71,6 +75,32 @@ pub async fn fetch_small(
     req: &DownloadRequest,
     max: usize,
 ) -> Result<SmallResponse, EngineError> {
+    let host = host_key(&req.url);
+    if prefers_native_tls(&host) {
+        match fetch_small_with(cfg, req, max, TlsBackend::Native).await {
+            // The OS TLS stack could not be set up: fall through to rustls.
+            Err(EngineError::Network { .. }) => {}
+            r => return r,
+        }
+    }
+    match fetch_small_with(cfg, req, max, TlsBackend::Rustls).await {
+        // Servers rustls cannot talk to (static-RSA only) are retried on the OS TLS stack.
+        Err(EngineError::Network { message })
+            if native_tls_available() && needs_native_tls(&message) =>
+        {
+            remember_native_tls(&host);
+            fetch_small_with(cfg, req, max, TlsBackend::Native).await
+        }
+        r => r,
+    }
+}
+
+async fn fetch_small_with(
+    cfg: &EngineConfig,
+    req: &DownloadRequest,
+    max: usize,
+    backend: TlsBackend,
+) -> Result<SmallResponse, EngineError> {
     let spec = ClientSpec {
         proxy: req
             .proxy
@@ -89,7 +119,7 @@ pub async fn fetch_small(
         })?,
         pool_max_idle: 1,
     };
-    let client = build_client(&spec)?;
+    let client = build_client_with(&spec, backend)?;
     let headers = base_headers(&req.headers, req.cookies.as_deref(), req.referer.as_deref())?;
     let mut resp = client
         .get(req.url.clone())

@@ -9,7 +9,11 @@ use reqwest::header::{self, HeaderValue};
 use url::Url;
 
 use super::auth::ChallengeAction;
-use super::client::build_client;
+use super::client::{
+    TlsBackend, build_client, build_client_with, native_tls_available, needs_native_tls,
+    prefers_native_tls, remember_native_tls,
+};
+use super::download::host_key;
 use super::{
     HttpCtx, SourceRef, Validators, header_string, parse_content_range, parse_unsatisfied_range,
     retry_after, strong_etag,
@@ -72,6 +76,8 @@ pub(crate) struct HttpFetcher {
     ctx: Arc<HttpCtx>,
     worker: WorkerId,
     client: Result<reqwest::Client, EngineError>,
+    /// The TLS implementation `client` was built with.
+    backend: TlsBackend,
     /// The NTLM handshake succeeded on the current connection.
     ntlm_ready: bool,
 }
@@ -131,13 +137,42 @@ fn status_error(status: u16) -> EngineError {
 
 impl HttpFetcher {
     pub(crate) fn new(ctx: Arc<HttpCtx>, worker: WorkerId) -> Self {
-        let client = build_client(&ctx.spec);
+        // A host that already rejected rustls is reached through the OS TLS stack from the start.
+        let native = prefers_native_tls(&host_key(&ctx.sources.original()))
+            .then(|| build_client_with(&ctx.spec, TlsBackend::Native))
+            .and_then(Result::ok);
+        let (client, backend) = match native {
+            Some(c) => (Ok(c), TlsBackend::Native),
+            None => (build_client(&ctx.spec), TlsBackend::Rustls),
+        };
         Self {
             ctx,
             worker,
             client,
+            backend,
             ntlm_ready: false,
         }
+    }
+
+    /// After a connect error that says rustls and the server share no TLS parameters, rebuilds
+    /// this worker's client on the OS TLS stack and remembers the host. Returns the new client
+    /// when the request is worth repeating.
+    fn switch_to_native_tls(&mut self, url: &Url, e: &reqwest::Error) -> Option<reqwest::Client> {
+        if self.backend == TlsBackend::Native || !native_tls_available() || !e.is_connect() {
+            return None;
+        }
+        let chain = error_chain(e);
+        if !needs_native_tls(&chain) {
+            return None;
+        }
+        let client = build_client_with(&self.ctx.spec, TlsBackend::Native).ok()?;
+        let failing = host_key(e.url().unwrap_or(url));
+        tracing::info!(host = %failing, "rustls cannot connect ({chain}); retrying with the system TLS stack");
+        remember_native_tls(&failing);
+        remember_native_tls(&host_key(&self.ctx.sources.original()));
+        self.backend = TlsBackend::Native;
+        self.client = Ok(client.clone());
+        Some(client)
     }
 
     fn request(
@@ -235,7 +270,7 @@ impl HttpFetcher {
         range: Option<(u64, Option<u64>)>,
         if_range: Option<&str>,
     ) -> Result<reqwest::Response, FetchError> {
-        let client = self
+        let mut client = self
             .client
             .as_ref()
             .map_err(|e| FetchError::fatal(e.clone()))?
@@ -250,10 +285,21 @@ impl HttpFetcher {
                 self.ntlm_handshake(&client, url, range, if_range).await?
             } else {
                 let auth = self.ctx.auth.authorization(method, url);
-                self.request(&client, url, range, if_range, auth)
+                match self
+                    .request(&client, url, range, if_range, auth)
                     .send()
                     .await
-                    .map_err(map_send_error)?
+                {
+                    Ok(resp) => resp,
+                    Err(e) => {
+                        // Once per worker: `switch_to_native_tls` refuses on the native stack.
+                        if let Some(native) = self.switch_to_native_tls(url, &e) {
+                            client = native;
+                            continue;
+                        }
+                        return Err(map_send_error(e));
+                    }
+                }
             };
             if resp.status() == StatusCode::UNAUTHORIZED
                 && rounds < 2

@@ -43,6 +43,9 @@ aes = "0.8"
 cbc = { version = "0.1", features = ["std"] }
 
 [target.'cfg(windows)'.dependencies]
+## Schannel fallback for servers rustls cannot talk to (TLS 1.2 with static-RSA key exchange only).
+## Windows only: other platforms keep a rustls-only build with no OpenSSL dependency.
+reqwest = { workspace = true, features = ["native-tls"] }
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_IO", "Win32_System_Ioctl", "Win32_Storage_FileSystem"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
