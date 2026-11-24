@@ -1,7 +1,33 @@
-# Prism 1.2.5 — One beam. Many rays.
+# Prism 1.2.6 — One beam. Many rays.
 
 A fast, open-source download manager for Windows, Linux and macOS, with browser integration
 and video downloads.
+
+## What's new in 1.2.6
+
+* **Drag a finished download into another app**
+  ([#48](https://github.com/FortoGraphy/prism-download-manager/issues/48)): grab the file in the
+  Download complete window and drop it into a chat, an e-mail or a folder (Windows and macOS).
+  Thanks to ibtkir (PR #95)!
+* **Hide the tray icon** in Settings → General or from the tray menu. The window then has a Quit
+  button, and starting Prism again brings the window back. Thanks to karayelxyz (PR #60)!
+* **Windows: the browser extension connects on every computer**
+  ([#111](https://github.com/FortoGraphy/prism-download-manager/issues/111)). Prism's browser
+  helper needed the Visual C++ Redistributable, and without it the extension said "Prism isn't
+  reachable". Thanks to Googlezpay for spotting it, and to alensoji2005 for the detailed report!
+* **Windows: the tray icon can be seen on a light taskbar**
+  ([#118](https://github.com/FortoGraphy/prism-download-manager/issues/118)), and it follows a
+  switch between light and dark at once.
+* **A queue's stop time runs its finish action**
+  ([#119](https://github.com/FortoGraphy/prism-download-manager/issues/119)): when the stop time
+  ends a queue, the computer shuts down, sleeps or does whatever the queue is set to, as it does
+  when the queue finishes. Stopping a queue by hand still runs nothing.
+* **Files keep their type** ([#121](https://github.com/FortoGraphy/prism-download-manager/issues/121)):
+  a file the browser named without an extension, like a `.webp` image, gets the extension of
+  the type the server sends.
+* **Playlists in 480p and 360p**, and a playlist starts at the preferred quality from Settings.
+* **Windows: the Downloading window keeps its size**
+  ([#102](https://github.com/FortoGraphy/prism-download-manager/issues/102)) as well as its place.
 
 ## What's new in 1.2.5
 

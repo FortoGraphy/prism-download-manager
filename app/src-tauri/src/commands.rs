@@ -491,6 +491,67 @@ pub async fn reveal_item(core: State<'_, Core>, app: AppHandle, id: String) -> C
     }
 }
 
+/// Start a native OS drag carrying the finished file, so it can be dropped into
+/// WhatsApp, a chat, an e-mail or any folder in Explorer/Finder. Must be called
+/// while the mouse button is still down (from the webview's `dragstart`).
+#[tauri::command]
+pub async fn start_file_drag(
+    core: State<'_, Core>,
+    window: tauri::WebviewWindow,
+    id: String,
+) -> CmdResult<()> {
+    let item = core.item(&id).ok_or("unknown item")?;
+    let path = item.path();
+    if !path.exists() {
+        return Err("file not found".into());
+    }
+    start_native_drag(window, path)
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+fn start_native_drag(window: tauri::WebviewWindow, path: PathBuf) -> CmdResult<()> {
+    const DRAG_ICON: &[u8] = include_bytes!("../icons/64x64.png");
+    let target = window.clone();
+    // OLE DoDragDrop (Windows) and NSDraggingSession (macOS) both have to run on the UI thread.
+    window
+        .run_on_main_thread(move || {
+            // Windows: DoDragDrop started with the button already let go (a quick flick, the
+            // call came late) waits for the next mouse move and the window stops responding
+            // until then; that move would also drop the file wherever the pointer is.
+            #[cfg(windows)]
+            if !mouse_button_down() {
+                tracing::debug!("file drag: the mouse button is up, nothing to drag");
+                return;
+            }
+            if let Err(e) = drag::start_drag(
+                &target,
+                drag::DragItem::Files(vec![path]),
+                drag::Image::Raw(DRAG_ICON.to_vec()),
+                |_result, _cursor| {},
+                drag::Options::default(),
+            ) {
+                tracing::warn!("file drag failed: {e}");
+            }
+        })
+        .map_err(err)
+}
+
+/// Whether a mouse button is held. Physical buttons: with swapped buttons the primary one is
+/// the right one, so either counts.
+#[cfg(windows)]
+fn mouse_button_down() -> bool {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON,
+    };
+    // The high bit (a negative value) means "down now".
+    unsafe { GetAsyncKeyState(VK_LBUTTON as i32) < 0 || GetAsyncKeyState(VK_RBUTTON as i32) < 0 }
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+fn start_native_drag(_window: tauri::WebviewWindow, _path: PathBuf) -> CmdResult<()> {
+    Err("dragging files out is not supported on this platform yet".into())
+}
+
 #[tauri::command]
 pub async fn open_path(app: AppHandle, path: PathBuf) -> CmdResult<()> {
     if !path.exists() {

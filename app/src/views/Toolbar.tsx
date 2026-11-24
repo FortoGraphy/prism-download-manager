@@ -18,6 +18,7 @@ export function Toolbar() {
   const queues = useApp((s) => s.queues);
   const limiter = useApp((s) => s.settings?.downloads.speedLimiterEnabled ?? false);
   const limit = useApp((s) => s.settings?.downloads.speedLimit ?? 0);
+  const noTray = useApp((s) => s.settings?.general.hideTrayIcon ?? false);
   const hasFinished = useApp((s) => Object.values(s.items).some((i) => i.status === "completed" && !i.trashed));
   const ui = useUi.getState;
 
@@ -55,6 +56,8 @@ export function Toolbar() {
       <IconButton icon="mini-mode" label={t("Mini window")} kbd="Ctrl Shift M" onClick={actions.toggleMini} />
       <span className="spacer" data-tauri-drag-region />
       <SearchBox />
+      {/* Without a tray icon its Quit is gone, so the window has one (#60). */}
+      {noTray && <IconButton icon="power" label={t("Quit Prism")} onClick={() => void api.quit()} />}
       <IconButton icon="options" label={t("Settings")} kbd="Ctrl ," onClick={() => ui().openSheet({ kind: "settings" })} />
       <Caption />
     </header>

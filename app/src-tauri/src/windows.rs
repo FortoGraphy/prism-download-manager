@@ -66,8 +66,8 @@ fn spec(kind: &str) -> Spec {
 }
 
 /// Windows (#92): dialogs that open where they were last closed instead of in the middle of the
-/// screen. Only their position comes back: their size is the app's (a later version may change
-/// it). Elsewhere they open centered as before (shown at once, they would jump).
+/// screen. Only their position comes back (and the size of those in `REMEMBER_SIZE`): their size
+/// is the app's. Elsewhere they open centered as before (shown at once, they would jump).
 pub const REMEMBER_POSITION: &[&str] = if cfg!(windows) {
     &[
         "capture", "batch", "video", "complete", "progress", "torrent", "model", "tools", "addurl",
@@ -75,6 +75,9 @@ pub const REMEMBER_POSITION: &[&str] = if cfg!(windows) {
 } else {
     &[]
 };
+
+/// Windows (#102): of those, the ones that also come back at their last size.
+const REMEMBER_SIZE: &[&str] = &["progress"];
 
 /// The window-state plugin keeps one entry per kind of window: `capture-<id>` → `capture`.
 /// (Before, every Download Details window kept its own entry, forever.)
@@ -221,9 +224,15 @@ fn create(app: &AppHandle, kind: &str, label: &str, route: &str) -> tauri::Resul
         // thread: the plugin holds its state's lock while it moves the window, and its own event
         // handlers take that lock on the main thread, so from here the two waited on each other.
         let w = window.clone();
+        let size = REMEMBER_SIZE.contains(&kind);
         let _ = app.run_on_main_thread(move || {
             use tauri_plugin_window_state::{StateFlags, WindowExt};
-            let _ = w.restore_state(StateFlags::POSITION);
+            let flags = if size {
+                StateFlags::POSITION | StateFlags::SIZE
+            } else {
+                StateFlags::POSITION
+            };
+            let _ = w.restore_state(flags);
         });
     }
     if matches!(kind, "mini" | "dropzone") {

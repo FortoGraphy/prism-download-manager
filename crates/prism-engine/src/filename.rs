@@ -182,6 +182,17 @@ pub fn derive_file_name(
     name
 }
 
+/// `name` with the MIME type's extension when it has none (`photo` + `image/webp` →
+/// `photo.webp`, #121); `None` when it keeps its name (it has an extension, or the type says
+/// nothing, like `application/octet-stream`).
+pub fn with_mime_extension(name: &str, mime: Option<&str>) -> Option<String> {
+    if name.is_empty() || Path::new(name).extension().is_some() {
+        return None;
+    }
+    let ext = mime.and_then(extension_for_mime)?;
+    Some(sanitize(&format!("{name}.{ext}")))
+}
+
 /// A UTF-8 name that was read one byte per character on its way here (as Latin-1, which is how
 /// Firefox hands over response headers) becomes readable again: `à¸­` → `อ` (#91). Only a name
 /// made of such characters that forms valid UTF-8 changes; `café` or `naïve` stay as they are.
@@ -342,6 +353,18 @@ mod tests {
             "pdf"
         );
         assert!(extension_for_mime("application/octet-stream").is_none());
+        // #121: a name without an extension gets the type's; one with an extension keeps it.
+        assert_eq!(
+            with_mime_extension("photo", Some("image/webp")).as_deref(),
+            Some("photo.webp")
+        );
+        assert_eq!(with_mime_extension("photo.png", Some("image/webp")), None);
+        assert_eq!(
+            with_mime_extension("photo", Some("application/octet-stream")),
+            None
+        );
+        assert_eq!(with_mime_extension("photo", None), None);
+        assert_eq!(with_mime_extension("", Some("image/webp")), None);
         assert_eq!(
             derive_file_name(
                 None,

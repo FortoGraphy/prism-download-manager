@@ -331,5 +331,11 @@
 .tjob__actions { display: flex; align-items: center; gap: 4px; }
 
 /* The completion window's quiet Tools buttons. */
+.complete .is-draggable { cursor: grab; -webkit-user-drag: element; }
+.complete .is-draggable:active { cursor: grabbing; }
+.complete__path.is-draggable { transition: box-shadow 0.15s ease, background 0.15s ease; }
+.complete__path.is-draggable:hover { box-shadow: inset 0 0 0 1px var(--border-strong); color: var(--text-secondary); }
+.complete__grip { margin-inline-start: auto; flex: none; opacity: 0.55; }
+.complete__path.is-draggable:hover .complete__grip { opacity: 0.9; }
 .complete__tools { display: flex; align-items: center; gap: 4px; margin: -8px 22px 12px; }
 .complete__tools .btn { color: var(--text-secondary); }

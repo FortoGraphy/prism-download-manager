@@ -44,8 +44,14 @@ changes.
 
 ## Firefox, Zen and Waterfox
 
-Zen and Waterfox are built on Firefox: the same steps work there. Prism isn't in Firefox Add-ons yet, and
-Firefox only keeps unsigned extensions until it restarts, so choose one of:
+Open [Prism in Firefox Add-ons](https://addons.mozilla.org/firefox/addon/prism-download-manager/)
+and click **Add to Firefox** (Firefox 140 or later). Zen and Waterfox are built on Firefox: the
+same page works there, and the add-on updates itself.
+
+### Prefer to add it by hand?
+
+Firefox keeps an extension added by hand only until it restarts, unless it is a Developer
+Edition, Nightly or ESR:
 
 * **Try it now (until restart):** open **`about:debugging#/runtime/this-firefox`** →
   **Load Temporary Add-on…** → pick `manifest.json` inside the **`firefox`** folder. Prism →
@@ -66,6 +72,7 @@ grab downloads before Prism sees them.
 | Symptom | Fix |
 |---|---|
 | Popup says **Not connected** / *Prism isn't reachable* | Start Prism (it lives in the tray), then click **Retry** in the popup. Still failing → Prism → Settings → Browser integration → **Repair**, then restart the browser. |
+| *Failed to start native messaging host* (Windows) while Prism runs and Browser integration is green | The browser couldn't start Prism's helper. Update Prism: since 1.2.6 the helper no longer needs the Visual C++ Redistributable. Still failing → Windows lacks the `ComSpec` variable, which Chrome needs to start any helper: run `setx ComSpec "%SystemRoot%\system32\cmd.exe"` in a terminal, then quit the browser completely and start it again. Chrome started with `--enable-logging --v=1` writes the reason to its log (search for `launch_context_win`). |
 | Downloads still go to the browser | Make sure *Capture downloads* is on in the popup; check the file type is in Settings → File types (e.g. images are not captured by default); `blob:` downloads (some web apps) can't be handed over. |
 | No **Download video** button | Hover the video; check *Show video button* in the extension options; reload the page after installing. |
 | The store says Prism is already added, but it's the old copy | Remove the copy you added by hand (see *Added Prism by hand before?*), then add it from the store. |

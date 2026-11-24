@@ -99,7 +99,9 @@ fn main() {
             if let Some(main) = app.get_webview_window("main") {
                 apply_window_material(&main, &settings);
                 windows::restore_main(&handle, &main);
-                let show = !background && !settings.general.start_minimized;
+                // Without a tray icon the window is the only way back to Prism, so it opens.
+                let show = settings.general.hide_tray_icon
+                    || (!background && !settings.general.start_minimized);
                 if show && windows::SHOW_ON_CREATE {
                     // macOS: WKWebView doesn't paint into a hidden window. Linux (#30): a hidden
                     // WebKitGTK window sometimes stays blank when shown. The transparent window is
@@ -224,6 +226,7 @@ fn main() {
             commands::item_details,
             commands::open_item,
             commands::reveal_item,
+            commands::start_file_drag,
             commands::open_path,
             commands::assign_to_queue,
             commands::move_in_queue,
@@ -344,6 +347,7 @@ pub fn apply_shell_settings(app: &AppHandle, settings: &Settings) {
     }
     windows::update_dock(app, windows::main_is_open(app));
     tray::refresh(app);
+    tray::sync_visibility(app, settings.general.hide_tray_icon);
 }
 
 /// Whether the OS puts a material behind the window: Mica on Windows 11, vibrancy on macOS. On

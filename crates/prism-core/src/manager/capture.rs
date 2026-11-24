@@ -546,11 +546,24 @@ impl Core {
             match result {
                 Ok(probe) => {
                     let user_named = p.item.file_name.is_some();
-                    if !user_named && !probe.file_name.is_empty() {
+                    let renamed = if !user_named && !probe.file_name.is_empty() {
                         p.info.file_name = match &p.fallback_name {
                             Some(name) if !server_named(&probe, &p.item.url) => name.clone(),
                             _ => super::sanitize_name(&probe.file_name),
                         };
+                        true
+                    } else if let Some(name) = prism_engine::filename::with_mime_extension(
+                        &p.info.file_name,
+                        probe.mime.as_deref(),
+                    ) {
+                        // A name without an extension (the browser's, from the address) gets
+                        // the type the server sent (#121).
+                        p.info.file_name = name;
+                        true
+                    } else {
+                        false
+                    };
+                    if renamed {
                         let cat = categories::classify(&categories_list, &p.info.file_name);
                         if cat != p.info.category {
                             p.info.category = cat.clone();
@@ -1322,10 +1335,16 @@ impl Core {
                     (Some(final_url), Some(c)) => (final_url, Some(c)),
                     _ => (url, s("cookies")),
                 };
+                // A name the browser gave without an extension gets the type's (#121).
+                let mime = s("mime");
                 let n = NewItem {
                     url,
                     file_name: s("filename")
-                        .map(|f| f.rsplit(['/', '\\']).next().unwrap_or(&f).to_string()),
+                        .map(|f| f.rsplit(['/', '\\']).next().unwrap_or(&f).to_string())
+                        .map(|f| {
+                            prism_engine::filename::with_mime_extension(&f, mime.as_deref())
+                                .unwrap_or(f)
+                        }),
                     referer: s("referrer").or_else(|| s("pageUrl")),
                     cookies,
                     user_agent: s("userAgent"),
@@ -2336,6 +2355,53 @@ mod file_name_tests {
             "entries": [{"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa", "title": "First", "index": 1}],
         }));
         assert_eq!(list[0].file_name, "First [aaaaaaaaaaa].mp4");
+        core.shutdown().await;
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_name_without_an_extension_gets_the_type_of_the_file() {
+        // #121: a .webp the browser named after its address came without an extension.
+        let server = prism_testserver::TestServer::start(Default::default())
+            .await
+            .unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        let core = core_in(tmp.path()).await;
+        let url = server.url("/file/photo?size=1000&type=image/webp");
+        let send = |mime: Option<&str>| {
+            let mut msg = json!({"type": "download", "url": url, "filename": "photo"});
+            if let Some(m) = mime {
+                msg["mime"] = json!(m);
+            }
+            core.handle_message(msg)
+        };
+        // Without the dialog: the type the browser saw.
+        let reply = send(Some("image/webp")).await;
+        let id = reply["downloadId"].as_str().expect("added").to_string();
+        assert_eq!(core.item(&id).unwrap().file_name, "photo.webp");
+        // In the Download File dialog: the type the server sends, once it answered.
+        core.update_settings(&json!({"general": {"showCaptureDialog": true}}))
+            .unwrap();
+        let reply = send(None).await;
+        let id = reply["downloadId"].as_str().expect("shown").to_string();
+        let info = tokio::time::timeout(Duration::from_secs(20), async {
+            loop {
+                let info = core.pending_capture(&id).unwrap();
+                if !info.probing {
+                    return info;
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        })
+        .await
+        .expect("the server was not asked");
+        assert_eq!(info.probe_error, None);
+        assert_eq!(info.file_name, "photo.webp");
+        // A name with an extension stays as the browser gave it.
+        let reply = core
+            .handle_message(json!({"type": "download", "url": url, "filename": "photo.png", "mime": "image/webp"}))
+            .await;
+        let id = reply["downloadId"].as_str().expect("shown").to_string();
+        assert_eq!(core.pending_capture(&id).unwrap().file_name, "photo.png");
         core.shutdown().await;
     }
 

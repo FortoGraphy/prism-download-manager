@@ -367,7 +367,7 @@ impl Core {
                     starts.push(q.id.clone());
                 }
                 if due.stop && q.running {
-                    stops.push(q.id.clone());
+                    stops.push((q.id.clone(), q.schedule.on_complete.clone()));
                 }
             }
             (starts, stops)
@@ -376,9 +376,15 @@ impl Core {
             tracing::info!(queue = %id, "schedule: starting queue");
             self.start_queue(&id);
         }
-        for id in stops {
+        for (id, on_complete) in stops {
             tracing::info!(queue = %id, "schedule: stopping queue");
             self.stop_queue(&id);
+            // #119: the stop time ends the queue's run as finishing does, so its finish action
+            // (shut down, sleep, …) runs too. Stopping it by hand doesn't run it.
+            if on_complete != PostAction::None {
+                tracing::info!(queue = %id, "schedule: finish action after the stop time");
+                self.run_post_action(on_complete);
+            }
         }
         self.admit();
         self.detect_finished_queues();
@@ -509,5 +515,84 @@ impl Core {
                 let _ = platform::schedule_wake(local.timestamp() - 30);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::manager::CoreOptions;
+    use std::path::Path;
+    use tokio::sync::broadcast;
+
+    async fn core_in(dir: &Path) -> Core {
+        Core::start(CoreOptions {
+            data_dir: dir.join("data"),
+            ipc: false,
+            clipboard: false,
+        })
+        .await
+        .unwrap()
+    }
+
+    /// The "main" queue running, with a schedule whose stop time passed 10 s ago and whose
+    /// finish action is the queue sound (so a failure only plays a sound).
+    fn running_past_its_stop_time(core: &Core) {
+        let now = chrono::Local::now().naive_local();
+        let mut st = core.0.state.lock();
+        st.last_schedule_tick = now - chrono::Duration::seconds(30);
+        let q = st.queues.iter_mut().find(|q| q.id == "main").unwrap();
+        q.running = true;
+        q.schedule.enabled = true;
+        q.schedule.stop_time = Some(
+            (now - chrono::Duration::seconds(10))
+                .format("%H:%M:%S")
+                .to_string(),
+        );
+        q.schedule.on_complete = PostAction::Sound;
+    }
+
+    async fn finish_action_ran(rx: &mut broadcast::Receiver<CoreEvent>) -> bool {
+        tokio::time::timeout(Duration::from_secs(3), async {
+            loop {
+                match rx.recv().await {
+                    Ok(CoreEvent::PlaySound { kind }) if kind == "queue" => return true,
+                    Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => {}
+                    Err(_) => return false,
+                }
+            }
+        })
+        .await
+        .unwrap_or(false)
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn the_stop_time_runs_the_finish_action() {
+        // #119: a queue stopped by its stop time never shut the computer down.
+        let tmp = tempfile::tempdir().unwrap();
+        let core = core_in(tmp.path()).await;
+        let mut rx = core.subscribe();
+        running_past_its_stop_time(&core);
+        core.queue_tick();
+        assert!(finish_action_ran(&mut rx).await, "the finish action ran");
+        let main = core.queues().into_iter().find(|q| q.id == "main").unwrap();
+        assert!(!main.running, "the stop time stopped the queue");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn stopping_a_queue_by_hand_runs_no_finish_action() {
+        let tmp = tempfile::tempdir().unwrap();
+        let core = core_in(tmp.path()).await;
+        {
+            let mut st = core.0.state.lock();
+            let q = st.queues.iter_mut().find(|q| q.id == "main").unwrap();
+            q.running = true;
+            q.schedule.enabled = true;
+            q.schedule.on_complete = PostAction::Sound;
+        }
+        let mut rx = core.subscribe();
+        core.stop_queue("main");
+        core.queue_tick();
+        assert!(!finish_action_ran(&mut rx).await, "no finish action");
     }
 }

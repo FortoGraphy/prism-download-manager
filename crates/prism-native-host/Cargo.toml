@@ -31,5 +31,10 @@ ureq = { version = "3", default-features = false, optional = true }
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"
 
+# Windows: the VC runtime is linked in, so the host starts on systems without the Visual C++
+# Redistributable (#111). The app gets the same from tauri-build.
+[build-dependencies]
+static_vcruntime = "3.0"
+
 [dev-dependencies]
 tempfile = { workspace = true }

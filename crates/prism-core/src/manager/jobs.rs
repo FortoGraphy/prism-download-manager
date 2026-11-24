@@ -1813,6 +1813,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_playlist_quality_picks_that_height_or_the_closest_below() {
+        // #99: playlists offer 480p and 360p too; each video gets the preset's height or less.
+        let video = |id: &str, h: u32| Choice {
+            id: id.into(),
+            kind: ChoiceKind::Video,
+            height: Some(h),
+            ..Default::default()
+        };
+        let choices = [
+            video("a", 1080),
+            video("b", 720),
+            video("c", 480),
+            video("d", 240),
+        ];
+        let preset = |h: u32| video(&format!("v{h}"), h);
+        let settings = Settings::default();
+        let pick = |h: u32| {
+            pick_choice(&choices, Some(&preset(h)), &settings)
+                .unwrap()
+                .id
+        };
+        assert_eq!(pick(1080), "a");
+        assert_eq!(pick(720), "b");
+        assert_eq!(pick(480), "c");
+        assert_eq!(pick(360), "d");
+    }
+
+    #[test]
     fn a_video_is_put_together_only_with_room_for_it() {
         // #49: 8 GB of streams on a disk with 5 GB free stop before ffmpeg fills it.
         let e = room_to_merge(8_000_000_000, Some(5_000_000_000)).unwrap_err();

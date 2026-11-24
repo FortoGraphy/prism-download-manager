@@ -32,6 +32,8 @@ export const PLAYLIST_CHOICES: VideoChoice[] = [
   preset("best", "video", tk("Best available"), tk("Highest resolution per video")),
   preset("v1080", "video", "1080p", tk("or the closest below"), { height: 1080 }),
   preset("v720", "video", "720p", tk("smaller files"), { height: 720 }),
+  preset("v480", "video", "480p", tk("smaller files"), { height: 480 }),
+  preset("v360", "video", "360p", tk("smaller files"), { height: 360 }),
   preset("a-mp3", "audio", "MP3", "320 kbps", { audioFormat: "mp3", audioBitrateKbps: 320 }),
 ];
 
@@ -134,7 +136,10 @@ export default function VideoWindow({ id }: { id: string }) {
           if (pre?.kind === "audio") setFormat("mp3");
           setChoice((pre && pre.kind !== "audio" ? pre.id : pick?.id) ?? "");
         } else {
-          setChoice("v1080");
+          // The preferred quality from Settings, or the closest preset below it (#99).
+          const pref = settings?.video.preferredHeight ?? 1080;
+          const pick = PLAYLIST_CHOICES.find((x) => x.kind === "video" && (x.height ?? 0) > 0 && (x.height ?? 0) <= pref);
+          setChoice(pick?.id ?? "v1080");
           setEntries(new Set(p.entries.map((e) => e.url)));
         }
       } catch (e) {

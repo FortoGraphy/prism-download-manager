@@ -49,6 +49,9 @@ pub struct General {
     pub launch_at_startup: bool,
     pub start_minimized: bool,
     pub close_to_tray: bool,
+    /// No icon in the notification area. Prism otherwise behaves as usual, so it can still wait
+    /// in the background and starting it again brings the window back.
+    pub hide_tray_icon: bool,
     /// Show the "Download File" dialog for downloads captured from the browser.
     pub show_capture_dialog: bool,
     /// Show the per-download progress window when a download starts.
@@ -76,6 +79,7 @@ impl Default for General {
             launch_at_startup: true,
             start_minimized: false,
             close_to_tray: true,
+            hide_tray_icon: false,
             show_capture_dialog: true,
             show_progress_window: false,
             show_completion_dialog: true,
@@ -498,6 +502,7 @@ mod tests {
             serde_json::from_str(r#"{"downloads":{"defaultConnections":16}}"#).unwrap();
         assert_eq!(s.downloads.default_connections, 16);
         assert_eq!(s.downloads.max_connections, 32);
+        assert!(!s.general.hide_tray_icon);
         assert!(s.capture.extensions.iter().any(|e| e == "zip"));
     }
 
