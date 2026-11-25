@@ -385,9 +385,9 @@ pub fn video_args(
         s("medium"),
         s("-b:v"),
         format!("{video_kbps}k"),
-        s("-pass"),
+        s("-pass:v"),
         pass.to_string(),
-        s("-passlogfile"),
+        s("-passlogfile:v"),
         path_arg(passlog),
         s("-pix_fmt"),
         s("yuv420p"),
@@ -804,7 +804,8 @@ mod tests {
         let vf = &args[args.iter().position(|a| a == "-vf").unwrap() + 1];
         assert_eq!(vf, &format!("{},fps=30", fit_short_side(480)));
         assert!(args.windows(2).any(|w| w == ["-b:a", "96k"]));
-        assert!(args.windows(2).any(|w| w == ["-pass", "2"]));
+        assert!(args.windows(2).any(|w| w == ["-pass:v", "2"]));
+        assert!(args.windows(2).any(|w| w == ["-passlogfile:v", "/t/log"]));
     }
 
     #[test]
@@ -839,6 +840,8 @@ mod tests {
         assert_eq!((p.width, p.height), (Some(854), Some(480)));
         assert_eq!(p.grade, Some(Grade::Good));
         let args = video_args(&v, &p, 1, 1000, Path::new("/t/log"), Path::new("/d/o.mp4"));
+        assert!(args.windows(2).any(|w| w == ["-pass:v", "1"]));
+        assert!(args.windows(2).any(|w| w == ["-passlogfile:v", "/t/log"]));
         assert!(args.ends_with(&[s("-an"), s("-sn"), s("-dn"), s("-f"), s("null"), s("-")]));
         assert!(args.contains(&s("scale=trunc(iw/2)*2:trunc(ih/2)*2")));
     }
