@@ -220,11 +220,28 @@ const soundCache: Record<string, HTMLAudioElement> = {};
 export function playSound(kind: string, completeSound?: string) {
   const s = useApp.getState().settings;
   if (!s?.sounds.enabled) return;
+  const preset = kind === "added" ? s.sounds.presetAdded
+    : kind === "failed" ? s.sounds.presetFailed
+    : kind === "queue" ? s.sounds.presetQueueDone
+    : s.sounds.presetComplete;
+  const custom = kind === "added" ? s.sounds.customAdded
+    : kind === "failed" ? s.sounds.customFailed
+    : kind === "queue" ? s.sounds.customQueueDone
+    : s.sounds.customComplete;
   if (NATIVE_SOUNDS) {
-    void api.playSound(kind, completeSound).catch(() => undefined);
+    void api.playSound(kind, completeSound ?? preset, custom || null).catch(() => undefined);
     return;
   }
-  const file = soundFile(kind, completeSound ?? s.sounds.completeSound);
+  if (custom) {
+    void import("@tauri-apps/api/core").then(async ({ convertFileSrc }) => {
+      const audio = (soundCache[custom] ??= new Audio(convertFileSrc(custom)));
+      audio.volume = Math.max(0, Math.min(1, s.sounds.volume));
+      audio.currentTime = 0;
+      void audio.play().catch(() => undefined);
+    }).catch(() => undefined);
+    return;
+  }
+  const file = soundFile(kind, completeSound ?? preset);
   const audio = (soundCache[file] ??= new Audio(`/sounds/${file}.wav`));
   audio.volume = Math.max(0, Math.min(1, s.sounds.volume));
   audio.currentTime = 0;

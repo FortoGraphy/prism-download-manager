@@ -683,11 +683,33 @@ fn side_effects(
         }
         // Linux plays sounds here, once, instead of in every window (#41).
         #[cfg(target_os = "linux")]
-        CoreEvent::PlaySound { kind } if settings.sounds.enabled => sound::play(
-            kind,
-            &settings.sounds.complete_sound,
-            settings.sounds.volume,
-        ),
+        CoreEvent::PlaySound { kind } if settings.sounds.enabled => {
+            let (preset, custom) = match kind.as_str() {
+                "added" => (
+                    settings.sounds.preset_added.as_str(),
+                    settings.sounds.custom_added.as_str(),
+                ),
+                "complete" => (
+                    settings.sounds.preset_complete.as_str(),
+                    settings.sounds.custom_complete.as_str(),
+                ),
+                "failed" => (
+                    settings.sounds.preset_failed.as_str(),
+                    settings.sounds.custom_failed.as_str(),
+                ),
+                "queue" => (
+                    settings.sounds.preset_queue_done.as_str(),
+                    settings.sounds.custom_queue_done.as_str(),
+                ),
+                _ => ("classic", ""),
+            };
+            sound::play(
+                kind,
+                preset,
+                settings.sounds.volume,
+                (!custom.is_empty()).then_some(custom),
+            )
+        }
         CoreEvent::ShowMain => windows::show_main(app),
         CoreEvent::ExitRequested => {
             let app = app.clone();

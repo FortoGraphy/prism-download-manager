@@ -783,15 +783,16 @@ pub async fn play_sound(
     core: State<'_, Core>,
     kind: String,
     complete_sound: Option<String>,
+    custom_sound: Option<String>,
 ) -> CmdResult<()> {
     #[cfg(target_os = "linux")]
     {
         let s = core.settings().sounds;
         let complete = complete_sound.unwrap_or(s.complete_sound);
-        crate::sound::play(&kind, &complete, s.volume);
+        crate::sound::play(&kind, &complete, s.volume, custom_sound.as_deref());
     }
     #[cfg(not(target_os = "linux"))]
-    let _ = (core, kind, complete_sound);
+    let _ = (core, kind, complete_sound, custom_sound);
     Ok(())
 }
 

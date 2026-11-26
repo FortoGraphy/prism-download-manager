@@ -244,7 +244,23 @@ export interface Settings {
     videoButton: boolean;
     videoMinDurationSecs: number;
   };
-  sounds: { enabled: boolean; onComplete: boolean; onFailed: boolean; onQueueDone: boolean; volume: number; completeSound: string };
+  sounds: {
+    enabled: boolean;
+    onAdded: boolean;
+    onComplete: boolean;
+    onFailed: boolean;
+    onQueueDone: boolean;
+    volume: number;
+    completeSound: string;
+    presetAdded: string;
+    presetComplete: string;
+    presetFailed: string;
+    presetQueueDone: string;
+    customAdded: string;
+    customComplete: string;
+    customFailed: string;
+    customQueueDone: string;
+  };
   clipboard: { monitor: boolean; ask: boolean };
   grabber: { defaultDepth: number; maxPages: number; concurrentRequests: number; respectRobots: boolean };
   antivirus: {

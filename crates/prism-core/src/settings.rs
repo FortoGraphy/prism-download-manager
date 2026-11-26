@@ -333,23 +333,41 @@ impl Default for Capture {
 #[serde(default, rename_all = "camelCase")]
 pub struct Sounds {
     pub enabled: bool,
+    pub on_added: bool,
     pub on_complete: bool,
     pub on_failed: bool,
     pub on_queue_done: bool,
     pub volume: f32,
     /// The "download complete" sound: "classic" or one of the app's `complete-<id>.wav`.
     pub complete_sound: String,
+    pub preset_added: String,
+    pub preset_complete: String,
+    pub preset_failed: String,
+    pub preset_queue_done: String,
+    pub custom_added: String,
+    pub custom_complete: String,
+    pub custom_failed: String,
+    pub custom_queue_done: String,
 }
 
 impl Default for Sounds {
     fn default() -> Self {
         Self {
             enabled: true,
+            on_added: false,
             on_complete: true,
             on_failed: true,
             on_queue_done: true,
             volume: 0.6,
             complete_sound: "classic".into(),
+            preset_added: "classic".into(),
+            preset_complete: "classic".into(),
+            preset_failed: "classic".into(),
+            preset_queue_done: "classic".into(),
+            custom_added: String::new(),
+            custom_complete: String::new(),
+            custom_failed: String::new(),
+            custom_queue_done: String::new(),
         }
     }
 }

@@ -23,8 +23,6 @@ export const NATIVE_SOUNDS = typeof navigator !== "undefined" && /Linux/i.test(n
 
 /** The file (without .wav) under /sounds that plays for `kind`; an unknown complete sound
  *  falls back to the classic one. */
-export function soundFile(kind: string, completeSound?: string): string {
-  if (kind === "failed") return "failed";
-  if (kind === "queue") return "queue";
+export function soundFile(_kind: string, completeSound?: string): string {
   return completeSound && completeSound !== "classic" && COMPLETE_SOUNDS.some((s) => s.id === completeSound) ? `complete-${completeSound}` : "complete";
 }

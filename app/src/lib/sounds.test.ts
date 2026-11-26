@@ -6,8 +6,8 @@ describe("download complete sounds", () => {
     expect(soundFile("complete", "kalimba")).toBe("complete-kalimba");
     expect(soundFile("complete", "music-box")).toBe("complete-music-box");
     expect(soundFile("complete", "classic")).toBe("complete");
-    expect(soundFile("failed", "kalimba")).toBe("failed");
-    expect(soundFile("queue", "kalimba")).toBe("queue");
+    expect(soundFile("failed", "kalimba")).toBe("complete-kalimba");
+    expect(soundFile("queue", "kalimba")).toBe("complete-kalimba");
   });
 
   it("falls back to the classic sound for a missing or unknown choice", () => {
