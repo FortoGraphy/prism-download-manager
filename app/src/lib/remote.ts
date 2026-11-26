@@ -28,6 +28,15 @@ function loginRedirect(): void {
   location.assign(`/login.html?next=${encodeURIComponent(location.pathname + location.hash)}`);
 }
 
+function rejectToken(): void {
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Storage can be disabled by the browser.
+  }
+  loginRedirect();
+}
+
 /** Returns null after redirecting when auth is on but the token is missing. */
 async function authHeaders(): Promise<HeadersInit | null> {
   const { auth } = await config();
@@ -52,6 +61,10 @@ export async function invoke<T>(cmd: string, args: Record<string, unknown> = {})
     headers: { "Content-Type": "application/json", ...auth },
     body: JSON.stringify({ cmd, args }),
   });
+  if (res.status === 401) {
+    rejectToken();
+    throw new Error("Authentication required");
+  }
   if (!res.ok) throw new Error(await errorMessage(res));
   return (await res.json()) as T;
 }
@@ -84,12 +97,7 @@ export async function subscribe(handler: (e: CoreEvent) => void): Promise<() => 
       try {
         const res = await fetch("/api/events", { headers: auth, signal: controller.signal });
         if (res.status === 401) {
-          try {
-            sessionStorage.removeItem(TOKEN_KEY);
-          } catch {
-            // Storage can be disabled by the browser.
-          }
-          loginRedirect();
+          rejectToken();
           return;
         }
         if (!res.ok || !res.body) throw new Error(`Cannot open event stream (${res.status})`);

@@ -60,6 +60,16 @@ describe("prism-web bridge", () => {
     await expect(api.getCapture("x")).rejects.toThrow("Capture is gone");
   });
 
+  it("clears a rejected token and returns to login", async () => {
+    store.set("prism-web-token", "expired");
+    fetchMock.mockResolvedValue(jsonResponse({ error: "unauthorized" }, 401));
+    const { api } = await import("./api");
+
+    await expect(api.bootstrap()).rejects.toThrow("Authentication required");
+    expect(store.has("prism-web-token")).toBe(false);
+    expect(assign).toHaveBeenCalledWith("/login.html?next=%2Fqueue%23top");
+  });
+
   it("redirects to login when auth is on and there is no token", async () => {
     const { api } = await import("./api");
 
