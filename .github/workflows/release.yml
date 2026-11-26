@@ -129,9 +129,110 @@ jobs:
           name: prism-extension
           path: extension/build/*.zip
 
+  build-web:
+    name: Build prism-web (Linux x64)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Frontend deps and build (embedded UI)
+        run: |
+          npm ci --prefix app
+          npm run build --prefix app
+      - name: Build prism-web
+        run: cargo build --release -p prism-web --target x86_64-unknown-linux-gnu
+      - name: Package prism-web-linux-x64.tar.gz
+        run: |
+          set -euo pipefail
+          STAGE=$(mktemp -d)
+          mkdir -p "$STAGE/target/x86_64-unknown-linux-gnu/release"
+          cp target/x86_64-unknown-linux-gnu/release/prism-web "$STAGE/target/x86_64-unknown-linux-gnu/release/"
+          cat > "$STAGE/README.txt" <<'EOF'
+          prism-web (Linux x64)
+
+          Run: ./target/x86_64-unknown-linux-gnu/release/prism-web [flags]
+
+          Flags:
+            --host <addr>       bind address (default 127.0.0.1)
+            --port <u16>        port (default 8080)
+            --no-auth-token     disable the generated auth token
+            --download-dir <p>  where downloads are saved
+            --data-dir <p>      where app state and tools live
+            --warmup            download yt-dlp/ffmpeg/deno, then exit
+
+          Env: PRISM_WEB_DATA_DIR and PRISM_WEB_DOWNLOAD_DIR override the default dirs.
+          Docker: use ghcr.io/<owner>/<repo>/prism-web (see BUILD.md).
+          EOF
+          tar -czf prism-web-linux-x64.tar.gz -C "$STAGE" .
+      - uses: actions/upload-artifact@v5
+        with:
+          name: prism-web-linux-x64
+          path: prism-web-linux-x64.tar.gz
+          if-no-files-found: error
+
+  docker:
+    name: Docker image (GHCR)
+    needs: build-web
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v5
+        with:
+          name: prism-web-linux-x64
+          path: artifacts
+      - name: Extract binary into Docker build context
+        run: tar -xzf artifacts/prism-web-linux-x64.tar.gz -C .
+      - name: Image metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO=$(printf '%s' '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
+          if [[ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == refs/tags/v* ]]; then
+            PUSH=true
+            TAGS="ghcr.io/$REPO/prism-web:${{ github.ref_name }}
+          ghcr.io/$REPO/prism-web:latest"
+          else
+            PUSH=false
+            TAGS="ghcr.io/$REPO/prism-web:ci-${GITHUB_SHA::12}"
+          fi
+          {
+            echo "push=$PUSH"
+            echo 'tags<<TAGS_EOF'
+            echo "$TAGS"
+            echo 'TAGS_EOF'
+          } >> "$GITHUB_OUTPUT"
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and optionally push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ steps.meta.outputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+
   publish:
     name: Publish GitHub release
-    needs: build
+    needs: [build, build-web]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -147,7 +248,8 @@ jobs:
         run: |
           mkdir -p out
           find artifacts -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' \
-            -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.zip' -o -name '*.app.tar.gz' \) -exec cp {} out/ \;
+            -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.zip' -o -name '*.app.tar.gz' \
+            -o -name 'prism-web-*.tar.gz' \) -exec cp {} out/ \;
           # Manifest for the in-app updater (signatures come from the .sig files).
           python3 scripts/make-latest-json.py artifacts "${GITHUB_REF_NAME}" docs/RELEASE_NOTES.md > latest.json
           cat latest.json
