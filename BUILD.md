@@ -64,6 +64,35 @@ Windows portable zip (after `tauri:build`):
 
 Building only some bundles: `npx tauri build --bundles nsis` (or `msi`, `deb`, `rpm`, `appimage`).
 
+## prism-web (standalone Linux binary)
+
+`prism-web` is a self-hosted HTTP server. Its build embeds `app/dist`, so build the UI first:
+
+```bash
+npm ci --prefix app
+npm run build --prefix app
+cargo build --release -p prism-web --target x86_64-unknown-linux-gnu
+./target/x86_64-unknown-linux-gnu/release/prism-web --host 127.0.0.1 --port 8080
+```
+
+Flags: `--host <addr>` (default `127.0.0.1`), `--port <u16>` (default `8080`),
+`--no-auth-token`, `--download-dir <path>`, `--data-dir <path>`, and `--warmup`
+(downloads yt-dlp/ffmpeg/deno, then exits). `PRISM_WEB_DATA_DIR` and
+`PRISM_WEB_DOWNLOAD_DIR` override the default directories.
+
+Docker (the build context needs the prebuilt binary at the target path above):
+
+```bash
+docker build -t prism-web .
+docker compose up -d
+```
+
+Compose publishes port 8080 and keeps state and downloads in named volumes.
+
+Release artifacts for `prism-web` are **Linux x64 only** (`prism-web-linux-x64.tar.gz`).
+Desktop bundles remain Windows/Linux/macOS; tag pushes also publish the container to
+`ghcr.io/<owner>/<repo>/prism-web`.
+
 ### Building Linux packages on Windows (WSL)
 
 The Linux bundles were produced from WSL2 Ubuntu 22.04:
