@@ -24,12 +24,17 @@ import type {
 import type { VideoChapter } from "./videoPart";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const webMode = typeof window !== "undefined" && "__PRISM_WEB__" in window;
 
 type InvokeFn = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
 let invokeImpl: InvokeFn | null = null;
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (webMode) {
+    const remote = await import("./remote");
+    return remote.invoke<T>(cmd, args);
+  }
   if (!invokeImpl) {
     if (inTauri) {
       const core = await import("@tauri-apps/api/core");
@@ -44,6 +49,10 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 
 /** Subscribe to core events. Returns an unsubscribe function. */
 export async function onCoreEvent(handler: (e: CoreEvent) => void): Promise<() => void> {
+  if (webMode) {
+    const remote = await import("./remote");
+    return remote.subscribe(handler);
+  }
   if (inTauri) {
     const { listen } = await import("@tauri-apps/api/event");
     return listen<CoreEvent>("core", (e) => handler(e.payload));
@@ -54,6 +63,10 @@ export async function onCoreEvent(handler: (e: CoreEvent) => void): Promise<() =
 
 /** Subscribe to a named app event emitted by the shell (e.g. `update-progress`). */
 export async function onAppEvent<T>(name: string, handler: (payload: T) => void): Promise<() => void> {
+  if (webMode) {
+    const remote = await import("./remote");
+    return remote.subscribeApp(name, handler as (payload: unknown) => void);
+  }
   if (inTauri) {
     const { listen } = await import("@tauri-apps/api/event");
     return listen<T>(name, (e) => handler(e.payload));
