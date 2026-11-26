@@ -467,7 +467,7 @@ pub fn restore_main(app: &AppHandle, main: &WebviewWindow) {
 }
 
 /// Windows (#53): remembers the main window before it's closed to free memory.
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn remember_main(window: &WebviewWindow) {
     #[cfg(windows)]
     {
