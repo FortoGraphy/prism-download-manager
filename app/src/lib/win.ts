@@ -1,6 +1,6 @@
-// Current-window controls. All are no-ops outside Tauri (browser preview).
+// Current-window controls. Outside Tauri they are no-ops, except web-mode close returning to main.
 
-import { inTauri } from "./api";
+import { inTauri, webMode } from "./api";
 
 async function current() {
   if (!inTauri) return null;
@@ -19,6 +19,10 @@ export const win = {
   /** Closes this window for good (dialogs are destroyed, not kept hidden); the main window
    * goes through the normal close request (to the tray, if enabled). */
   close: async () => {
+    if (webMode) {
+      location.hash = "";
+      return;
+    }
     const w = await current();
     if (!w) return;
     if (w.label === "main") await w.close();

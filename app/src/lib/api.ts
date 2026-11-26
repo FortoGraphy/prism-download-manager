@@ -24,7 +24,7 @@ import type {
 import type { VideoChapter } from "./videoPart";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-const webMode = typeof window !== "undefined" && "__PRISM_WEB__" in window;
+export const webMode = typeof window !== "undefined" && "__PRISM_WEB__" in window;
 
 type InvokeFn = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 

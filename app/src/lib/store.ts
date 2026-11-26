@@ -2,7 +2,8 @@
 // the 4 Hz progress stream only re-renders the rows that changed.
 
 import { create } from "zustand";
-import { api, onCoreEvent } from "./api";
+import { api, onCoreEvent, webMode } from "./api";
+import { hexEncode } from "./route";
 import { NATIVE_SOUNDS, soundFile } from "./sounds";
 import type {
   Bootstrap,
@@ -108,6 +109,29 @@ export const useApp = create<AppState>((set, get) => ({
 
 export function handleEvent(e: CoreEvent) {
   const st = useApp.getState();
+  // Web mode has no shell to open windows, so dialog events select the matching hash route.
+  if (webMode) {
+    switch (e.type) {
+      case "captureRequested":
+        location.hash = `#/capture/${e.payload.id}`;
+        break;
+      case "batchRequested":
+        location.hash = `#/batch/${e.payload.id}`;
+        break;
+      case "videoRequested":
+        location.hash = `#/video/${e.payload.id}`;
+        break;
+      case "openModel":
+        location.hash = `#/model/${hexEncode(e.payload.source)}`;
+        break;
+      case "openTorrent":
+        location.hash = `#/torrent/${hexEncode(e.payload.source)}`;
+        break;
+      case "showMain":
+        location.hash = "";
+        break;
+    }
+  }
   switch (e.type) {
     case "itemsAdded": {
       // Also the whole list again after the window missed events (see main.rs): live progress
