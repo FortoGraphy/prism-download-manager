@@ -54,9 +54,12 @@ of them can win, so disable them while using Prism.
   are cleared on navigation, and the badge shows the count.
 * **Floating video button** — Shadow-DOM pill above the top-right of a hovered `<video>` (YouTube
   player / Shorts aware, skips players < 200×120 and small muted autoplay loops, follows
-  scroll/resize, moves into the fullscreen element, handles `yt-navigate-finish`, `popstate`,
-  Navigation API and DOM mutations). On `videoSites` (YouTube, Vimeo, …) the menu shows the app's
-  `probeVideo` formats — on a feed, profile or listing (X, Instagram, Facebook, Reddit, TikTok,
+  scroll/resize and handles `yt-navigate-finish`, `popstate`, Navigation API and DOM mutations).
+  The **×** hides the overlay for that video or post until you reload the page. The browser's
+  **Download with Prism** action can still open the menu for that video. The overlay and its menu
+  hide during fullscreen playback, including in embedded players. In small viewports, the menu
+  fits the available space and scrolls when needed. On `videoSites` (YouTube, Vimeo, …) the menu
+  shows the app's `probeVideo` formats — on a feed, profile or listing (X, Instagram, Facebook, Reddit, TikTok,
   LinkedIn…) for the hovered post (the tile's link, the single-post link of its `<article>`, or
   LinkedIn's post id in the attributes of its container, or in LinkedIn's newer pages the
   `componentkey` of the post's text block inside the video's `[role=listitem]` card), not the page (the app refuses
@@ -248,6 +251,9 @@ Chromium config dir.
 `node e2e/mock-app.mjs <dataDir>` runs the mock app standalone (prints every message) for manual
 testing with a real browser.
 
+`npm run e2e:video-overlay` checks dismissal, fullscreen, and menu layout in Chromium after
+`npm run build`. It does not require the native host.
+
 ## Limitations
 
 * Firefox build: compiles, passes `web-ext lint` (0 errors), same features, but has not been run
@@ -256,4 +262,3 @@ testing with a real browser.
 * Opera/Vivaldi/Brave use Chrome's registration; Opera's Linux/macOS directories are unverified.
 * Partitioned (CHIPS) cookies are only included when the browser sent them on the captured request.
 * Downloads started by `<a download>` on `blob:`/`data:` URLs, and POST form downloads, always stay in the browser.
-* The video button cannot overlay a `<video>` element that is itself fullscreen (it hides then).

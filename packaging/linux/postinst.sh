@@ -5,7 +5,8 @@
 set -e
 HOST=/usr/bin/prism-native-host
 CHROME_ID=mmcdeiglkbfbicdjboocmhehodogilfl
-FIREFOX_ID=prism@prism.dev
+# Must match prism-native-host (CHROME_EXTENSION_ID, FIREFOX_EXTENSION_ID); a test checks it.
+FIREFOX_ID=prism@prismdl.site
 
 chromium_manifest() {
   cat <<JSON

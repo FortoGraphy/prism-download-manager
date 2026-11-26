@@ -185,18 +185,18 @@ mod tests {
     fn firefox_invocation_is_host() {
         let inv = classify(&v(&[
             r"C:\Users\u\AppData\Roaming\Prism\native-messaging\dev.prism.host.firefox.json",
-            "prism@prism.dev",
+            "prism@prismdl.site",
         ]))
         .unwrap();
         assert_eq!(
             inv,
             Invocation::Host {
-                caller: Some("prism@prism.dev".into())
+                caller: Some("prism@prismdl.site".into())
             }
         );
         let inv = classify(&v(&[
             "/home/u/.mozilla/native-messaging-hosts/dev.prism.host.json",
-            "prism@prism.dev",
+            "prism@prismdl.site",
         ]))
         .unwrap();
         assert!(matches!(inv, Invocation::Host { .. }));

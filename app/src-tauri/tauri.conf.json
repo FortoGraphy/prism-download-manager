@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Prism",
   "mainBinaryName": "prism",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "identifier": "dev.prism.manager",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -46,7 +46,7 @@
       "dmg"
     ],
     "publisher": "Prism",
-    "copyright": "Personal use",
+    "copyright": "Copyright (c) 2026 Jan Sechovec and Prism contributors",
     "category": "Utility",
     "shortDescription": "Fast multi-connection download manager",
     "longDescription": "Prism is a fast multi-segment download manager with browser integration, video downloading, queues, a scheduler and a site grabber.",

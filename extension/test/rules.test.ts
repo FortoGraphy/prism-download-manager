@@ -82,6 +82,19 @@ describe('decideCapture', () => {
     expect(decideCapture({ url: 'https://x.com/get?id=1', mime: 'video/mp4' }, S, ctx).capture).toBe(true);
     expect(decideCapture({ url: 'https://x.com/get?id=1', filename: 'a.r01' }, S, ctx).capture).toBe(true);
   });
+  it('lets a generic MIME type decide only for a name without an extension (#137)', () => {
+    const octet = 'application/octet-stream';
+    // A Discord attachment of a type that is not in the list stays in the browser.
+    expect(decideCapture({ url: 'https://cdn.discordapp.com/attachments/1/2/scene.blend', filename: 'scene.blend', mime: octet }, S, ctx).capture).toBe(false);
+    expect(decideCapture({ url: 'https://x.com/file', filename: 'notes.psd', mime: 'binary/octet-stream; charset=x' }, S, ctx).capture).toBe(false);
+    // A listed type is captured whatever the server calls it.
+    expect(decideCapture({ url: 'https://x.com/a.zip', filename: 'a.zip', mime: octet }, S, ctx).capture).toBe(true);
+    // No extension, or a script that serves the file: the type is all there is.
+    expect(decideCapture({ url: 'https://x.com/download?id=1', mime: octet }, S, ctx).capture).toBe(true);
+    expect(decideCapture({ url: 'https://x.com/get.php?id=1', mime: octet }, S, ctx).capture).toBe(true);
+    // A specific MIME type in the list still decides on its own.
+    expect(decideCapture({ url: 'https://x.com/a.weird', filename: 'a.weird', mime: 'application/zip' }, S, ctx).capture).toBe(true);
+  });
   it('leaves other types, blob/data URLs and POSTs to the browser', () => {
     expect(decideCapture({ url: 'https://x.com/a.html', mime: 'text/html' }, S, ctx).capture).toBe(false);
     expect(decideCapture({ ...base, url: 'blob:https://x.com/123' }, S, ctx).capture).toBe(false);

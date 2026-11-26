@@ -31,6 +31,18 @@ use std::str::FromStr;
 
 use crate::{CHROME_EXTENSION_ID, HOST_DESCRIPTION, HOST_NAME, paths};
 
+/// Brave and Brave Origin channel directory names under `BraveSoftware/`.
+const BRAVE_CHANNELS: &[&str] = &[
+    "Brave-Browser",
+    "Brave-Browser-Beta",
+    "Brave-Browser-Dev",
+    "Brave-Browser-Nightly",
+    "Brave-Origin",
+    "Brave-Origin-Beta",
+    "Brave-Origin-Dev",
+    "Brave-Origin-Nightly",
+];
+
 /// A browser (family member) we can register the host for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -400,9 +412,9 @@ mod platform {
             }
             Browser::Chromium => local.map(|d| d.join("Chromium\\User Data")),
             Browser::Edge => local.map(|d| d.join("Microsoft\\Edge\\User Data")),
-            // Brave Origin (its own build and folder) reads the same key as Brave.
+            // Brave and Brave Origin (all channels) read Google Chrome's registry key on Windows.
             Browser::Brave => {
-                return ["Brave-Browser", "Brave-Origin"].iter().any(|p| {
+                return BRAVE_CHANNELS.iter().any(|p| {
                     local
                         .as_ref()
                         .is_some_and(|d| d.join("BraveSoftware").join(p).join("User Data").exists())
@@ -640,13 +652,11 @@ mod platform {
         }
     }
 
-    /// Brave and Brave Origin (a separate Brave build with its own folder, which reads native
-    /// messaging hosts from there).
+    /// Brave and Brave Origin across all channels (stable, Beta, Dev, Nightly), each with its
+    /// own folder that reads native messaging manifests from there.
     fn brave(base: &Path) -> (PathBuf, Vec<PathBuf>) {
-        channel_dirs(vec![
-            base.join("BraveSoftware/Brave-Browser"),
-            base.join("BraveSoftware/Brave-Origin"),
-        ])
+        let vendor = base.join("BraveSoftware");
+        channel_dirs(BRAVE_CHANNELS.iter().map(|c| vendor.join(c)).collect())
     }
 
     /// Browsers with one profile dir per channel or build (Chrome stable, Dev, Beta, Canary;
@@ -873,8 +883,8 @@ mod tests {
             json!(["chrome-extension://abc/", "chrome-extension://def/"])
         );
         assert!(m.get("allowed_extensions").is_none());
-        let f = firefox_manifest(&host, &["prism@prism.dev".into()]);
-        assert_eq!(f["allowed_extensions"], json!(["prism@prism.dev"]));
+        let f = firefox_manifest(&host, &["me@example.org".into()]);
+        assert_eq!(f["allowed_extensions"], json!(["me@example.org"]));
         assert!(f.get("allowed_origins").is_none());
         // round trip through the reader
         let dir = tempfile::tempdir().unwrap();
@@ -895,13 +905,31 @@ mod tests {
         );
         assert_eq!(
             o.firefox_extension_ids,
-            vec![
-                crate::FIREFOX_EXTENSION_ID.to_string(),
-                "prism@prism.dev".to_string()
-            ],
-            "the Firefox Add-ons ID, and the one copies loaded by hand used before"
+            vec![crate::FIREFOX_EXTENSION_ID.to_string()],
+            "only the Firefox Add-ons ID: the one used before 1.1.6 belongs to someone else there              (GHSA-v59w-jfj8-7pf6)"
         );
         assert!(o.browsers.is_empty());
+    }
+
+    #[test]
+    fn the_linux_packages_allow_the_same_extensions() {
+        // GHSA-v59w-jfj8-7pf6: postinst.sh wrote the old Firefox ID into the system-wide
+        // manifests for years after the app had moved on. Both must name the same extensions.
+        let script = fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packaging/linux/postinst.sh"),
+        )
+        .unwrap();
+        let value = |key: &str| {
+            script
+                .lines()
+                .find_map(|l| l.trim().strip_prefix(&format!("{key}=")))
+                .map(|v| v.trim().trim_matches('"').to_string())
+        };
+        assert_eq!(value("CHROME_ID").as_deref(), Some(CHROME_EXTENSION_ID));
+        assert_eq!(
+            value("FIREFOX_ID").as_deref(),
+            Some(crate::FIREFOX_EXTENSION_ID)
+        );
     }
 
     #[test]
@@ -1183,5 +1211,56 @@ mod tests {
         );
         unregister(&[Browser::Chrome], &loc).unwrap();
         assert!(!manifest(&dev).exists());
+    }
+
+    /// Brave and Brave Origin Beta/Dev/Nightly channels each keep their own profile directory
+    /// under `BraveSoftware/` and read native messaging manifests only from there.
+    #[cfg(not(windows))]
+    #[test]
+    fn brave_origin_nightly_channel_is_detected_and_registered() {
+        let dir = tempfile::tempdir().unwrap();
+        let host = dir.path().join(crate::HOST_BINARY_NAME);
+        fs::write(&host, b"").unwrap();
+        let home = dir.path().join("home");
+        let loc = Locations {
+            manifest_dir: None,
+            home: Some(home.clone()),
+            registry_root: None,
+        };
+        let vendor = if cfg!(target_os = "macos") {
+            home.join("Library/Application Support/BraveSoftware")
+        } else {
+            home.join(".config/BraveSoftware")
+        };
+        let stable = vendor.join("Brave-Browser");
+        let origin_nightly = vendor.join("Brave-Origin-Nightly");
+        let browser_nightly = vendor.join("Brave-Browser-Nightly");
+        let manifest = |root: &Path| {
+            root.join("NativeMessagingHosts")
+                .join(format!("{HOST_NAME}.json"))
+        };
+
+        // Only Brave Origin Nightly installed: registered there without creating other dirs.
+        fs::create_dir_all(&origin_nightly).unwrap();
+        let mut opts = RegisterOptions::new(&host);
+        opts.locations = loc.clone();
+        register(&opts).unwrap();
+        assert!(
+            manifest(&origin_nightly).is_file(),
+            "Brave Origin Nightly not registered"
+        );
+        assert!(!stable.exists(), "nothing created for absent stable Brave");
+        let st = &status(&[Browser::Brave], &host, &loc)[0];
+        assert!(
+            st.installed && st.registered && st.points_to_this_host,
+            "{st:?}"
+        );
+
+        // Both Nightly channels installed: both get manifests, unregister removes both.
+        fs::create_dir_all(&browser_nightly).unwrap();
+        register(&opts).unwrap();
+        assert!(manifest(&origin_nightly).is_file() && manifest(&browser_nightly).is_file());
+        unregister(&[Browser::Brave], &loc).unwrap();
+        assert!(!manifest(&origin_nightly).exists() && !manifest(&browser_nightly).exists());
     }
 }

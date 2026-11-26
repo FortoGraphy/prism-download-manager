@@ -16,7 +16,7 @@ prism-native-host = { path = "../prism-native-host", default-features = false }
 | `registration` | `register(&RegisterOptions) -> Result<Vec<BrowserStatus>>`, `unregister(&[Browser], &Locations)`, `status(&[Browser], host_path, &Locations) -> Vec<BrowserStatus>` — the "Browser integration → Repair" page. Idempotent and fast: call `register` on every app start (self-healing). |
 | `paths` | `data_dir()`, `ipc_file()`, `logs_dir()`, `manifests_dir()`, `app_executable()` — the location contract below. |
 | `framing`, `protocol` | Native messaging framing and the envelope/error-code rules. |
-| constants | `HOST_NAME = "dev.prism.host"`, `CHROME_EXTENSION_ID = "mmcdeiglkbfbicdjboocmhehodogilfl"`, `FIREFOX_EXTENSION_ID = "prism@prismdl.site"` (plus the older `prism@prism.dev` in `LEGACY_FIREFOX_EXTENSION_IDS`), `HOST_BINARY_NAME`, `APP_BINARY_NAME`. |
+| constants | `HOST_NAME = "dev.prism.host"`, `CHROME_EXTENSION_ID = "mmcdeiglkbfbicdjboocmhehodogilfl"`, `FIREFOX_EXTENSION_ID = "prism@prismdl.site"` (the ID used before 1.1.6 is no longer allowed: it belongs to someone else on Firefox Add-ons), `caller_allowed` (the host serves only these extensions, plus IDs in `PRISM_EXTENSION_IDS`), `HOST_BINARY_NAME`, `APP_BINARY_NAME`. |
 
 ```rust
 use prism_native_host::registration::{self, RegisterOptions, Browser};
@@ -109,7 +109,7 @@ prism-native-host --version | --help
 
 Browsers: `chrome`, `chromium`, `edge`, `brave`, `vivaldi`, `opera`, `chrome-for-testing`,
 `firefox` (`all` = default). Default extension IDs: Chromium `mmcdeiglkbfbicdjboocmhehodogilfl`,
-Firefox `prism@prismdl.site` (and `prism@prism.dev`, used before 1.1.6).
+Firefox `prism@prismdl.site`. The host also checks the caller the browser names and exits for any other extension; an extension built with an ID of its own needs that ID in `PRISM_EXTENSION_IDS` (comma separated) as well as `--extension-id-*` at registration.
 
 ## Where registration writes
 

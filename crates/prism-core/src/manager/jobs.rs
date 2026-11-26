@@ -890,7 +890,7 @@ impl VideoJob {
         // The formats for the container asked for (the dialog's, else Settings › Video): the
         // choice's container is what the file is merged into.
         info.choices = video.choices(&info, wanted_container(spec.get("options"), &settings));
-        let renamed = adopt_title(core, item, &info, &settings, &page_url);
+        let renamed = adopt_name(core, item, &info, &settings, &page_url);
         let item = &renamed;
 
         let opts = output_options(&spec, item, &settings);
@@ -1703,33 +1703,62 @@ fn wanted_container(options: Option<&serde_json::Value>, settings: &Settings) ->
     }
 }
 
-/// A video added without its title (a playlist that didn't list one) is still named "Video …":
-/// name it after the video now that its page is read, before anything is written. A file
-/// renamed in the meantime keeps its name; a playlist number in front stays.
-fn adopt_title(
+/// A video is named from the name template when it is added, with what is known then (see
+/// [`super::capture::known_fields`]): a playlist that didn't list its title gives "Video …", and
+/// fields only its page has (`%(uploader)s`, `%(artist)s`, `%(upload_date)s`, …) are left out.
+/// Now that the page is read, before anything is written, the name is made again with the
+/// page's fields (#145) and its title when there was none. The title the item was added with
+/// stays (it is what the list and the video window showed). A name typed or changed in the
+/// meantime is kept; a playlist number in front and a part's range behind stay.
+fn adopt_name(
     core: &Core,
     item: &DownloadItem,
     info: &prism_video::VideoInfo,
     settings: &Settings,
     page_url: &str,
 ) -> DownloadItem {
-    let untitled = item.media.as_ref().is_some_and(|m| m.title.is_none());
-    if !untitled || info.title.trim().is_empty() || item.downloaded > 0 {
+    let media = item.media.clone().unwrap_or_default();
+    let untitled = media.title.is_none() && !info.title.trim().is_empty();
+    let template = &settings.video.file_template;
+    // Only a title and an id: what the address already gave (the id from the page would name
+    // other sites' videos differently than before).
+    let from_page = prism_video::template::template_fields(template)
+        .iter()
+        .any(|f| !matches!(*f, "title" | "fulltitle" | "id" | "ext"));
+    if (!untitled && !from_page) || item.downloaded > 0 {
         return item.clone();
     }
-    let template = &settings.video.file_template;
-    let id = super::capture::video_id(page_url);
+    let place = item
+        .request
+        .as_ref()
+        .and_then(|r| r.get("playlist"))
+        .and_then(|p| serde_json::from_value(p.clone()).ok())
+        .unwrap_or(super::capture::PlaylistPlace {
+            index: media.playlist_index,
+            ..Default::default()
+        });
+    let shown = media.title.clone().unwrap_or_else(|| "Video".into());
+    let known = super::capture::known_fields(&shown, page_url, Some(&place));
     let file = Path::new(&item.file_name);
+    let ext = file
+        .extension()
+        .map(|e| e.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let stem = file
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let placeholder = super::sanitize_name(&super::capture::render_name_template(
-        template,
-        "Video",
-        id.as_deref(),
-    ));
-    let Some(prefix) = stem.strip_suffix(placeholder.as_str()) else {
+    let render = |fields: &prism_video::VideoInfo| {
+        super::sanitize_name(&prism_video::template::render_name(template, fields, &ext))
+    };
+    // Still the name it was given: `[NN - ]<template>[ (1m23s–2m45s)]`.
+    let range = media
+        .section
+        .map(|s| s.file_suffix())
+        .filter(|r| stem.ends_with(r.as_str()))
+        .unwrap_or_default();
+    let body = &stem[..stem.len() - range.len()];
+    let Some(prefix) = body.strip_suffix(render(&known).as_str()) else {
         return item.clone();
     };
     let numbered = prefix
@@ -1738,19 +1767,38 @@ fn adopt_title(
     if !prefix.is_empty() && !numbered {
         return item.clone();
     }
-    let titled = super::sanitize_name(&super::capture::render_name_template(
-        template,
-        &info.title,
-        id.as_deref(),
-    ));
-    let name = match file.extension() {
-        Some(ext) => format!("{prefix}{titled}.{}", ext.to_string_lossy()),
-        None => format!("{prefix}{titled}"),
+    let title = media.title.clone().unwrap_or_else(|| info.title.clone());
+    let fields = if from_page {
+        prism_video::VideoInfo {
+            title,
+            id: if info.id.is_empty() {
+                known.id
+            } else {
+                info.id.clone()
+            },
+            playlist_title: known.playlist_title,
+            playlist_index: known.playlist_index,
+            last_playlist_index: known.last_playlist_index,
+            ..info.clone()
+        }
+    } else {
+        prism_video::VideoInfo { title, ..known }
     };
+    let named = render(&fields);
+    let name = if ext.is_empty() {
+        format!("{prefix}{named}{range}")
+    } else {
+        format!("{prefix}{named}{range}.{ext}")
+    };
+    if name == item.file_name && !untitled {
+        return item.clone();
+    }
     core.with_item(&item.id, |i| {
         i.file_name = name.clone();
         if let Some(m) = i.media.as_mut() {
-            m.title = Some(info.title.clone());
+            if untitled {
+                m.title = Some(info.title.clone());
+            }
             m.thumbnail = m.thumbnail.take().or_else(|| info.thumbnail.clone());
             m.duration = m.duration.or(info.duration);
         }

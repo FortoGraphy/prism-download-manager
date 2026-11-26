@@ -16,7 +16,7 @@ import type { NativeError } from '../shared/correlator';
 import type { DownloadRequest } from '../shared/protocol';
 import { type CaptureCandidate, decideCapture, filenameFromContentDisposition, filenameFromUrl, isAttachment } from '../shared/rules';
 import { showUnreachable } from './badge';
-import { actionTimeout, cookieHeaderFor, tabInfo, userAgent } from './context';
+import { CAPTURE_DEADLINE_MARGIN_MS, CAPTURE_TIMEOUT_MS, cookieHeaderFor, tabInfo, userAgent } from './context';
 import { native } from './native';
 import { type RequestInfo, requestByUrl } from './requests';
 import { getState } from './state';
@@ -93,10 +93,12 @@ export async function maybeHandOff({ candidate, req, incognito }: HandOffInput):
     source: 'capture',
   };
   try {
-    const reply = await native.request({ ...msg, type: 'download' }, { timeoutMs: actionTimeout() });
+    // The app opens no dialog after the deadline: the browser has the file by then.
+    const deadline = Date.now() + CAPTURE_TIMEOUT_MS - CAPTURE_DEADLINE_MARGIN_MS;
+    const reply = await native.request({ ...msg, deadline, type: 'download' }, { timeoutMs: CAPTURE_TIMEOUT_MS });
     lastCapture.deliveredMs = performance.now() - t0;
-    lastCapture.result = reply.accepted === false ? 'declined by app' : 'handed off';
-    return reply.accepted !== false;
+    lastCapture.result = reply.accepted === true ? 'handed off' : 'declined by app';
+    return reply.accepted === true;
   } catch (e) {
     const err = e as NativeError;
     lastCapture.deliveredMs = performance.now() - t0;

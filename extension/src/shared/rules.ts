@@ -111,6 +111,20 @@ export interface CaptureDecision {
   reason: string;
 }
 
+/** MIME types servers use for "some file", whatever it is. */
+const GENERIC_MIMES = new Set([
+  'application/octet-stream',
+  'binary/octet-stream',
+  'application/binary',
+  'application/force-download',
+  'application/x-download',
+  'application/download',
+  'application/unknown',
+]);
+
+/** Extensions of scripts that serve files (`get.php`): not the type of the file they send. */
+const SCRIPT_EXTS = new Set(['PHP', 'ASP', 'ASPX', 'JSP', 'CGI', 'PL', 'DO', 'ACTION', 'CFM', 'PY']);
+
 /** Pure capture decision for a browser download. */
 export function decideCapture(c: CaptureCandidate, s: CaptureSettings, ctx: CaptureContext): CaptureDecision {
   const no = (reason: string): CaptureDecision => ({ capture: false, reason });
@@ -124,7 +138,12 @@ export function decideCapture(c: CaptureCandidate, s: CaptureSettings, ctx: Capt
 
   const ext = fileExtension(c.filename) || fileExtension(c.finalUrl) || fileExtension(c.url);
   const byExt = matchesExtension(ext, s.extensions);
-  const byMime = matchesMime(c.mime, s.mimeTypes);
+  // A generic type (application/octet-stream…) says nothing about the file: it decides only
+  // for a name without a real extension. A .blend that a server sends as octet-stream is not
+  // in the list, so the browser keeps it (#137); "get.php?id=1" or "/download" still count.
+  const mime = (c.mime ?? '').split(';')[0]!.trim().toLowerCase();
+  const generic = GENERIC_MIMES.has(mime) && !!ext && !SCRIPT_EXTS.has(ext);
+  const byMime = !generic && matchesMime(c.mime, s.mimeTypes);
   if (!byExt && !byMime) return no(`type not in capture list (${ext || '-'} / ${c.mime || '-'})`);
   if (s.minSize > 0 && c.fileSize !== undefined && c.fileSize > 0 && c.fileSize < s.minSize) {
     return no(`smaller than ${s.minSize} bytes`);

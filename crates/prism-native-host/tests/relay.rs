@@ -199,6 +199,8 @@ fn relays_messages_long_lived_port() {
     send(&mut stdin, &json!({"id": "p", "type": "hostPing"}));
     let r = recv(&mut stdout).unwrap();
     assert_eq!(r["host"]["version"], env!("CARGO_PKG_VERSION"));
+    // No data folder: its path holds the account name (GHSA-v59w-jfj8-7pf6).
+    assert!(r["host"].get("dataDir").is_none(), "{r}");
 
     // 5. concurrency: a slow request does not block a fast one
     send(&mut stdin, &json!({"id": "slow", "type": "slow"}));
@@ -280,6 +282,77 @@ fn one_shot_and_app_not_running() {
     eprintln!("stale port detection took {:?}", t.elapsed());
     drop(stdin);
     child.wait().unwrap();
+}
+
+/// Started for `caller` (the browser's arguments) with a working app behind it: whether the
+/// host answers a status request, or exits at once.
+fn answers_for(args: &[&str], extra_ids: Option<&str>) -> bool {
+    let mock = start_mock();
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("ipc.json"), ipc_json(mock.port)).unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_prism-native-host"));
+    cmd.args(args)
+        .env("PRISM_DATA_DIR", dir.path())
+        .env("PRISM_APP_PATH", missing_app(dir.path()))
+        .env_remove(prism_native_host::EXTRA_CALLERS_ENV)
+        .env_remove("HTTP_PROXY")
+        .env_remove("http_proxy")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    if let Some(ids) = extra_ids {
+        cmd.env(prism_native_host::EXTRA_CALLERS_ENV, ids);
+    }
+    let mut child = cmd.spawn().expect("spawn host");
+    let mut stdin = child.stdin.take().unwrap();
+    let mut stdout = child.stdout.take().unwrap();
+    // The host may already be gone: a failed write is part of the answer.
+    let body = serde_json::to_vec(&json!({"id": 1, "type": "status"})).unwrap();
+    let _ = stdin
+        .write_all(&(body.len() as u32).to_ne_bytes())
+        .and_then(|_| stdin.write_all(&body))
+        .and_then(|_| stdin.flush());
+    let reply = recv(&mut stdout);
+    drop(stdin);
+    let status = child.wait().unwrap();
+    match reply {
+        Some(r) => r["ok"] == true,
+        None => {
+            assert!(
+                !status.success(),
+                "a turned-away caller exits with an error"
+            );
+            false
+        }
+    }
+}
+
+#[test]
+fn only_prisms_extension_is_served() {
+    // GHSA-v59w-jfj8-7pf6: an extension with the old Firefox ID (someone else's on Firefox
+    // Add-ons) was let in by older manifests; the host turns away any caller but Prism's.
+    let ff_manifest = "/home/u/.mozilla/native-messaging-hosts/dev.prism.host.json";
+    assert!(answers_for(
+        &[ff_manifest, prism_native_host::FIREFOX_EXTENSION_ID],
+        None
+    ));
+    assert!(answers_for(
+        &[
+            "chrome-extension://mmcdeiglkbfbicdjboocmhehodogilfl/",
+            "--parent-window=0"
+        ],
+        None
+    ));
+    assert!(!answers_for(&[ff_manifest, "prism@prism.dev"], None));
+    assert!(!answers_for(
+        &["chrome-extension://abcdefghijklmnopabcdefghijklmnop/"],
+        None
+    ));
+    // An extension built with an ID of its own, named in PRISM_EXTENSION_IDS.
+    assert!(answers_for(
+        &[ff_manifest, "me@example.org"],
+        Some("me@example.org")
+    ));
 }
 
 #[test]

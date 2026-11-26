@@ -20,6 +20,17 @@ export function detectBrowser(): BrowserName {
 }
 
 /**
+ * How long a captured download waits for the app (#130, #98): longer than the host takes to
+ * start the app (8 s) and the app to try the link (2.5 s). The browser holds its own download
+ * meanwhile; the request carries a deadline, after which the app opens no dialog, so a reply
+ * that comes too late never leaves both the browser and Prism downloading the file.
+ */
+export const CAPTURE_TIMEOUT_MS = 20_000;
+
+/** The app must answer a captured download this much before the extension stops waiting. */
+export const CAPTURE_DEADLINE_MARGIN_MS = 2_000;
+
+/**
  * Timeout for user-initiated requests: short when the app is known to be up,
  * long enough for the host to launch it (8 s) otherwise.
  */

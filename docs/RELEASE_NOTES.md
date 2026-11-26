@@ -1,7 +1,60 @@
-# Prism 1.2.6 — One beam. Many rays.
+# Prism 1.2.7 — One beam. Many rays.
 
 A fast, open-source download manager for Windows, Linux and macOS, with browser integration
 and video downloads.
+
+## What's new in 1.2.7
+
+* **Security: only Prism's own extension can talk to Prism**
+  ([GHSA-v59w-jfj8-7pf6](https://github.com/FortoGraphy/prism-download-manager/security/advisories/GHSA-v59w-jfj8-7pf6)).
+  The browser helper also let in a Firefox extension with the ID Prism's extension used before
+  1.1.6, an ID that belongs to someone else on Firefox Add-ons; the `.deb` and `.rpm` packages
+  allowed only that ID. Now only Prism's extensions are let in, and the helper turns away
+  anyone else even when an old manifest is still around. The helper also no longer tells the
+  extension where Prism keeps its data (the path holds your account name). If you added the
+  Firefox extension by hand before 1.1.6, install it from
+  [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/prism-download-manager/) instead.
+  Thanks to Illumye for the careful report!
+* **Downloading a part of a video no longer keeps the processor at 100 %**
+  ([#135](https://github.com/FortoGraphy/prism-download-manager/issues/135)). The part is copied
+  instead of encoded again, so it's also much faster; a video part may start up to a couple of
+  seconds earlier, on the nearest keyframe.
+* **Name videos after their artist, channel or date**
+  ([#145](https://github.com/FortoGraphy/prism-download-manager/issues/145)): the name template in
+  Settings → Video & streams understands `%(artist)s`, `%(uploader)s`, `%(channel)s`,
+  `%(upload_date)s`, `%(playlist_index)s` and more, and fallbacks like `%(artist,uploader)s`.
+  A title with a `/` keeps its whole name.
+* **Make smaller works again with videos that have sound**
+  ([#128](https://github.com/FortoGraphy/prism-download-manager/issues/128)) on recent ffmpeg
+  builds. Thanks to burhanbty (PR #133)!
+* **The browser and Prism no longer both download the same file**
+  ([#130](https://github.com/FortoGraphy/prism-download-manager/issues/130),
+  [#98](https://github.com/FortoGraphy/prism-download-manager/issues/98)). The extension now waits
+  long enough for Prism to start, and Prism opens no dialog for a download the browser has
+  already taken over.
+* **File types you didn't pick stay in the browser**
+  ([#137](https://github.com/FortoGraphy/prism-download-manager/issues/137)): a server's generic
+  "binary file" type no longer makes the extension take a file whose type isn't in your list.
+* **The video button** hides in fullscreen, also in embedded players
+  ([#77](https://github.com/FortoGraphy/prism-download-manager/issues/77),
+  [#87](https://github.com/FortoGraphy/prism-download-manager/issues/87),
+  [#110](https://github.com/FortoGraphy/prism-download-manager/issues/110)), has a **×** that
+  hides it for one video until you reload the page
+  ([#81](https://github.com/FortoGraphy/prism-download-manager/issues/81)), fits its menu into
+  small windows, and no longer appears over videos a page keeps hidden
+  ([#66](https://github.com/FortoGraphy/prism-download-manager/issues/66)). Thanks to YosuaPWH
+  (PR #103)!
+* **Brave Beta, Dev and Nightly, and Brave Origin's channels** find Prism
+  ([#132](https://github.com/FortoGraphy/prism-download-manager/issues/132)). Thanks to
+  HousseinTlili (PR #139)!
+* **Add URL and Download Links no longer stay above every window**
+  ([#143](https://github.com/FortoGraphy/prism-download-manager/issues/143)) once you've used them,
+  so you can copy links from another window.
+* The toolbar fits in every language at narrow widths (thanks to burhanbty, PR #134), and the
+  app's copyright line matches its MIT license (thanks to Illumye, PR #125). A security policy
+  explains how to report a vulnerability privately (thanks to Illumye, PR #126).
+* The browser extension's updates reach Chrome Web Store and Firefox Add-ons separately, after
+  their review.
 
 ## What's new in 1.2.6
 

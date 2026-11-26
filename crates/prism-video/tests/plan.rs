@@ -458,7 +458,7 @@ fn a_part_is_downloaded_by_the_engine_and_cut_by_ffmpeg() {
 }
 
 #[test]
-fn a_part_falls_back_to_ytdlp_cutting_on_exact_frames() {
+fn a_part_falls_back_to_ytdlp_which_copies_it() {
     let v = video("youtube_bbb.json");
     let c = choice(&v, "v1080p60");
     let o = part(83.0, 165.0);
@@ -468,11 +468,13 @@ fn a_part_falls_back_to_ytdlp_cutting_on_exact_frames() {
     let a = job.args.join(" ");
     assert!(
         a.contains(
-            "-N 8 --download-sections *83-165 --force-keyframes-at-cuts \
+            "-N 8 --download-sections *83-165 \
              --downloader-args ffmpeg:-progress pipe:1 -nostats"
         ),
         "{a}"
     );
+    // Copied, not encoded again on every core (#135).
+    assert!(!a.contains("--force-keyframes-at-cuts"), "{a}");
     assert!(a.contains("--embed-thumbnail") && a.contains("--embed-metadata"));
     // Chapters, SponsorBlock segments and subtitles are timed to the whole video.
     assert!(!a.contains("--embed-chapters"), "{a}");
