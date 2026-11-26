@@ -103,9 +103,8 @@ fn main() {
                 let show = settings.general.hide_tray_icon
                     || (!background && !settings.general.start_minimized);
                 if show && windows::SHOW_ON_CREATE {
-                    // macOS: WKWebView doesn't paint into a hidden window. Linux (#30): a hidden
-                    // WebKitGTK window sometimes stays blank when shown. The transparent window is
-                    // shown now and paints itself in.
+                    // WKWebView on macOS needs a visible window before it paints.
+                    // Linux and Windows wait for the mounted UI to reveal the window.
                     let _ = main.show();
                 }
                 if show {

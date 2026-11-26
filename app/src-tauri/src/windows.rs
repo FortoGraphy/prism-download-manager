@@ -93,14 +93,11 @@ pub fn state_label(label: &str) -> &str {
     }
 }
 
-/// Windows are shown as soon as they are created, not after the page's first paint:
-/// * macOS: WKWebView doesn't render into a hidden window.
-/// * Linux (#30): a WebKitGTK window that goes from hidden to shown sometimes stays blank on KDE
-///   Plasma (#18 was the same for a window shown again from the tray). The windows are
-///   transparent, so one shown before its page paints has nothing to flash.
-///
-/// Windows (WebView2) keeps them hidden until the first paint, so no white frame shows.
-pub const SHOW_ON_CREATE: bool = cfg!(any(target_os = "macos", target_os = "linux"));
+/// macOS needs an already visible WKWebView to render. On Linux and Windows,
+/// create windows hidden and let the mounted UI reveal them (with a timer for
+/// webviews that suspend animation frames while hidden). Showing a transparent
+/// Linux window immediately exposes an empty outline during the cold page load.
+pub const SHOW_ON_CREATE: bool = cfg!(target_os = "macos");
 
 /// Labels of windows that are being built right now. Tauri checks a label before it creates the
 /// window but registers it only afterwards, so two requests at the same moment both built one
@@ -207,7 +204,7 @@ fn create(app: &AppHandle, kind: &str, label: &str, route: &str) -> tauri::Resul
         .shadow(false)
         .always_on_top(sp.always_on_top)
         .skip_taskbar(matches!(kind, "mini" | "dropzone"))
-        // Windows: hidden until the page has painted (no white flash). macOS and Linux: shown
+        // Linux and Windows: hidden until the UI is mounted. macOS: shown
         // right away (see `SHOW_ON_CREATE`). Corner windows are positioned first and shown below.
         .visible(SHOW_ON_CREATE && !matches!(kind, "mini" | "dropzone"))
         .focused(!matches!(kind, "mini" | "dropzone"));
@@ -336,8 +333,9 @@ pub fn toggle_dropzone(app: &AppHandle) -> tauri::Result<bool> {
 
 /// How long the main window waits hidden in the tray before it is closed to free its web view's
 /// memory (#11: WebView2 keeps 100+ MB that downloads don't need). Opening Prism creates a new
-/// one; a quick close and reopen keeps the same window.
-#[cfg(not(target_os = "macos"))]
+/// one; a quick close and reopen keeps the same window. Linux keeps its rendered
+/// webview, like macOS, to avoid a cold WebKit load when returning from the tray.
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 const RELEASE_HIDDEN_MAIN_AFTER: Duration = Duration::from_secs(60);
 
 /// Set once the user opens the main window, so a newly created one shows itself after its first
@@ -346,25 +344,21 @@ pub static MAIN_WANTED: AtomicBool = AtomicBool::new(false);
 /// A new main window is on its way; another "Open Prism" meanwhile has nothing to do.
 static CREATING_MAIN: AtomicBool = AtomicBool::new(false);
 /// Counts trips to the tray and reopenings: only the latest trip's timer may close the window.
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 static TRAY_TRIP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 pub fn show_main(app: &AppHandle) {
     MAIN_WANTED.store(true, Ordering::SeqCst);
     update_dock(app, true);
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     TRAY_TRIP.fetch_add(1, Ordering::SeqCst);
     if CREATING_MAIN.load(Ordering::SeqCst) {
         return;
     }
     match app.get_webview_window("main") {
-        // Linux (#18): a transparent WebKitGTK window that was hidden can come back without
-        // painting anything — invisible, though the desktop shows it as open (KDE Plasma). A new
-        // window always paints, so a hidden main window is replaced instead of shown again.
-        Some(w) if cfg!(target_os = "linux") && !w.is_visible().unwrap_or(true) => {
-            let _ = w.destroy();
-            create_main(app);
-        }
+        // Reuse the rendered webview when returning from the tray. Destroying it
+        // here forced a full page load on every Linux reopen, exposing a blank
+        // transparent window until WebKit finished starting the replacement.
         Some(w) => {
             let _ = w.unminimize();
             let _ = w.show();
@@ -553,7 +547,7 @@ fn create_main(app: &AppHandle) {
                 tracing::info!("opened the main window again");
                 crate::apply_window_material(&window, &app.state::<Core>().settings());
                 restore_main(&app, &window);
-                // macOS and Linux show it now (see `SHOW_ON_CREATE`).
+                // macOS shows it now (see `SHOW_ON_CREATE`).
                 if SHOW_ON_CREATE {
                     let _ = window.show();
                     let _ = window.set_focus();
@@ -607,9 +601,10 @@ pub fn main_is_open(app: &AppHandle) -> bool {
 }
 
 /// The main window went to the tray, or Prism started there: after a while the hidden window is
-/// closed to free its memory (#11), and `show_main` creates it again. macOS keeps it.
+/// closed to free its memory (#11), and `show_main` creates it again. macOS and
+/// Linux keep it so returning from the tray reuses an already rendered page.
 pub fn release_main_later(app: &AppHandle) {
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
         let trip = TRAY_TRIP.fetch_add(1, Ordering::SeqCst) + 1;
         let app = app.clone();
@@ -627,7 +622,7 @@ pub fn release_main_later(app: &AppHandle) {
             }
         });
     }
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     let _ = app;
 }
 
