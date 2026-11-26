@@ -1,0 +1,19 @@
+services:
+  prism-web:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - prism-web-data:/data
+      - prism-web-downloads:/downloads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/config"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  prism-web-data:
+  prism-web-downloads:

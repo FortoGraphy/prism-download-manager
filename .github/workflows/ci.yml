@@ -43,16 +43,19 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - name: Rust tests (engine, core, video, torrent, native host)
-        run: cargo test --workspace --exclude prism-app
-      - name: Frontend deps
+      # prism-web's build.rs embeds app/dist, so the UI must exist before Rust tests.
+      - name: Frontend deps and build (app)
         run: |
           npm ci --prefix app
-          npm ci --prefix extension
-      - name: Frontend + extension build (both needed by tauri-build)
-        run: |
           npm run build --prefix app
-          npm run build --prefix extension
+      - name: Rust tests (workspace + prism-web)
+        run: |
+          cargo test --workspace --exclude prism-app
+          cargo test -p prism-web
+      - name: Frontend deps (extension)
+        run: npm ci --prefix extension
+      - name: Frontend build (extension, needed by tauri-build)
+        run: npm run build --prefix extension
       - name: Sidecar (debug)
         run: node scripts/build-sidecar.mjs --debug
       - name: Clippy (whole workspace incl. app shell)
