@@ -7,6 +7,7 @@ pub struct Args {
     pub no_auth_token: bool,
     pub data_dir: Option<PathBuf>,
     pub download_dir: Option<PathBuf>,
+    pub ipc_file: Option<PathBuf>,
     pub warmup: bool,
 }
 
@@ -18,6 +19,7 @@ impl Default for Args {
             no_auth_token: false,
             data_dir: None,
             download_dir: None,
+            ipc_file: None,
             warmup: false,
         }
     }
@@ -52,6 +54,7 @@ impl Args {
                 "--no-auth-token" => out.no_auth_token = true,
                 "--data-dir" => out.data_dir = Some(PathBuf::from(value(key)?)),
                 "--download-dir" => out.download_dir = Some(PathBuf::from(value(key)?)),
+                "--ipc-file" => out.ipc_file = Some(PathBuf::from(value(key)?)),
                 "--warmup" => out.warmup = true,
                 other => return Err(format!("unknown argument: {other}")),
             }
@@ -76,6 +79,22 @@ impl Args {
             .or_else(|| std::env::var_os("PRISM_WEB_DOWNLOAD_DIR").map(PathBuf::from))
     }
 
+    /// Where the native host looks for `ipc.json`. Kept separate from the web data dir.
+    pub fn ipc_file(&self) -> PathBuf {
+        self.ipc_file
+            .clone()
+            .or_else(|| std::env::var_os("PRISM_WEB_IPC_FILE").map(PathBuf::from))
+            .unwrap_or_else(prism_core::paths::ipc_file)
+    }
+
+    /// Port written to `ipc.json`: the published port when behind Docker NAT.
+    pub fn public_port(&self) -> u16 {
+        std::env::var("PRISM_WEB_PUBLIC_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(self.port)
+    }
+
     pub fn usage() -> &'static str {
         "prism-web — headless Prism download manager\n\
          \n\
@@ -87,6 +106,7 @@ impl Args {
            --no-auth-token        Serve without a bearer token (trusted networks only)\n\
            --data-dir <path>      Data directory (or PRISM_WEB_DATA_DIR)\n\
            --download-dir <path>  Default save folder on a fresh install\n\
+           --ipc-file <path>      Native-host discovery file (or PRISM_WEB_IPC_FILE)\n\
            --warmup               Download yt-dlp/ffmpeg/deno, then exit\n\
            -h, --help             Show this help"
     }
@@ -118,6 +138,7 @@ mod tests {
             "--port=9090",
             "--no-auth-token",
             "--download-dir=/downloads",
+            "--ipc-file=/host-ipc/ipc.json",
             "--warmup",
         ])
         .unwrap();
@@ -125,6 +146,7 @@ mod tests {
         assert_eq!(a.port, 9090);
         assert!(a.no_auth_token);
         assert_eq!(a.download_dir, Some(PathBuf::from("/downloads")));
+        assert_eq!(a.ipc_file(), PathBuf::from("/host-ipc/ipc.json"));
         assert!(a.warmup);
     }
 
