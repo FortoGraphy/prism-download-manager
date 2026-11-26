@@ -1,0 +1,30 @@
+[package]
+name = "prism-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+description = "Headless Prism download manager with a browser UI"
+
+[[bin]]
+name = "prism-web"
+path = "src/main.rs"
+
+[dependencies]
+prism-core = { workspace = true }
+prism-torrent = { path = "../prism-torrent" }
+prism-video = { workspace = true }
+tokio = { workspace = true }
+futures-util = { workspace = true }
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+getrandom = "0.4"
+hex = "0.4"
+dirs = "7"
+
+[dev-dependencies]
+tempfile = { workspace = true }
