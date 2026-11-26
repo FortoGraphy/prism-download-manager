@@ -3,6 +3,7 @@
 mod args;
 mod auth;
 mod commands;
+mod ipc;
 mod web;
 
 use args::Args;
@@ -91,8 +92,15 @@ async fn main() {
             std::process::exit(1);
         }
     };
+    let ipc_auth = ipc::IpcAuth::new(args.ipc_file());
+    if let Err(e) = ipc_auth.publish(args.public_port()) {
+        eprintln!("prism-web: cannot write {}: {e}", ipc_auth.file().display());
+        core.shutdown().await;
+        std::process::exit(1);
+    }
     let url = format!("http://{}:{}", args.host, args.port);
     println!("Prism Web listening on {url}");
+    println!("IPC info: {}", ipc_auth.file().display());
     if let Some(token) = auth.token() {
         println!("Access token: {token}");
         println!("Saved in: {}", auth.file().display());
@@ -100,7 +108,7 @@ async fn main() {
         println!("WARNING: authentication is disabled; anyone who can reach {url} controls this downloader.");
     }
 
-    let server = axum::serve(listener, web::router(core.clone(), auth))
+    let server = axum::serve(listener, web::router(core.clone(), auth, ipc_auth))
         .with_graceful_shutdown(async { let _ = tokio::signal::ctrl_c().await; });
     if let Err(e) = server.await {
         tracing::error!("web server stopped: {e}");

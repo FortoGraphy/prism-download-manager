@@ -1,5 +1,6 @@
 use crate::auth::Auth;
 use crate::commands;
+use crate::ipc;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::sse::{Event, Sse};
@@ -21,16 +22,20 @@ struct AppState {
     auth: Auth,
 }
 
-pub fn router(core: Core, auth: Auth) -> Router {
-    let state = Arc::new(AppState { core, auth });
+pub fn router(core: Core, auth: Auth, ipc_auth: ipc::IpcAuth) -> Router {
+    let state = Arc::new(AppState {
+        core: core.clone(),
+        auth,
+    });
     Router::new()
         .route("/", get(index))
         .route("/api/config", get(config))
         .route("/api/invoke", post(invoke))
         .route("/api/events", get(events))
         .route("/login.html", get(login))
-        .route("/{*path}", get(asset))
         .with_state(state)
+        .merge(ipc::router(core, ipc_auth))
+        .route("/{*path}", get(asset))
 }
 
 async fn index(State(state): State<Arc<AppState>>) -> ([(header::HeaderName, &'static str); 2], Vec<u8>) {

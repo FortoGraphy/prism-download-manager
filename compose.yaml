@@ -2,10 +2,18 @@ services:
   prism-web:
     build: .
     ports:
-      - "8080:8080"
+      - "${PRISM_WEB_PORT:-8080}:8080"
+    environment:
+      # The native host reads ipc.json from PRISM_DATA_DIR on the host side.
+      # Point the container at the bind mount and tell it the published port.
+      PRISM_WEB_IPC_FILE: /host-ipc/ipc.json
+      PRISM_WEB_PUBLIC_PORT: ${PRISM_WEB_PORT:-8080}
     volumes:
       - prism-web-data:/data
       - prism-web-downloads:/downloads
+      # Override PRISM_IPC_DIR when desktop Prism already owns the default folder;
+      # the host can also point PRISM_DATA_DIR at that directory instead.
+      - ${PRISM_IPC_DIR:-${HOME}/.local/share/prism}:/host-ipc
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/config"]
