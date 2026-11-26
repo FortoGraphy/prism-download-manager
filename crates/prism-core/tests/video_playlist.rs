@@ -506,8 +506,29 @@ async fn the_name_template_gets_the_pages_fields_when_the_download_starts() {
     assert_eq!(names(&typed), ["Bunny, my way.mp4"]);
     let ids = [items[0].id.clone(), typed[0].id.clone()];
 
+    // One at a time: two stand-in yt-dlp scripts appending to args.txt at the same moment can
+    // lose a line on Windows (the file is locked by the other one).
+    let args_file = tmp.path().join("bin").join("args.txt");
+    let downloaded = |needle: &'static str| {
+        let args_file = args_file.clone();
+        async move {
+            tokio::time::timeout(Duration::from_secs(30), async {
+                loop {
+                    let text = std::fs::read_to_string(&args_file).unwrap_or_default();
+                    if let Some(l) = text
+                        .lines()
+                        .find(|l| l.contains("PRISMFILE") && l.contains(needle))
+                    {
+                        return l.to_string();
+                    }
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+            })
+            .await
+        }
+    };
     let mut rx = core.subscribe();
-    core.start_items(&ids);
+    core.start_items(&ids[..1]);
     let renamed = tokio::time::timeout(Duration::from_secs(30), async {
         loop {
             match rx.recv().await {
@@ -531,37 +552,15 @@ async fn the_name_template_gets_the_pages_fields_when_the_download_starts() {
         Some("Big Buck Bunny")
     );
 
-    let args_file = tmp.path().join("bin").join("args.txt");
-    let downloads = tokio::time::timeout(Duration::from_secs(30), async {
-        loop {
-            let text = std::fs::read_to_string(&args_file).unwrap_or_default();
-            let lines: Vec<String> = text
-                .lines()
-                .filter(|l| l.contains("PRISMFILE"))
-                .map(String::from)
-                .collect();
-            if lines.len() >= 2 {
-                return lines;
-            }
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
-    })
-    .await
-    .expect("yt-dlp was not asked to download both");
-    assert!(
-        downloads
-            .iter()
-            .any(|l| l.contains("Blender - Big Buck Bunny.")),
-        "{downloads:?}"
-    );
-    assert!(
-        downloads.iter().any(|l| l.contains("Bunny, my way.")),
-        "{downloads:?}"
-    );
-    assert!(
-        !downloads.iter().any(|l| l.contains("Blender - Bunny")),
-        "{downloads:?}"
-    );
+    downloaded("Blender - Big Buck Bunny.")
+        .await
+        .expect("yt-dlp was not asked to download it under the completed name");
+    core.start_items(&ids[1..]);
+    downloaded("Bunny, my way.")
+        .await
+        .expect("yt-dlp was not asked to download the typed name");
+    let all = std::fs::read_to_string(&args_file).unwrap_or_default();
+    assert!(!all.contains("Blender - Bunny"), "{all}");
     assert_eq!(core.item(&ids[1]).unwrap().file_name, "Bunny, my way.mp4");
     core.shutdown().await;
 }
