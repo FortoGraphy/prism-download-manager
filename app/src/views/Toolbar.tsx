@@ -3,7 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { IconButton } from "../components/IconButton";
 import { Icon } from "../design/icons";
 import { actions } from "../lib/actions";
-import { api } from "../lib/api";
+import { api, webMode } from "../lib/api";
 import { formatBytes } from "../lib/format";
 import { t } from "../lib/i18n";
 import { canPause, canResume, displayName } from "../lib/present";
@@ -59,7 +59,7 @@ export function Toolbar() {
       {/* Without a tray icon its Quit is gone, so the window has one (#60). */}
       {noTray && <IconButton icon="power" label={t("Quit Prism")} onClick={() => void api.quit()} />}
       <IconButton icon="options" label={t("Settings")} kbd="Ctrl ," onClick={() => ui().openSheet({ kind: "settings" })} />
-      <Caption />
+      {!webMode && <Caption />}
     </header>
   );
 }

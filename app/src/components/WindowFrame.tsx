@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect } from "react";
 import { Icon } from "../design/icons";
-import { inTauri } from "../lib/api";
+import { inTauri, webMode } from "../lib/api";
 import { t } from "../lib/i18n";
 import { win } from "../lib/win";
 
@@ -35,7 +35,7 @@ interface Props {
 /**
  * Frame for undecorated, transparent secondary windows: rounded glass shell, draggable
  * title bar and its own caption buttons. Shows the native window after the first paint.
- * Outside Tauri the window is staged at its real size on a wallpaper for previews.
+ * Outside Tauri and web mode the window is staged at its real size on a wallpaper for previews.
  */
 export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, children, className, bare }: Props) {
   useEffect(() => {
@@ -70,23 +70,25 @@ export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, 
             {title}
           </span>
           {actions}
-          <div className="caption">
-            {minimizable && (
-              <button type="button" className="caption__btn" aria-label={t("Minimize")} onClick={() => void win.minimize()}>
-                <Icon name="minimize" size={16} strokeWidth={1.25} />
+          {!webMode && (
+            <div className="caption">
+              {minimizable && (
+                <button type="button" className="caption__btn" aria-label={t("Minimize")} onClick={() => void win.minimize()}>
+                  <Icon name="minimize" size={16} strokeWidth={1.25} />
+                </button>
+              )}
+              <button type="button" className="caption__btn caption__btn--close" aria-label={t("Close")} onClick={close}>
+                <Icon name="close" size={16} strokeWidth={1.4} />
               </button>
-            )}
-            <button type="button" className="caption__btn caption__btn--close" aria-label={t("Close")} onClick={close}>
-              <Icon name="close" size={16} strokeWidth={1.4} />
-            </button>
-          </div>
+            </div>
+          )}
         </header>
       )}
       {children}
     </div>
   );
 
-  if (inTauri) return frame;
+  if (inTauri || webMode) return frame;
   const [w, h] = WINDOW_SIZES[kind];
   return (
     <div className="preview-desktop">
