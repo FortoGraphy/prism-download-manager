@@ -111,8 +111,9 @@ function Preferences() {
       <div className="themes themes--onboard">
         {(
           [
-            ["light", t("Light"), "pv-light"],
             ["dark", t("Dark"), "pv-dark"],
+            ["dimmed", t("Dark Dimmed"), "pv-dimmed"],
+            ["light", t("Light"), "pv-light"],
             ["system", t("Match system"), "pv-sys"],
           ] as const
         ).map(([v, label, cls]) => (

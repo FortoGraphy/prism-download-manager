@@ -3,6 +3,7 @@
 
 import { create } from "zustand";
 import { api, onCoreEvent } from "./api";
+import { applyCustomThemeTokens, clearInjectedThemeTokens, findThemeById } from "./customThemes";
 import { NATIVE_SOUNDS, soundFile } from "./sounds";
 import type {
   Bootstrap,
@@ -196,8 +197,17 @@ export function applyAppearance(s: Settings) {
   const root = document.documentElement;
   const a = s.appearance;
   const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
-  const theme = a.theme === "system" ? (systemDark ? "dark" : "light") : a.theme;
-  root.dataset.theme = theme;
+  const rawTheme = a.theme || "system";
+  const theme = rawTheme === "system" ? (systemDark ? "dark" : "light") : rawTheme;
+
+  const custom = findThemeById(theme);
+  if (custom) {
+    applyCustomThemeTokens(custom);
+  } else {
+    clearInjectedThemeTokens();
+    root.dataset.theme = theme;
+  }
+
   root.dataset.accent = a.accent || "prism";
   root.dataset.density = a.density;
   root.classList.toggle("no-blur", a.reduceTransparency);
