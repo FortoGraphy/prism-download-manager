@@ -8,6 +8,17 @@ async function current() {
   return getCurrentWindow();
 }
 
+const isMac = typeof navigator !== "undefined" && /Macintosh|Mac OS X/i.test(navigator.userAgent);
+
+/**
+ * True when this window gets the native macOS traffic lights (close / minimise / zoom, top left)
+ * instead of the drawn Windows-style caption buttons. Mirrors `native_controls` in
+ * src-tauri/src/windows.rs and the macOS window in src-tauri/tauri.macos.conf.json.
+ */
+export function hasNativeControls(kind: string): boolean {
+  return inTauri && isMac && kind !== "mini" && kind !== "dropzone";
+}
+
 export const win = {
   show: async () => {
     const w = await current();
@@ -27,6 +38,12 @@ export const win = {
   minimize: async () => (await current())?.minimize(),
   toggleMaximize: async () => (await current())?.toggleMaximize(),
   isMaximized: async () => (await (await current())?.isMaximized()) ?? false,
+  /** Runs `cb` instead of the default when the native close button is used (secondary windows). */
+  onCloseRequested: async (cb: () => void) =>
+    (await current())?.onCloseRequested((e) => {
+      e.preventDefault();
+      cb();
+    }),
   onResized: async (cb: () => void) => (await current())?.onResized(cb),
   setAlwaysOnTop: async (on: boolean) => (await current())?.setAlwaysOnTop(on),
 };

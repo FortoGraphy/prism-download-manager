@@ -1,8 +1,8 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Icon } from "../design/icons";
 import { inTauri } from "../lib/api";
 import { t } from "../lib/i18n";
-import { win } from "../lib/win";
+import { hasNativeControls, win } from "../lib/win";
 
 /** Preview sizes mirror `spec()` in src-tauri/src/windows.rs (used only in the browser preview). */
 export const WINDOW_SIZES: Record<string, [number, number]> = {
@@ -53,6 +53,21 @@ export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, 
   }, []);
 
   const close = onClose ?? (() => void win.close());
+  const native = hasNativeControls(kind);
+  // The red traffic light must go through the same close handler as the drawn close button
+  // (Download file / Download video cancel their pending request there).
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  useEffect(() => {
+    if (!native) return;
+    let off: (() => void) | undefined;
+    let gone = false;
+    void win.onCloseRequested(() => closeRef.current()).then((u) => (gone ? u?.() : (off = u)));
+    return () => {
+      gone = true;
+      off?.();
+    };
+  }, [native]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector(".modal-scrim, .menu--floating")) close();
@@ -64,12 +79,13 @@ export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, 
   const frame = (
     <div className={`wframe glass-strong ${className ?? ""}`}>
       {!bare && (
-        <header className="wtitle" data-tauri-drag-region>
+        <header className={`wtitle${native ? " wtitle--native" : ""}`} data-tauri-drag-region>
           {icon}
           <span className="wtitle__text" data-tauri-drag-region>
             {title}
           </span>
           {actions}
+          {!native && (
           <div className="caption">
             {minimizable && (
               <button type="button" className="caption__btn" aria-label={t("Minimize")} onClick={() => void win.minimize()}>
@@ -80,6 +96,7 @@ export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, 
               <Icon name="close" size={16} strokeWidth={1.4} />
             </button>
           </div>
+          )}
         </header>
       )}
       {children}

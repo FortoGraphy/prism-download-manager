@@ -1,0 +1,24 @@
+{
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Prism",
+        "url": "index.html",
+        "width": 1320,
+        "height": 820,
+        "minWidth": 760,
+        "minHeight": 480,
+        "center": true,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 22, "y": 28 },
+        "transparent": true,
+        "visible": false,
+        "shadow": true,
+        "dragDropEnabled": false
+      }
+    ]
+  }
+}

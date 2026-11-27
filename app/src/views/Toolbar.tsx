@@ -9,7 +9,7 @@ import { t } from "../lib/i18n";
 import { canPause, canResume, displayName } from "../lib/present";
 import { useApp } from "../lib/store";
 import { attempt, useUi } from "../lib/ui";
-import { win } from "../lib/win";
+import { hasNativeControls, win } from "../lib/win";
 
 export function Toolbar() {
   const selection = useApp((s) => s.selection);
@@ -60,7 +60,7 @@ export function Toolbar() {
       {/* Without a tray icon its Quit is gone, so the window has one (#60). */}
       {noTray && <IconButton icon="power" label={t("Quit Prism")} onClick={() => void api.quit()} />}
       <IconButton icon="options" label={t("Settings")} kbd="Ctrl ," onClick={() => ui().openSheet({ kind: "settings" })} />
-      <Caption />
+      {!hasNativeControls("main") && <Caption />}
     </header>
   );
 }

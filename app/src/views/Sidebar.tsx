@@ -12,6 +12,7 @@ import { Ring } from "../lib/ring";
 import { type AppState, counts, useApp, type View } from "../lib/store";
 import { openTools, selectedMediaPaths } from "../lib/tools";
 import { attempt, useUi } from "../lib/ui";
+import { hasNativeControls } from "../lib/win";
 
 const same = (a: View, b: View) => a.kind === b.kind && ("id" in a ? a.id : "") === ("id" in b ? b.id : "");
 
@@ -105,7 +106,7 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar glass" aria-label={t("Library")}>
-      <div className="brand" data-tauri-drag-region>
+      <div className={`brand${hasNativeControls("main") ? " brand--native" : ""}`} data-tauri-drag-region>
         <BrandTile size={28} />
         <span className="brand__name" data-tauri-drag-region>
           Prism

@@ -196,21 +196,35 @@ fn create(app: &AppHandle, kind: &str, label: &str, route: &str) -> tauri::Resul
         .min_size
         .unwrap_or((sp.width.min(420.0), sp.height.min(240.0)));
     let init = format!("if (!location.hash) history.replaceState(null, '', '#{route}');");
+    // macOS: the real traffic lights (top left) drawn over the page, like any other Mac app. The
+    // floating mini window and the drop zone have no title bar and stay frameless. Keep in sync
+    // with `hasNativeControls` in src/lib/win.ts. Elsewhere the page draws its own buttons.
+    let native_controls = cfg!(target_os = "macos") && !matches!(kind, "mini" | "dropzone");
     let builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
         .initialization_script(&init)
         .title(sp.title)
         .inner_size(sp.width, sp.height)
         .min_inner_size(min_w, min_h)
         .resizable(sp.resizable)
-        .decorations(false)
+        .decorations(native_controls)
         .transparent(true)
-        .shadow(false)
+        .shadow(native_controls)
         .always_on_top(sp.always_on_top)
         .skip_taskbar(matches!(kind, "mini" | "dropzone"))
         // Windows: hidden until the page has painted (no white flash). macOS and Linux: shown
         // right away (see `SHOW_ON_CREATE`). Corner windows are positioned first and shown below.
         .visible(SHOW_ON_CREATE && !matches!(kind, "mini" | "dropzone"))
         .focused(!matches!(kind, "mini" | "dropzone"));
+    #[cfg(target_os = "macos")]
+    let builder = if native_controls {
+        // Vertically centred in the 40px title bar of `WindowFrame`.
+        builder
+            .title_bar_style(tauri::TitleBarStyle::Overlay)
+            .hidden_title(true)
+            .traffic_light_position(tauri::LogicalPosition::new(16.0, 14.0))
+    } else {
+        builder
+    };
     // HTML5 drag & drop (links from the browser) instead of Tauri's file-only handler, except in
     // the Tools window: files dropped there need their paths, which only Tauri's handler gives.
     let builder = if kind == "tools" {
