@@ -15,16 +15,18 @@ const PUBLIC_KEY = readFileSync(join(root, 'keys', 'public-key.txt'), 'utf8').tr
 export const CHROME_EXTENSION_ID = 'mmcdeiglkbfbicdjboocmhehodogilfl';
 export const GECKO_ID = 'prism@prismdl.site';
 
-const description = 'Hand downloads, videos and links to the Prism download manager.';
+// Manifest texts go through `_locales/<code>/messages.json` (`__MSG_…`), so the store page and the
+// toolbar name follow the browser language. UI strings use `src/locales/*.json` instead.
 const icons = { 16: 'icons/icon-16.png', 32: 'icons/icon-32.png', 48: 'icons/icon-48.png', 128: 'icons/icon-128.png' };
 const common = {
   manifest_version: 3,
-  name: 'Prism Download Manager',
-  short_name: 'Prism',
+  name: '__MSG_extName__',
+  short_name: '__MSG_extShortName__',
+  default_locale: 'en',
   version: pkg.version,
-  description,
+  description: '__MSG_extDescription__',
   icons,
-  action: { default_popup: 'popup.html', default_title: 'Prism', default_icon: { 16: icons[16], 32: icons[32] } },
+  action: { default_popup: 'popup.html', default_title: '__MSG_actionTitle__', default_icon: { 16: icons[16], 32: icons[32] } },
   options_ui: { page: 'options.html', open_in_tab: true },
   host_permissions: ['<all_urls>'],
   content_scripts: [{ matches: ['<all_urls>'], js: ['content.js'], run_at: 'document_start', all_frames: true }],
@@ -151,6 +153,7 @@ for (const target of ['chromium', 'firefox']) {
   });
   for (const [dst, src] of Object.entries(statics)) copyFileSync(join(root, src), join(out, dst));
   copyDir(join(root, 'static', 'icons'), join(out, 'icons'));
+  copyDir(join(root, 'src', '_locales'), join(out, '_locales'));
   writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifests[target], null, 2) + '\n');
   zipDir(out, join(outRoot, `prism-${target}.zip`));
   console.log(`built ${relative(root, out)} + build/prism-${target}.zip`);
