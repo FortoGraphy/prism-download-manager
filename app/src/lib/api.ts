@@ -3,6 +3,7 @@
 // an in-memory demo backend instead.
 
 import type { MediaFile, MediaJob, MediaRequest, ShrinkPlan, ToolsRequest } from "./media";
+import { hexEncode } from "./route";
 import type {
   BatchInfo,
   Bootstrap,
@@ -239,7 +240,15 @@ export const api = {
   /** Removes finished jobs; returns the ones left. */
   mediaClear: () => invoke<MediaJob[]>("media_clear"),
   /** Opens (or brings forward) the Tools window for a tab, files and a size. */
-  openTools: (request: ToolsRequest) => invoke<void>("open_tools", { request }),
+  openTools: (request: ToolsRequest) => {
+    if (webMode) {
+      const tab = request.tab === "shrink" ? "shrink" : "convert";
+      const arg = request.paths?.length ? `/${hexEncode(JSON.stringify(request))}` : "";
+      location.hash = `#/tools/${tab}${arg}`;
+      return Promise.resolve();
+    }
+    return invoke<void>("open_tools", { request });
+  },
   openFile: (path: string) => invoke<void>("open_file", { path }),
   revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   addTorrent: (args: {
@@ -314,7 +323,13 @@ export const api = {
   repairIntegration: () => invoke<IntegrationStatus>("repair_integration"),
   extensionDir: () => invoke<string | null>("extension_dir"),
 
-  openDetails: (id: string) => invoke<void>("open_details", { id }),
+  openDetails: (id: string) => {
+    if (webMode) {
+      location.hash = `#/details/${id}`;
+      return Promise.resolve();
+    }
+    return invoke<void>("open_details", { id });
+  },
   openWindow: (kind: string, id?: string) => {
     // Web mode has one tab: a "window" is just a hash route. The server's open_window is a no-op.
     if (webMode) {
@@ -323,9 +338,27 @@ export const api = {
     }
     return invoke<void>("open_window", { kind, id });
   },
-  toggleMini: () => invoke<boolean>("toggle_mini"),
-  toggleDropzone: () => invoke<boolean>("toggle_dropzone"),
-  showMain: () => invoke<void>("show_main"),
+  toggleMini: () => {
+    if (webMode) {
+      location.hash = "#/mini";
+      return Promise.resolve(true);
+    }
+    return invoke<boolean>("toggle_mini");
+  },
+  toggleDropzone: () => {
+    if (webMode) {
+      location.hash = "#/dropzone";
+      return Promise.resolve(true);
+    }
+    return invoke<boolean>("toggle_dropzone");
+  },
+  showMain: () => {
+    if (webMode) {
+      location.hash = "";
+      return Promise.resolve();
+    }
+    return invoke<void>("show_main");
+  },
   mainWindowStartsVisible: () => invoke<boolean>("main_window_starts_visible"),
   appRunId: () => invoke<number>("app_run_id"),
   /** Whether the OS puts a material (Mica / vibrancy) behind the window. */

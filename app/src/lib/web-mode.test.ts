@@ -39,6 +39,18 @@ describe("prism-web UI", () => {
     expect(location.hash).toBe("#/addurl");
     await api.openWindow("capture", "cap1");
     expect(location.hash).toBe("#/capture/cap1");
+    await api.openDetails("item1");
+    expect(location.hash).toBe("#/details/item1");
+    await api.openTools({ tab: "convert" });
+    expect(location.hash).toBe("#/tools/convert");
+    await api.openTools({ tab: "shrink", paths: ["/srv/video.mp4"], preset: "email" });
+    expect(location.hash.startsWith("#/tools/shrink/")).toBe(true);
+    await api.toggleMini();
+    expect(location.hash).toBe("#/mini");
+    await api.toggleDropzone();
+    expect(location.hash).toBe("#/dropzone");
+    await api.showMain();
+    expect(location.hash).toBe("");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
