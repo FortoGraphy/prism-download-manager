@@ -13,7 +13,8 @@ Download the latest version from the **[Releases page](https://github.com/FortoG
 | Fedora, openSUSE, RHEL | `Prism-<version>-1.x86_64.rpm` | |
 | Any other Linux | `Prism_<version>_amd64.AppImage` | |
 
-Every release also contains `SHA256SUMS.txt` so you can verify downloads.
+Every release also contains `SHA256SUMS.txt`, and from 1.2.8 on each file has a build
+provenance attestation: see [Verify a download](../../SECURITY.md#verify-a-download).
 
 After installing the app, **install the browser extension** — that is what lets Prism catch
 downloads and videos from your browser: [browser-extension.md](browser-extension.md).
