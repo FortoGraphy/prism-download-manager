@@ -65,13 +65,13 @@
           <textarea id="videoSites" rows="3" spellcheck="false"></textarea>
         </section>
         <section class="field">
-          <label for="remoteUrl">Prism web server URL</label>
-          <p class="muted small">Leave blank to use the native messaging host. Use HTTPS beyond loopback — HTTP exposes the token on the network.</p>
+          <label for="remoteUrl">Prism web server root URL</label>
+          <p class="muted small">Enter the server root, e.g. <code>http://127.0.0.1:8787</code>, not a path prefix. Leave blank to use the native messaging host. Use HTTPS beyond loopback — HTTP exposes the token on the network.</p>
           <input id="remoteUrl" type="url" placeholder="http://127.0.0.1:8787" spellcheck="false" />
         </section>
         <section class="field">
           <label for="remoteToken">Bearer token</label>
-          <p class="muted small">Value of <code>PRISM_WEB_TOKEN</code> on the server. Leave blank if the server has no token.</p>
+          <p class="muted small">Value of <code>PRISM_WEB_TOKEN</code> on the server (or the token prism-web generated). Leave the URL blank to use native messaging; a direct HTTP connection always needs the token.</p>
           <input id="remoteToken" type="password" autocomplete="off" spellcheck="false" />
         </section>
         <footer class="actions">

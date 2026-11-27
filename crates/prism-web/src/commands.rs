@@ -8,7 +8,7 @@ use prism_torrent::TorrentSource;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use std::path::PathBuf;
+use std::path::{Component, PathBuf};
 
 fn arg<T: DeserializeOwned>(args: &Value, key: &str) -> Result<T, String> {
     let value = args.get(key).cloned().unwrap_or(Value::Null);
@@ -66,9 +66,13 @@ pub async fn invoke(core: &Core, cmd: &str, args: Value) -> Result<Value, String
     let done = || Ok(Value::Null);
     match cmd {
         "bootstrap" => Ok(json!(core.bootstrap())),
-        "update_settings" => Ok(json!(core
-            .update_settings(&arg(&args, "patch")?)
-            .map_err(|e| e.to_string())?)),
+        "update_settings" => {
+            let patch = arg(&args, "patch")?;
+            let mut candidate = core.settings();
+            candidate.apply_patch(&patch).map_err(|e| e.to_string())?;
+            reject_executable_settings(&candidate)?;
+            Ok(json!(core.update_settings(&patch).map_err(|e| e.to_string())?))
+        }
         "toggle_speed_limiter" => Ok(json!(core
             .toggle_speed_limiter()
             .map_err(|e| e.to_string())?)),
@@ -358,10 +362,15 @@ pub async fn invoke(core: &Core, cmd: &str, args: Value) -> Result<Value, String
 
         "free_space" => {
             let path: PathBuf = arg(&args, "path")?;
+            if path.components().any(|c| c == Component::ParentDir) {
+                return Err("free space is only available for Prism folders".into());
+            }
             let state = core.bootstrap();
-            let allowed = path.starts_with(core.data_dir())
-                || path.starts_with(&state.settings.downloads.default_dir)
-                || state.categories.iter().filter_map(|c| c.save_dir.as_ref()).any(|dir| path.starts_with(dir));
+            let mut roots = std::iter::once(core.data_dir())
+                .chain(std::iter::once(state.settings.downloads.default_dir.as_path()))
+                .chain(state.categories.iter().filter_map(|c| c.save_dir.as_deref()));
+            let allowed = path.is_absolute()
+                && roots.any(|root| root.is_absolute() && !root.as_os_str().is_empty() && path.starts_with(root));
             if !allowed {
                 return Err("free space is only available for Prism folders".into());
             }
@@ -401,6 +410,20 @@ pub async fn invoke(core: &Core, cmd: &str, args: Value) -> Result<Value, String
 
         other => Err(format!("unknown command: {other}")),
     }
+}
+
+/// Browser clients cannot configure executables, even through a patch that looks harmless on its own.
+fn reject_executable_settings(s: &prism_core::settings::Settings) -> Result<(), String> {
+    if s.antivirus.kind == prism_core::settings::AntivirusKind::Custom
+        || !s.antivirus.command.is_empty()
+        || !s.antivirus.args.is_empty()
+    {
+        return Err("custom antivirus settings are not available in prism-web".into());
+    }
+    if !s.video.ytdlp_path.is_empty() || !s.video.ffmpeg_path.is_empty() {
+        return Err("custom tool paths are not available in prism-web".into());
+    }
+    Ok(())
 }
 
 fn integration_status(core: &Core) -> Value {
@@ -501,6 +524,58 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn web_rejects_executable_settings_patches() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::start(prism_core::manager::CoreOptions {
+            data_dir: dir.path().to_path_buf(),
+            ipc: false,
+            clipboard: false,
+        })
+        .await
+        .unwrap();
+
+        let before = core.settings();
+        for patch in [
+            json!({"antivirus": {"kind": "custom", "command": "/bin/sh", "args": "-c touch /tmp/pwned"}}),
+            json!({"antivirus": {"kind": "custom"}}),
+            json!({"antivirus": {"command": "/bin/sh"}}),
+            json!({"antivirus": {"args": "-c touch /tmp/pwned"}}),
+            json!({"video": {"ytdlpPath": "/bin/sh"}}),
+            json!({"video": {"ffmpegPath": "/bin/sh"}}),
+        ] {
+            let err = invoke(&core, "update_settings", json!({"patch": patch}))
+                .await
+                .unwrap_err();
+            assert!(err.contains("not available in prism-web"), "{err}");
+            assert_eq!(core.settings(), before, "rejected patch changed settings");
+        }
+
+        invoke(
+            &core,
+            "update_settings",
+            json!({"patch": {"downloads": {"defaultDir": "/tmp/downloads"}}}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            core.settings().downloads.default_dir,
+            PathBuf::from("/tmp/downloads")
+        );
+
+        // A command seeded by the desktop path still cannot be combined with `kind: custom` over HTTP.
+        core.update_settings(&json!({"antivirus": {"command": "/bin/sh"}}))
+            .unwrap();
+        let seeded = core.settings();
+        assert!(
+            invoke(&core, "update_settings", json!({"patch": {"antivirus": {"kind": "custom"}}}))
+                .await
+                .is_err()
+        );
+        assert_eq!(core.settings(), seeded);
+        core.shutdown().await;
+    }
+
+    #[tokio::test]
     async fn web_rejects_path_taking_commands() {
         let dir = tempfile::tempdir().unwrap();
         let core = Core::start(prism_core::manager::CoreOptions {
@@ -531,6 +606,15 @@ mod tests {
         assert_eq!(std::fs::read(&victim).unwrap(), b"keep");
         assert!(invoke(&core, "free_space", json!({"path": victim})).await.is_ok());
         assert!(invoke(&core, "free_space", json!({"path": "/etc/passwd"})).await.is_err());
+        assert!(
+            invoke(&core, "free_space", json!({"path": dir.path().join("../../etc/passwd")}))
+                .await
+                .is_err()
+        );
+        core.update_settings(&json!({"downloads": {"defaultDir": ""}}))
+            .unwrap();
+        assert!(invoke(&core, "free_space", json!({"path": "/etc/passwd"})).await.is_err());
+        assert!(invoke(&core, "free_space", json!({"path": victim})).await.is_ok());
         core.shutdown().await;
     }
 }

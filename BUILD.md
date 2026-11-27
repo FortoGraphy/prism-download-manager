@@ -93,11 +93,13 @@ docker build -t prism-web .
 docker compose up -d
 ```
 
-Compose requires `PRISM_WEB_TOKEN`, publishes port 8080 and keeps state and
-downloads in named volumes. To connect the extension, open its Options page and
-enter the server URL (e.g. `http://127.0.0.1:8080`) and the same token; leaving the
-URL blank keeps native messaging. Use HTTPS behind a reverse proxy beyond loopback:
-over plain HTTP the token and all traffic are visible on the network.
+Compose requires `PRISM_WEB_TOKEN`, keeps state and downloads in named volumes, and
+binds port 8080 to loopback only (`PRISM_WEB_BIND_HOST` defaults to `127.0.0.1`).
+Binding to another interface must be explicit: set `PRISM_WEB_BIND_HOST` yourself,
+and use TLS (a reverse proxy) beyond loopback — over plain HTTP the token and all
+traffic are visible on the network. To connect the extension, open its Options page
+and enter the server root URL (e.g. `http://127.0.0.1:8080`) and the same token;
+leaving the URL blank keeps native messaging.
 
 Release artifacts for `prism-web` are **Linux x64 only** (`prism-web-linux-x64.tar.gz`).
 Desktop bundles remain Windows/Linux/macOS; tag pushes also publish the container to

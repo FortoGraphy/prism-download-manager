@@ -47,7 +47,7 @@ describe('remote transport', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe('http://127.0.0.1:8787/base/v1/message');
+    expect(url).toBe('http://127.0.0.1:8787/v1/message');
     expect(init?.method).toBe('POST');
     expect(init?.headers).toEqual({ 'Content-Type': 'application/json', Authorization: 'Bearer s3cr3t' });
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
@@ -72,6 +72,52 @@ describe('remote transport', () => {
     expect(seen).toEqual(['unauthorized']);
   });
 
+  it('maps 403 to unauthorized', async () => {
+    stored = { remoteUrl: 'http://127.0.0.1:8787', remoteToken: 'wrong' };
+    fetchMock.mockResolvedValue({ ok: false, status: 403 } as Response);
+    const c = new NativeClient();
+
+    await expect(c.request({ type: 'status' })).rejects.toMatchObject({ code: 'unauthorized' });
+  });
+
+  it('throws the error from an ok:false reply', async () => {
+    stored = { remoteUrl: 'http://127.0.0.1:8787', remoteToken: 's3cr3t' };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: false, error: { code: 'app_error', message: 'request failed' } }),
+    } as Response);
+
+    await expect(new NativeClient().request({ type: 'status' })).rejects.toMatchObject({
+      code: 'app_error',
+      message: 'request failed',
+    });
+  });
+
+  it('maps malformed JSON to an invalid reply error', async () => {
+    stored = { remoteUrl: 'http://127.0.0.1:8787', remoteToken: 's3cr3t' };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => { throw new Error('bad json'); },
+    } as unknown as Response);
+
+    await expect(new NativeClient().request({ type: 'status' })).rejects.toMatchObject({
+      code: 'error',
+      message: 'Prism web server sent an invalid reply',
+    });
+  });
+
+  it('maps a 5xx response to app_unreachable', async () => {
+    stored = { remoteUrl: 'http://127.0.0.1:8787', remoteToken: 's3cr3t' };
+    fetchMock.mockResolvedValue({ ok: false, status: 503 } as Response);
+
+    await expect(new NativeClient().request({ type: 'status' })).rejects.toMatchObject({
+      code: 'app_unreachable',
+      message: 'Prism web server returned 503',
+    });
+  });
+
   it('maps an aborted request to timeout', async () => {
     stored = { remoteUrl: 'http://127.0.0.1:8787', remoteToken: 's3cr3t' };
     fetchMock.mockImplementation((_url, init) => new Promise<Response>((_resolve, reject) => {
@@ -90,7 +136,7 @@ describe('remote transport', () => {
   });
 
   it('normalizes remote URL and token before storing them', () => {
-    expect(normalizeRemoteUrl(' http://127.0.0.1:8787/base/ ')).toBe('http://127.0.0.1:8787/base');
+    expect(normalizeRemoteUrl(' http://127.0.0.1:8787/base/ ')).toBe('http://127.0.0.1:8787');
     expect(normalizeRemoteUrl('javascript:alert(1)')).toBe('');
     expect(normalizeRemoteUrl('http://user:pw@host')).toBe('');
     expect(normalizeRemoteToken(' s3cr3t ')).toBe('s3cr3t');

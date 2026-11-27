@@ -109,6 +109,8 @@ async fn main() {
     } else if let Some(token) = auth.token() {
         println!("Access token: {token}");
         println!("Saved in: {}", auth.file().display());
+    } else if token.is_some() {
+        println!("WARNING: UI authentication is disabled; anyone who can reach {url} controls this downloader. The extension endpoint still requires PRISM_WEB_TOKEN.");
     } else {
         println!("WARNING: authentication is disabled; anyone who can reach {url} controls this downloader.");
     }

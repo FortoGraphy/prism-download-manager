@@ -113,7 +113,7 @@ export function normalizeRemoteUrl(v: unknown): string {
   try {
     const u = new URL(v.trim());
     if ((u.protocol !== 'http:' && u.protocol !== 'https:') || u.username || u.password) return '';
-    return `${u.origin}${u.pathname}`.replace(/\/+$/, '');
+    return u.origin;
   } catch {
     return '';
   }
@@ -131,7 +131,7 @@ export interface StoredState {
   /** `app`: settings follow the app (refreshed on every hello); `local`: user edited them in Options. */
   settingsSource: 'app' | 'local';
   appVersion?: string;
-  /** Base URL of a prism-web server (e.g. `http://127.0.0.1:8787`); empty = native messaging. */
+  /** Root URL of a prism-web server (e.g. `http://127.0.0.1:8787`); empty = native messaging. */
   remoteUrl: string;
   /** Bearer token sent to that server; stored locally, never logged. */
   remoteToken: string;

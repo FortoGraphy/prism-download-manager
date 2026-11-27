@@ -7,7 +7,7 @@ import { setLanguage, t } from "./lib/i18n";
 import { applyPreviewParams } from "./lib/previewParams";
 import { type Route, parseRoute } from "./lib/route";
 import { actions } from "./lib/actions";
-import { api, onCoreEvent } from "./lib/api";
+import { api, onCoreEvent, webMode } from "./lib/api";
 import { useApp } from "./lib/store";
 import { attempt, toast } from "./lib/ui";
 import { MainWindow } from "./views/MainWindow";
@@ -97,6 +97,8 @@ export function App() {
 /** Core toasts live above the routed views so dialog routes don't unmount them. */
 function useCoreNotifications() {
   useEffect(() => {
+    // Desktop toasts are handled by MainWindow; only web routes need an App-level listener.
+    if (!webMode) return;
     let off: (() => void) | undefined;
     void onCoreEvent((e) => {
       if (e.type === "failed") toast(t("Download failed"), { kind: "error", body: `${e.payload.fileName}${e.payload.error ? ` — ${e.payload.error}` : ""}` });

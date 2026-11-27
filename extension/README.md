@@ -87,7 +87,7 @@ of them can win, so disable them while using Prism.
 
 Transport: extension ⇄ `prism-native-host` (native messaging) ⇄ app, or extension → prism-web
 `POST {baseUrl}/v1/message` (`Authorization: Bearer <token>`, JSON body = the extension's message
-verbatim). `GET {baseUrl}/v1/health` (same auth) → `200 {"ok":true,...}`.
+verbatim). `GET {baseUrl}/v1/health` is an unauthenticated liveness check → `200 {"ok":true,...}`.
 Host details (ipc.json, launch, error codes): `crates/prism-native-host/README.md`.
 
 **Envelope** (every request): `id` (string, e.g. `"k4fqpc-13"`), `type`, optional
