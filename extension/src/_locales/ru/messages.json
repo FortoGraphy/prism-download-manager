@@ -1,0 +1,6 @@
+{
+  "extName": { "message": "Prism Download Manager" },
+  "extShortName": { "message": "Prism" },
+  "extDescription": { "message": "Передаёт загрузки, видео и ссылки в менеджер загрузок Prism." },
+  "actionTitle": { "message": "Prism" }
+}

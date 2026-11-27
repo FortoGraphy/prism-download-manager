@@ -123,7 +123,8 @@ try {
     headless: !headed,
     acceptDownloads: true,
     downloadsPath: dlDir,
-    args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`],
+    // The text assertions in this run are English, so the browser language is pinned (see e2e/language.mjs).
+    args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`, '--lang=en-US'],
     env: { ...process.env, PRISM_DATA_DIR: dataDir, PRISM_APP_PATH: join(tmp, 'no-app.exe'), PRISM_HOST_DEBUG: '1' },
     viewport: { width: 1280, height: 900 },
   });

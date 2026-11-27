@@ -4,6 +4,7 @@
  */
 import { IS_FIREFOX, api } from '../shared/api';
 import type { NativeError } from '../shared/correlator';
+import { setLanguage } from '../shared/i18n';
 import type { ActionResult, InternalMessage, PopupState } from '../shared/messages';
 import { visibleMedia } from '../shared/media';
 import { PROTOCOL_VERSION } from '../shared/protocol';
@@ -20,6 +21,9 @@ import { applyAppSettings, getConnection, getState, markConnected, markFailure, 
 import { downloadMedia, sendVideo, videoOptions } from './video';
 
 // ---- wiring -------------------------------------------------------------------
+
+// Menus, badge texts and the video notices are written in the browser's language.
+setLanguage();
 
 native.onResult((ok, err, reply) => {
   if (ok) {

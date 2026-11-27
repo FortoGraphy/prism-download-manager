@@ -1,4 +1,5 @@
 /** Floating video button + popup media actions. */
+import { tk } from '../shared/i18n';
 import type { NativeError } from '../shared/correlator';
 import { type ElementSource, type MediaItem, elementMedia, mediaDetail, mediaLabel, visibleMedia } from '../shared/media';
 import type { VideoOption, VideoOptionsResult } from '../shared/messages';
@@ -64,30 +65,32 @@ async function expandStream(m: MediaItem, group: VideoOption['group'], pageUrl: 
   }
 }
 
+// Notices shown in the video menu: keys are translated by the caller (`t(res.notice)`), so they are
+// marked with `tk`. Text coming from the app or from yt-dlp (`err.message`) stays as it is.
 function noticeFor(err: NativeError): string {
   switch (err.code) {
     case 'host_missing':
     case 'host_forbidden':
-      return 'Browser integration is not installed — open Prism › Settings › Browser integration.';
+      return tk('Browser integration is not installed — open Prism › Settings › Browser integration.');
     case 'app_not_running':
     case 'app_unreachable':
-      return "Prism isn't running — showing streams found on this page.";
+      return tk("Prism isn't running — showing streams found on this page.");
     case 'timeout':
-      return 'Prism took too long to read this page — showing streams found on this page.';
+      return tk('Prism took too long to read this page — showing streams found on this page.');
     case 'not_a_video_page':
       return err.message;
     default:
       // yt-dlp's own text is long and technical ("please report this issue…"): console only.
       console.debug('[prism] probeVideo failed:', err.message);
       if (/couldn't read the cookies/i.test(err.message)) {
-        return "Prism couldn't read your browser's cookies (Settings › Video & streams › Cookies from browser) — showing streams found on this page.";
+        return tk("Prism couldn't read your browser's cookies (Settings › Video & streams › Cookies from browser) — showing streams found on this page.");
       }
       if (/sign in|log in|logged-in|login required|private/i.test(err.message)) {
-        return 'This video needs you to be signed in: sign in to the site in this browser and try again.';
+        return tk('This video needs you to be signed in: sign in to the site in this browser and try again.');
       }
       // Prism 1.0.6+ already answers in plain words; older apps pass yt-dlp's text through.
       if (err.code === 'app_error' && !/yt-dlp/i.test(err.message) && err.message.length < 200) return err.message;
-      return "Prism couldn't get this video's formats — showing streams found on this page (some may be video or audio only).";
+      return tk("Prism couldn't get this video's formats — showing streams found on this page (some may be video or audio only).");
   }
 }
 
@@ -117,7 +120,7 @@ export async function videoOptions(
         ...(f.note ? { detail: f.note } : {}),
       }));
       if (options.length) return { source: 'probe', pageUrl, ...(reply.title ? { title: reply.title } : {}), options };
-      notice = 'Prism found no downloadable formats on this page.';
+      notice = tk('Prism found no downloadable formats on this page.');
     } catch (e) {
       notice = noticeFor(e as NativeError);
     }
@@ -161,7 +164,7 @@ export async function sendVideo(pageUrl: string, title: string, option: VideoOpt
         incognito,
       };
   const reply = await native.request(msg, { timeoutMs: actionTimeout() });
-  if (reply.accepted === false) throw new Error('Prism declined the video');
+  if (reply.accepted === false) throw new Error(tk('Prism declined the video'));
 }
 
 /** Popup "Download" on a sniffed media item. */

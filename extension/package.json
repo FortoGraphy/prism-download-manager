@@ -11,10 +11,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "e2e": "node e2e/run.mjs",
-    "e2e:video-overlay": "node e2e/video-overlay.mjs"
+    "e2e:video-overlay": "node e2e/video-overlay.mjs",
+    "e2e:language": "node e2e/language.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.5",
+    "@types/node": "^26.6.11",
     "esbuild": "^0.28.2",
     "playwright": "^1.64.1",
     "typescript": "^7.0.2",

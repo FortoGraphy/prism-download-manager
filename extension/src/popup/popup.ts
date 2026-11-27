@@ -1,8 +1,11 @@
 import { api, sendInternal } from '../shared/api';
+import { t, setLanguage } from '../shared/i18n';
 import { icons, prismMark } from '../shared/icons';
 import { type MediaItem, humanSize } from '../shared/media';
 import type { ActionResult, ConnectionInfo, PopupState } from '../shared/messages';
 import type { BatchKind } from '../shared/protocol';
+
+setLanguage();
 
 const app = document.getElementById('app')!;
 let tabId = -1;
@@ -14,39 +17,39 @@ function esc(s: string): string {
 }
 
 function toast(text: string, bad = false): void {
-  let t = document.querySelector<HTMLDivElement>('.toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.className = 'toast glass';
-    t.setAttribute('role', 'status');
-    document.body.append(t);
+  let node = document.querySelector<HTMLDivElement>('.toast');
+  if (!node) {
+    node = document.createElement('div');
+    node.className = 'toast glass';
+    node.setAttribute('role', 'status');
+    document.body.append(node);
   }
-  t.textContent = text;
-  t.classList.toggle('bad', bad);
-  t.classList.add('show');
-  clearTimeout(Number(t.dataset.timer));
-  t.dataset.timer = String(setTimeout(() => t!.classList.remove('show'), 2200));
+  node.textContent = text;
+  node.classList.toggle('bad', bad);
+  node.classList.add('show');
+  clearTimeout(Number(node.dataset.timer));
+  node.dataset.timer = String(setTimeout(() => node!.classList.remove('show'), 2200));
 }
 
 function chip(c: ConnectionInfo): string {
-  if (c.state === 'connected') return `<span class="chip ok" id="conn" data-state="connected"><span class="dot"></span>Connected${c.appVersion ? ` · v${esc(c.appVersion)}` : ''}</span>`;
-  if (c.state === 'unknown') return `<span class="chip unknown" id="conn" data-state="unknown"><span class="dot"></span>Checking…</span>`;
-  return `<span class="chip bad" id="conn" data-state="${c.state}"><span class="dot"></span>Not connected</span>`;
+  if (c.state === 'connected') return `<span class="chip ok" id="conn" data-state="connected"><span class="dot"></span>${t('Connected')}${c.appVersion ? ` · v${esc(c.appVersion)}` : ''}</span>`;
+  if (c.state === 'unknown') return `<span class="chip unknown" id="conn" data-state="unknown"><span class="dot"></span>${t('Checking…')}</span>`;
+  return `<span class="chip bad" id="conn" data-state="${c.state}"><span class="dot"></span>${t('Not connected')}</span>`;
 }
 
 function alertCard(c: ConnectionInfo): string {
   if (c.state === 'connected' || c.state === 'unknown') return '';
   const missing = c.state === 'host_missing';
-  const title = missing ? 'Browser integration isn’t installed' : 'Prism isn’t reachable';
+  const title = missing ? t('Browser integration isn’t installed') : t('Prism isn’t reachable');
   const hint = missing
-    ? 'Fix: open Prism › Settings › Browser integration and click Repair.'
-    : 'Start Prism, or open Prism › Settings › Browser integration › Repair. Downloads stay in the browser meanwhile.';
+    ? t('Fix: open Prism › Settings › Browser integration and click Repair.')
+    : t('Start Prism, or open Prism › Settings › Browser integration › Repair. Downloads stay in the browser meanwhile.');
   return `<section class="alert glass" id="fix">
-    <span class="ic">${icons.alert(18)}</span><b>${title}</b>
-    <p>${hint}${c.error ? `<br><span class="small">Details: ${esc(c.error)}</span>` : ''}</p>
+    <span class="ic">${icons.alert(18)}</span><b>${esc(title)}</b>
+    <p>${esc(hint)}${c.error ? `<br><span class="small">${esc(t('Details: {error}', { error: c.error }))}</span>` : ''}</p>
     <div class="actions">
-      ${missing ? '' : `<button class="btn primary" data-act="launch">${icons.external(14)}Start Prism</button>`}
-      <button class="btn" data-act="retry">${icons.refresh(14)}Retry</button>
+      ${missing ? '' : `<button class="btn primary" data-act="launch">${icons.external(14)}${esc(t('Start Prism'))}</button>`}
+      <button class="btn" data-act="retry">${icons.refresh(14)}${esc(t('Retry'))}</button>
     </div>
   </section>`;
 }
@@ -69,20 +72,20 @@ function render(): void {
   app.innerHTML = `
     <header class="top">
       <span class="tile">${prismMark(24)}</span>
-      <div class="brand"><b>Prism</b><span class="muted">Download manager</span></div>
+      <div class="brand"><b>Prism</b><span class="muted">${esc(t('Download manager'))}</span></div>
       ${chip(connection)}
     </header>
     ${alertCard(connection)}
     <section class="row glass">
-      <div class="tx"><b>Capture downloads</b><span>${
-        !st.settings.captureEnabled ? 'Disabled in settings' : st.paused ? 'Paused — the browser downloads files itself' : 'Matching files open in Prism'
-      }</span></div>
-      <label class="switch" title="Pause capture"><input type="checkbox" id="capture" ${capturing ? 'checked' : ''} ${
+      <div class="tx"><b>${esc(t('Capture downloads'))}</b><span>${esc(
+        !st.settings.captureEnabled ? t('Disabled in settings') : st.paused ? t('Paused — the browser downloads files itself') : t('Matching files open in Prism')
+      )}</span></div>
+      <label class="switch" title="${esc(t('Pause capture'))}"><input type="checkbox" id="capture" ${capturing ? 'checked' : ''} ${
         st.settings.captureEnabled ? '' : 'disabled'
-      } aria-label="Capture downloads"><span></span></label>
+      } aria-label="${esc(t('Capture downloads'))}"><span></span></label>
     </section>
     <section class="section glass">
-      <h2>Media on this page <span class="count" id="media-count">${media.length}</span></h2>
+      <h2>${esc(t('Media on this page'))} <span class="count" id="media-count">${media.length}</span></h2>
       <div class="list" id="media">${
         media.length
           ? media
@@ -90,22 +93,22 @@ function render(): void {
                 (m) => `<div class="media" data-key="${esc(m.key)}">
                   <span class="kind">${kindIcon(m)}</span>
                   <span class="tx"><span class="name" title="${esc(m.url)}">${esc(m.name)}</span><span class="meta">${esc(mediaMeta(m))}</span></span>
-                  <button class="btn" data-act="media" data-key="${esc(m.key)}">${icons.download(14)}Download</button>
+                  <button class="btn" data-act="media" data-key="${esc(m.key)}">${icons.download(14)}${esc(t('Download'))}</button>
                 </div>`,
               )
               .join('')
-          : `<div class="empty"><b>No media detected yet</b>Play a video or audio on the page and it will show up here.</div>`
+          : `<div class="empty"><b>${esc(t('No media detected yet'))}</b>${esc(t('Play a video or audio on the page and it will show up here.'))}</div>`
       }</div>
     </section>
     <section class="grab">
-      <button class="btn" data-act="collect" data-mode="links">${icons.link(18)}All links</button>
-      <button class="btn" data-act="collect" data-mode="images">${icons.image(18)}All images</button>
-      <button class="btn" data-act="collect" data-mode="videos">${icons.film(18)}All videos</button>
+      <button class="btn" data-act="collect" data-mode="links">${icons.link(18)}${esc(t('All links'))}</button>
+      <button class="btn" data-act="collect" data-mode="images">${icons.image(18)}${esc(t('All images'))}</button>
+      <button class="btn" data-act="collect" data-mode="videos">${icons.film(18)}${esc(t('All videos'))}</button>
     </section>
     <footer class="foot">
-      <button class="btn ghost" data-act="open">${prismMark(16)}Open Prism</button>
+      <button class="btn ghost" data-act="open">${prismMark(16)}${esc(t('Open Prism'))}</button>
       <span class="spacer"></span>
-      <button class="btn ghost icon" data-act="options" title="Options" aria-label="Options">${icons.gear(16)}</button>
+      <button class="btn ghost icon" data-act="options" title="${esc(t('Options'))}" aria-label="${esc(t('Options'))}">${icons.gear(16)}</button>
     </footer>`;
 }
 
@@ -139,11 +142,11 @@ async function act(el: HTMLElement): Promise<void> {
     switch (a) {
       case 'media':
         r = await sendInternal<ActionResult>({ kind: 'downloadMedia', tabId, key: el.dataset.key! });
-        if (r?.ok) toast('Sent to Prism');
+        if (r?.ok) toast(t('Sent to Prism'));
         break;
       case 'collect':
         r = await sendInternal<ActionResult>({ kind: 'collect', tabId, mode: el.dataset.mode as BatchKind });
-        if (r?.ok) toast(r.count ? `Sent ${r.count} item${r.count === 1 ? '' : 's'} to Prism` : 'Nothing found on this page');
+        if (r?.ok) toast(r.count ? t('Sent {count} item(s) to Prism', { count: r.count }) : t('Nothing found on this page'));
         break;
       case 'open':
       case 'launch':
@@ -158,8 +161,8 @@ async function act(el: HTMLElement): Promise<void> {
         r = { ok: true };
         break;
     }
-    if (r && !r.ok) toast(r.error ?? 'Something went wrong', true);
-    if (!r) toast('Prism extension is restarting — try again', true);
+    if (r && !r.ok) toast(r.error ? t(r.error) : t('Something went wrong'), true);
+    if (!r) toast(t('Prism extension is restarting — try again'), true);
   } finally {
     busy = false;
     (el as HTMLButtonElement).disabled = false;

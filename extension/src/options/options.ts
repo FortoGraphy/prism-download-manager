@@ -1,4 +1,5 @@
 import { api, sendInternal } from '../shared/api';
+import { t, setLanguage } from '../shared/i18n';
 import { prismMark } from '../shared/icons';
 import type { CaptureSettings } from '../shared/protocol';
 import { DEFAULT_SETTINGS, STATE_KEY, type StoredState, normalizeState } from '../shared/settings';
@@ -8,6 +9,11 @@ const form = $<HTMLFormElement>('form');
 const status = $<HTMLSpanElement>('status');
 
 $('mark').innerHTML = prismMark(40);
+
+// Static texts live in the markup as `data-i18n` keys; the page language is the browser's.
+setLanguage();
+document.title = t('Prism — Extension options');
+for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) el.textContent = t(el.dataset.i18n!);
 
 function setStatus(text: string, kind: '' | 'ok' | 'bad' = ''): void {
   status.textContent = text;
@@ -26,8 +32,8 @@ function fill(s: CaptureSettings, st?: StoredState): void {
   if (st) {
     $('source-line').textContent =
       st.settingsSource === 'app'
-        ? `Settings follow the Prism app${st.appVersion ? ` (v${st.appVersion})` : ''}. Saving here overrides them locally.`
-        : 'Using local settings. “Sync from Prism” goes back to the app’s settings.';
+        ? t('Settings follow the Prism app{app}. Saving here overrides them locally.', { app: st.appVersion ? ` (v${st.appVersion})` : '' })
+        : t('Using local settings. “Sync from Prism” goes back to the app’s settings.');
   }
 }
 
@@ -56,22 +62,22 @@ form.addEventListener('submit', async (e) => {
   const r = await sendInternal<{ ok: boolean; state?: StoredState; error?: string }>({ kind: 'saveSettings', settings: read() });
   if (r?.ok && r.state) {
     fill(r.state.settings, r.state);
-    setStatus('Saved.', 'ok');
-  } else setStatus(r?.error ?? 'Could not save.', 'bad');
+    setStatus(t('Saved.'), 'ok');
+  } else setStatus(r?.error ? t(r.error) : t('Could not save.'), 'bad');
 });
 
 $('reset').addEventListener('click', () => {
   fill(DEFAULT_SETTINGS);
-  setStatus('Defaults restored — click Save to keep them.');
+  setStatus(t('Defaults restored — click Save to keep them.'));
 });
 
 $('sync').addEventListener('click', async () => {
-  setStatus('Asking Prism…');
+  setStatus(t('Asking Prism…'));
   const r = await sendInternal<{ ok: boolean; state?: StoredState; error?: string }>({ kind: 'syncSettings' });
   if (r?.ok && r.state) {
     fill(r.state.settings, r.state);
-    setStatus('Settings synced from Prism.', 'ok');
-  } else setStatus(`Couldn’t reach Prism: ${r?.error ?? 'no answer'}. Is the app running?`, 'bad');
+    setStatus(t('Settings synced from Prism.'), 'ok');
+  } else setStatus(t("Couldn’t reach Prism: {error}. Is the app running?", { error: r?.error ?? t('no answer') }), 'bad');
 });
 
 void load();

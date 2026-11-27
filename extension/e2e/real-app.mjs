@@ -75,7 +75,8 @@ try {
   context = await chromium.launchPersistentContext(join(tmp, 'profile'), {
     ...(chromePath ? { executablePath: chromePath } : { channel: 'chromium' }),
     headless: true,
-    args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`],
+    // Texts are asserted in English, so the browser language is pinned (see e2e/language.mjs).
+    args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`, '--lang=en-US'],
     env: { ...process.env, PRISM_DATA_DIR: dataDir },
   });
   const page = await context.newPage();

@@ -59,7 +59,8 @@ try {
     ...(chromePath ? { executablePath: chromePath } : { channel: 'chromium' }),
     headless: process.env.PRISM_E2E_HEADED !== '1',
     viewport: { width: 800, height: 650 },
-    args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`],
+    // Button and menu texts are asserted in English, so the browser language is pinned (see e2e/language.mjs).
+    args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`, '--lang=en-US'],
   });
   const sw = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker', { timeout: 10000 });
   const page = await context.newPage();

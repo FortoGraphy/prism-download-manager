@@ -4,12 +4,15 @@
  * video sites, sniffed streams elsewhere.
  */
 import { sendInternal } from '../shared/api';
+import { t, tk, setLanguage } from '../shared/i18n';
 import { icons, prismMark } from '../shared/icons';
 import { type ElementSource, elementSources, linkedinCommentaryPath, linkedinPostPath, postUrl } from '../shared/media';
 import { siteMatches } from '../shared/rules';
 import type { ActionResult, VideoOption, VideoOptionsResult } from '../shared/messages';
 import { FullscreenState } from './fullscreen';
 import { VIDEO_BUTTON_CSS } from './styles';
+
+setLanguage();
 
 const MIN_W = 200;
 const MIN_H = 120;
@@ -288,10 +291,10 @@ export class VideoButton {
     this.wrap.inert = true;
     this.wrap.innerHTML = `
       <div class="controls">
-        <button class="pill glass" type="button" aria-haspopup="menu" aria-expanded="false" title="Download this video with Prism">
-          ${prismMark(18)}<span class="label">Download</span><span class="chev">${icons.chevronDown(14)}</span>
+        <button class="pill glass" type="button" aria-haspopup="menu" aria-expanded="false" title="${esc(t('Download this video with Prism'))}">
+          ${prismMark(18)}<span class="label">${esc(t('Download'))}</span><span class="chev">${icons.chevronDown(14)}</span>
         </button>
-        <button class="dismiss glass" type="button" aria-label="Hide Prism for this video" title="Hide Prism for this video until the page is reloaded">
+        <button class="dismiss glass" type="button" aria-label="${esc(t('Hide Prism for this video'))}" title="${esc(t('Hide Prism for this video until the page is reloaded'))}">
           ${icons.close(16)}
         </button>
       </div>
@@ -569,19 +572,19 @@ export class VideoButton {
     if (!this.menuOpen) return;
     const session = ++this.menuSession;
     const ctx = this.context();
-    this.menu.innerHTML = `<div class="loading"><span class="spin"></span>Finding qualities…</div>`;
+    this.menu.innerHTML = `<div class="loading"><span class="spin"></span>${esc(t('Finding qualities…'))}</div>`;
     // On a video site's single post / video page "Best quality" works right away: the app picks
     // the best format (within the preferred quality) once it has read the page.
     const best = this.bestTarget(ctx);
     if (best) {
       this.menu.insertAdjacentHTML(
         'beforeend',
-        `<button class="item" role="menuitem" data-id="best"><span class="ic">${icons.film(18)}</span><span class="tx"><span class="l">Best quality</span><span class="d">Download now, without waiting for the list</span></span><span class="go">${icons.download(16)}</span></button>`,
+        `<button class="item" role="menuitem" data-id="best"><span class="ic">${icons.film(18)}</span><span class="tx"><span class="l">${esc(t('Best quality'))}</span><span class="d">${esc(t('Download now, without waiting for the list'))}</span></span><span class="go">${icons.download(16)}</span></button>`,
       );
       this.menu.querySelector<HTMLButtonElement>('.item[data-id="best"]')!.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!e.isTrusted) return;
-        void this.choose({ id: 'fmt:best', label: 'Best quality', group: 'video', formatId: 'best' }, ctx.title, ctx.key, best);
+        void this.choose({ id: 'fmt:best', label: t('Best quality'), group: 'video', formatId: 'best' }, ctx.title, ctx.key, best);
       });
     }
     const res = await this.options();
@@ -591,27 +594,27 @@ export class VideoButton {
   }
 
   private renderMenu(title: string, key: string, res: VideoOptionsResult | undefined): void {
-    const head = `<div class="head">${prismMark(16)}<span class="t">${esc(res?.title || title)}</span><span class="src">${res?.source === 'probe' ? 'Prism' : 'Detected'}</span></div>`;
+    const head = `<div class="head">${prismMark(16)}<span class="t">${esc(res?.title || title)}</span><span class="src">${res?.source === 'probe' ? 'Prism' : esc(t('Detected'))}</span></div>`;
     if (!res) {
-      this.menu.innerHTML = `${head}<div class="note">Prism extension is restarting — try again in a moment.</div>`;
+      this.menu.innerHTML = `${head}<div class="note">${esc(t('Prism extension is restarting — try again in a moment.'))}</div>`;
       return;
     }
     const own = res.options.some((o) => o.group === 'element');
     const groups: Array<[VideoOption['group'], string]> = [
-      ['element', 'This video'],
-      ['video', 'Video'],
-      ['audio', 'Audio only'],
-      ['stream', own ? 'Other streams on this page' : 'Streams on this page'],
+      ['element', tk('This video')],
+      ['video', tk('Video')],
+      ['audio', tk('Audio only')],
+      ['stream', own ? tk('Other streams on this page') : tk('Streams on this page')],
     ];
     let html = head;
-    if (res.notice) html += `<div class="note">${esc(res.notice)}</div>`;
+    if (res.notice) html += `<div class="note">${esc(t(res.notice))}</div>`;
     if (!res.options.length) {
-      html += `<div class="empty">No downloadable stream found yet — start playback and try again.</div>`;
+      html += `<div class="empty">${esc(t('No downloadable stream found yet — start playback and try again.'))}</div>`;
     }
     for (const [g, label] of groups) {
       const items = res.options.filter((o) => o.group === g);
       if (!items.length) continue;
-      if (res.source === 'probe' || g === 'stream' || g === 'element') html += `<div class="group">${label}</div>`;
+      if (res.source === 'probe' || g === 'stream' || g === 'element') html += `<div class="group">${esc(t(label))}</div>`;
       for (const o of items) {
         const ic = g === 'audio' ? icons.audio(18) : g === 'stream' ? icons.stream(18) : icons.film(18);
         html += `<button class="item" role="menuitem" data-id="${esc(o.id)}"><span class="ic">${ic}</span><span class="tx"><span class="l">${esc(o.label)}</span>${o.detail ? `<span class="d">${esc(o.detail)}</span>` : ''}</span><span class="go">${icons.download(16)}</span></button>`;
@@ -642,17 +645,17 @@ export class VideoButton {
     if (key !== ctx.key) return;
     const session = this.menuSession;
     const label = this.pill.querySelector('.label')!;
-    if (this.current) label.textContent = 'Sending…';
+    if (this.current) label.textContent = t('Sending…');
     const r = await sendInternal<ActionResult>({ kind: 'videoDownload', pageUrl: pageUrl ?? ctx.pageUrl, title, option });
     if (!this.current || session !== this.menuSession || ctx.key !== this.context().key) return;
     if (r?.ok) {
       this.pill.classList.add('done');
-      label.textContent = 'Sent to Prism';
+      label.textContent = t('Sent to Prism');
       this.pill.querySelector('.chev')!.innerHTML = icons.check(14);
     } else {
       this.pill.classList.add('err');
-      label.textContent = r?.error ? 'Prism unavailable' : 'Failed';
-      this.pill.title = r?.error ?? 'Could not reach Prism';
+      label.textContent = r?.error ? t('Prism unavailable') : t('Failed');
+      this.pill.title = r?.error ? t(r.error) : t('Could not reach Prism');
     }
     setTimeout(() => {
       if (session === this.menuSession && ctx.key === this.context().key) this.resetPill();
@@ -662,8 +665,8 @@ export class VideoButton {
   private resetPill(): void {
     if (!this.host) return;
     this.pill.classList.remove('done', 'err');
-    this.pill.title = 'Download this video with Prism';
-    this.pill.querySelector('.label')!.textContent = 'Download';
+    this.pill.title = t('Download this video with Prism');
+    this.pill.querySelector('.label')!.textContent = t('Download');
     this.pill.querySelector('.chev')!.innerHTML = icons.chevronDown(14);
   }
 }
