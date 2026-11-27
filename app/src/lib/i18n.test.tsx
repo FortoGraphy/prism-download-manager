@@ -105,6 +105,16 @@ describe("t()", () => {
     }
   });
 
+  it("uses Russian plural forms", () => {
+    setLanguage("ru");
+    try {
+      // one / few / many: 1 файл, 2 файла, 5 файлов
+      expect([1, 2, 5].map((count) => t("{count} files", { count }))).toEqual(["1 файл", "2 файла", "5 файлов"]);
+    } finally {
+      setLanguage("en");
+    }
+  });
+
   it("tr() puts React nodes into the text", () => {
     const parts = tr("Click {button} to go on", { button: <b>Next</b> }) as ReactNode[];
     expect(parts).toHaveLength(3);
