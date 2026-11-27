@@ -29,6 +29,19 @@ describe("prism-web UI", () => {
     expect(location.hash).toBe("");
   });
 
+  it("opens hash-routed windows without calling the no-op server command", async () => {
+    const fetchMock = vi.fn(() => {
+      throw new Error("open_window must not call HTTP in web mode");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { api } = await import("./api");
+    await api.openWindow("addurl");
+    expect(location.hash).toBe("#/addurl");
+    await api.openWindow("capture", "cap1");
+    expect(location.hash).toBe("#/capture/cap1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("leaves other core events on the current route", async () => {
     const { handleEvent } = await import("./store");
     location.hash = "#/capture/cap1";

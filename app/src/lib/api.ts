@@ -315,7 +315,14 @@ export const api = {
   extensionDir: () => invoke<string | null>("extension_dir"),
 
   openDetails: (id: string) => invoke<void>("open_details", { id }),
-  openWindow: (kind: string, id?: string) => invoke<void>("open_window", { kind, id }),
+  openWindow: (kind: string, id?: string) => {
+    // Web mode has one tab: a "window" is just a hash route. The server's open_window is a no-op.
+    if (webMode) {
+      location.hash = `#/${kind}${id ? `/${id}` : ""}`;
+      return Promise.resolve();
+    }
+    return invoke<void>("open_window", { kind, id });
+  },
   toggleMini: () => invoke<boolean>("toggle_mini"),
   toggleDropzone: () => invoke<boolean>("toggle_dropzone"),
   showMain: () => invoke<void>("show_main"),
