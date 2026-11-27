@@ -72,6 +72,8 @@ describe("t()", () => {
     expect(resolveLanguage("de", ["cs-CZ"])).toBe("de");
     expect(resolveLanguage("", ["pt-BR", "it-IT", "en"])).toBe("it");
     expect(resolveLanguage("", ["cs"])).toBe("cs");
+    expect(resolveLanguage("", ["vi-VN"])).toBe("vi");
+    expect(resolveLanguage("", ["vi"])).toBe("vi");
     expect(resolveLanguage("", ["ja-JP"])).toBe("en");
     expect(resolveLanguage("xx", ["cs"])).toBe("en");
     // Simplified Chinese for a Simplified (or plain) Chinese system, not for Traditional.

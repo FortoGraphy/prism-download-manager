@@ -53,7 +53,7 @@ Free, open source, no ads, no accounts, no telemetry.
 | 🧲 **Every protocol** | HTTP(S), FTP/FTPS, HLS and DASH streams, BitTorrent and magnet links. |
 | 🤖 **AI models** | Download models from [Hugging Face](https://huggingface.co) by name, link or search. Prism picks the files you need (one GGUF version, the weights in one format), downloads them over many connections and checks each against its SHA-256. Gated models, mirrors like hf-mirror.com and LM Studio's folder work too. |
 | 🗂 **Organised** | Categories, queues with schedules and speed limits, "shut down when done", site grabber, batch downloads, clipboard monitor. |
-| 🌍 **Your language** | English, Czech, German, Spanish, French, Italian, Indonesian, Turkish, Simplified Chinese and Arabic. Prism follows your system's language, or pick one in Settings. |
+| 🌍 **Your language** | English, Czech, German, Spanish, French, Italian, Indonesian, Turkish, Vietnamese, Simplified Chinese and Arabic. Prism follows your system's language, or pick one in Settings. |
 | 🎨 **Gorgeous** | Liquid-glass design, dark & light themes, six accent colours, a mini window — and fast with thousands of downloads. |
 
 <p align="center">

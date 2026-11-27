@@ -45,8 +45,8 @@ const MIRROR = "https://hf-mirror.com";
 /** The texts search looks at: group names, and each setting's title and hint. */
 const TEXTS = ".group__t, .srow__t1, .srow__t2";
 
-/** Lower case without accents, so "Zvuky" finds "zvuky" and "stazeni" finds "stažení". */
-const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+/** Lower case without accents, so "Zvuky" finds "zvuky", "stazeni" finds "stažení" and "duong dan" finds "Đường dẫn". */
+const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/đ/g, "d");
 
 /** Each section's texts in the current language, from a static render of its body: the index
  *  follows whatever the sections show, and no effects run (nothing is asked from the core). */

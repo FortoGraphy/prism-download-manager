@@ -38,13 +38,14 @@ fn lookup(lang: &str, key: &str) -> Option<&'static str> {
         "ar" => 7,
         "tr" => 8,
         "zh" => 9,
+        "vi" => 10,
         _ => return None,
     };
     Some(row[column])
 }
 
-/// English, Czech, German, Spanish, French, Italian, Indonesian, Arabic, Turkish, Simplified Chinese.
-const TEXTS: &[[&str; 10]] = &[
+/// English, Czech, German, Spanish, French, Italian, Indonesian, Arabic, Turkish, Simplified Chinese, Vietnamese.
+const TEXTS: &[[&str; 11]] = &[
     [
         "Open Prism",
         "Otevřít Prism",
@@ -56,6 +57,7 @@ const TEXTS: &[[&str; 10]] = &[
         "فتح Prism",
         "Prism'i aç",
         "打开 Prism",
+        "Mở Prism",
     ],
     [
         "Add URL…",
@@ -68,6 +70,7 @@ const TEXTS: &[[&str; 10]] = &[
         "إضافة رابط…",
         "URL ekle…",
         "添加 URL…",
+        "Thêm URL…",
     ],
     [
         "Pause all",
@@ -80,6 +83,7 @@ const TEXTS: &[[&str; 10]] = &[
         "إيقاف الكل مؤقتًا",
         "Tümünü duraklat",
         "全部暂停",
+        "Tạm dừng tất cả",
     ],
     [
         "Resume all",
@@ -92,6 +96,7 @@ const TEXTS: &[[&str; 10]] = &[
         "استئناف الكل",
         "Tümünü sürdür",
         "全部继续",
+        "Tiếp tục tất cả",
     ],
     [
         "Speed limiter",
@@ -104,6 +109,7 @@ const TEXTS: &[[&str; 10]] = &[
         "محدد السرعة",
         "Hız sınırlayıcı",
         "限速",
+        "Giới hạn tốc độ",
     ],
     [
         "Mini window",
@@ -116,6 +122,7 @@ const TEXTS: &[[&str; 10]] = &[
         "نافذة مصغرة",
         "Mini pencere",
         "迷你窗口",
+        "Cửa sổ thu gọn",
     ],
     [
         "Drop zone",
@@ -128,6 +135,7 @@ const TEXTS: &[[&str; 10]] = &[
         "منطقة الإفلات",
         "Bırakma alanı",
         "拖放区",
+        "Vùng kéo thả",
     ],
     [
         "Hide tray icon",
@@ -140,6 +148,7 @@ const TEXTS: &[[&str; 10]] = &[
         "إخفاء الأيقونة",
         "Simgeyi gizle",
         "隐藏托盘图标",
+        "Ẩn biểu tượng khay hệ thống",
     ],
     [
         "Hide menu bar icon",
@@ -152,6 +161,7 @@ const TEXTS: &[[&str; 10]] = &[
         "إخفاء أيقونة شريط القوائم",
         "Menü çubuğundaki simgeyi gizle",
         "隐藏菜单栏图标",
+        "Ẩn biểu tượng thanh menu",
     ],
     [
         "Quit Prism",
@@ -164,6 +174,7 @@ const TEXTS: &[[&str; 10]] = &[
         "إنهاء Prism",
         "Prism'den çık",
         "退出 Prism",
+        "Thoát Prism",
     ],
     [
         "Prism — idle",
@@ -176,6 +187,7 @@ const TEXTS: &[[&str; 10]] = &[
         "Prism — خامل",
         "Prism — boşta",
         "Prism — 空闲",
+        "Prism — đang rảnh",
     ],
     [
         "Prism — {count} downloading · {speed}",
@@ -188,6 +200,7 @@ const TEXTS: &[[&str; 10]] = &[
         "Prism — {count} قيد التنزيل · {speed}",
         "Prism — {count} indiriliyor · {speed}",
         "Prism — {count} 个正在下载 · {speed}",
+        "Prism — {count} đang tải · {speed}",
     ],
     [
         "Download added",
@@ -200,6 +213,7 @@ const TEXTS: &[[&str; 10]] = &[
         "تمت إضافة التنزيل",
         "İndirme eklendi",
         "已添加下载",
+        "Đã thêm mục tải xuống",
     ],
     [
         "Download complete",
@@ -212,6 +226,7 @@ const TEXTS: &[[&str; 10]] = &[
         "اكتمل التنزيل",
         "İndirme tamamlandı",
         "下载完成",
+        "Tải xuống hoàn tất",
     ],
     [
         "Download failed",
@@ -224,6 +239,7 @@ const TEXTS: &[[&str; 10]] = &[
         "فشل التنزيل",
         "İndirme başarısız oldu",
         "下载失败",
+        "Tải xuống thất bại",
     ],
     [
         "Queue finished",
@@ -236,6 +252,7 @@ const TEXTS: &[[&str; 10]] = &[
         "انتهت قائمة الانتظار",
         "Kuyruk tamamlandı",
         "队列已完成",
+        "Hàng đợi đã hoàn tất",
     ],
     [
         "{name} has no more downloads.",
@@ -248,6 +265,7 @@ const TEXTS: &[[&str; 10]] = &[
         "لم يعد في {name} أي تنزيلات.",
         "{name} için başka indirme kalmadı.",
         "队列“{name}”中已没有待下载的项目。",
+        "{name} không còn mục tải nào nữa.",
     ],
     [
         "Added to the list",
@@ -260,6 +278,7 @@ const TEXTS: &[[&str; 10]] = &[
         "أضيف إلى القائمة",
         "Listeye eklendi",
         "已添加到列表",
+        "Đã thêm vào danh sách",
     ],
     [
         "Downloading in the browser",
@@ -272,6 +291,7 @@ const TEXTS: &[[&str; 10]] = &[
         "يجري التنزيل في المتصفح",
         "Tarayıcıda indiriliyor",
         "正在浏览器中下载",
+        "Đang tải trong trình duyệt",
     ],
     [
         "{host} lets only a web browser download this file, so the browser is downloading it.",
@@ -284,6 +304,7 @@ const TEXTS: &[[&str; 10]] = &[
         "يسمح {host} لمتصفح الويب فقط بتنزيل هذا الملف، لذا يتولى المتصفح تنزيله.",
         "{host} bu dosyanın yalnızca bir web tarayıcısıyla indirilmesine izin veriyor, bu yüzden dosyayı tarayıcı indiriyor.",
         "{host} 只允许网页浏览器下载此文件，因此改由浏览器下载。",
+        "{host} chỉ cho phép trình duyệt web tải tệp này, nên trình duyệt đang đảm nhận việc tải xuống.",
     ],
     [
         "Conversion finished",
@@ -296,6 +317,7 @@ const TEXTS: &[[&str; 10]] = &[
         "اكتمل التحويل",
         "Dönüştürme tamamlandı",
         "转换完成",
+        "Chuyển đổi hoàn tất",
     ],
     [
         "Smaller file ready",
@@ -308,6 +330,7 @@ const TEXTS: &[[&str; 10]] = &[
         "الملف الأصغر جاهز",
         "Küçültülmüş dosya hazır",
         "缩小后的文件已就绪",
+        "Đã giảm dung lượng tệp xong",
     ],
     [
         "ZIP file ready",
@@ -320,6 +343,7 @@ const TEXTS: &[[&str; 10]] = &[
         "ملف ZIP جاهز",
         "ZIP dosyası hazır",
         "ZIP 文件已就绪",
+        "Tệp ZIP đã sẵn sàng",
     ],
     [
         "Conversion failed",
@@ -332,6 +356,7 @@ const TEXTS: &[[&str; 10]] = &[
         "فشل التحويل",
         "Dönüştürme başarısız oldu",
         "转换失败",
+        "Chuyển đổi thất bại",
     ],
 ];
 
@@ -376,6 +401,12 @@ mod tests {
         assert_eq!(
             tr("{name} has no more downloads.", &[("name", "夜间")]),
             "队列“夜间”中已没有待下载的项目。"
+        );
+        set_language("vi");
+        assert_eq!(tr("Pause all", &[]), "Tạm dừng tất cả");
+        assert_eq!(
+            tr("{name} has no more downloads.", &[("name", "Ban đêm")]),
+            "Ban đêm không còn mục tải nào nữa."
         );
         set_language("en");
         assert_eq!(tr("Pause all", &[]), "Pause all");

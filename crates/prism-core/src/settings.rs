@@ -65,7 +65,7 @@ pub struct General {
     pub check_updates: bool,
     /// Finished downloads whose file was deleted from the computer leave the list (off by default).
     pub remove_deleted_files: bool,
-    /// UI language code ("en", "cs", "de", "es", "fr", "it", "id", "tr", "zh", "ar"); empty = the
+    /// UI language code ("en", "cs", "de", "es", "fr", "it", "id", "tr", "vi", "zh", "ar"); empty = the
     /// system's language.
     pub language: String,
     /// macOS (#34): no Dock icon while Prism waits in the menu bar (it's back while the main

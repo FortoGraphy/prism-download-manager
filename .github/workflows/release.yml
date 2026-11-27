@@ -75,11 +75,15 @@ jobs:
           # Unset secrets that are not configured: an empty APPLE_CERTIFICATE would make the
           # bundler try (and fail) to import a signing certificate. Without them the macOS app
           # gets an ad-hoc signature (bundle.macOS.signingIdentity = "-").
-          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
             [ -n "${!v}" ] || unset "$v"
           done
-          # Signed in-app update bundles only for official releases (needs the signing key).
-          npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config '{"bundle":{"createUpdaterArtifacts":true}}'
+          # Signed in-app update bundles only when the signing key is configured.
+          if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+            npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config '{"bundle":{"createUpdaterArtifacts":true}}'
+          else
+            npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+          fi
       - name: Name the macOS update bundle per architecture
         if: runner.os == 'macOS'
         run: |
@@ -87,8 +91,12 @@ jobs:
           M=target/${{ matrix.target }}/release/bundle/macos
           V=$(node -p "require('./app/src-tauri/tauri.conf.json').version")
           A=$([ "${{ matrix.target }}" = aarch64-apple-darwin ] && echo aarch64 || echo x64)
-          mv "$M/Prism.app.tar.gz" "$M/Prism_${V}_${A}.app.tar.gz"
-          mv "$M/Prism.app.tar.gz.sig" "$M/Prism_${V}_${A}.app.tar.gz.sig"
+          if [ -f "$M/Prism.app.tar.gz" ]; then
+            mv "$M/Prism.app.tar.gz" "$M/Prism_${V}_${A}.app.tar.gz"
+          fi
+          if [ -f "$M/Prism.app.tar.gz.sig" ]; then
+            mv "$M/Prism.app.tar.gz.sig" "$M/Prism_${V}_${A}.app.tar.gz.sig"
+          fi
       - name: DMG with the browser extension next to the app (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -149,9 +157,12 @@ jobs:
           find artifacts -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' \
             -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.zip' -o -name '*.app.tar.gz' \) -exec cp {} out/ \;
           # Manifest for the in-app updater (signatures come from the .sig files).
-          python3 scripts/make-latest-json.py artifacts "${GITHUB_REF_NAME}" docs/RELEASE_NOTES.md > latest.json
-          cat latest.json
-          cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt && mv ../latest.json .
+          if find artifacts -type f -name '*.sig' | grep -q .; then
+            python3 scripts/make-latest-json.py artifacts "${GITHUB_REF_NAME}" docs/RELEASE_NOTES.md > latest.json
+            cat latest.json
+          fi
+          cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+          if [ -f ../latest.json ]; then mv ../latest.json .; fi
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:

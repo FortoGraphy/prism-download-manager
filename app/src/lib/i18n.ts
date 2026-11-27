@@ -18,6 +18,7 @@ import fr from "../locales/fr.json";
 import id from "../locales/id.json";
 import it from "../locales/it.json";
 import turkish from "../locales/tr.json";
+import vi from "../locales/vi.json";
 import zh from "../locales/zh.json";
 
 export type PluralEntry = Partial<Record<Intl.LDMLPluralRule, string>>;
@@ -33,13 +34,14 @@ export const LANGUAGES = [
   { code: "id", name: "Bahasa Indonesia" },
   { code: "it", name: "Italiano" },
   { code: "tr", name: "Türkçe" },
+  { code: "vi", name: "Tiếng Việt" },
   { code: "zh", name: "简体中文" },
   { code: "ar", name: "العربية" },
 ] as const;
 
 export type Language = (typeof LANGUAGES)[number]["code"];
 
-export const CATALOGS: Record<Language, Catalog> = { en, cs, de, es, fr, id, it, tr: turkish, zh, ar };
+export const CATALOGS: Record<Language, Catalog> = { en, cs, de, es, fr, id, it, tr: turkish, vi, zh, ar };
 
 /** Languages written right to left: the whole layout mirrors (`<html dir="rtl">`). */
 const RTL: readonly Language[] = ["ar"];
