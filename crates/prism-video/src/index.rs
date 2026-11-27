@@ -191,7 +191,10 @@ fn parse_sidx(d: &[u8], end: u64) -> Result<Vec<Piece>, IndexError> {
         return Err(IndexError::NoIndex("an empty or broken sidx"));
     }
     let ts = timescale as f64;
-    let mut offset = end + first;
+    // Version 1 stores the first offset and the start time on 64 bits: sums near the limit
+    // would wrap around in release builds and give pieces that end before they start.
+    let broken = || IndexError::NoIndex("a broken sidx");
+    let mut offset = end.checked_add(first).ok_or_else(broken)?;
     let mut t = ept;
     let mut pieces = Vec::with_capacity(count);
     for _ in 0..count {
@@ -202,14 +205,16 @@ fn parse_sidx(d: &[u8], end: u64) -> Result<Vec<Piece>, IndexError> {
             return Err(IndexError::NoIndex("an index of indexes"));
         }
         let size = r & 0x7FFF_FFFF;
+        let to = offset.checked_add(size).ok_or_else(broken)?;
+        let t_end = t.checked_add(dur).ok_or_else(broken)?;
         pieces.push(Piece {
             start: t as f64 / ts,
-            end: (t + dur) as f64 / ts,
+            end: t_end as f64 / ts,
             from: offset,
-            to: offset + size,
+            to,
         });
-        offset += size;
-        t += dur;
+        offset = to;
+        t = t_end;
     }
     Ok(pieces)
 }
@@ -368,7 +373,7 @@ fn parse_webm(b: &[u8], file_size: Option<u64>) -> Result<MediaIndex, IndexError
     let cues = cues.ok_or(IndexError::NoIndex("the WebM index is not at the start"))?;
 
     let secs = |t: u64| t as f64 * scale as f64 / 1e9;
-    let mut points: Vec<(u64, u64)> = Vec::new(); // (cluster position, time)
+    let mut points: Vec<(u64, u64)> = Vec::new(); // (cluster position in the file, time)
     for (id, cp) in children(cues)? {
         if id != CUE_POINT {
             continue;
@@ -388,7 +393,11 @@ fn parse_webm(b: &[u8], file_size: Option<u64>) -> Result<MediaIndex, IndexError
             }
         }
         if let (Some(t), Some(c)) = (time, cluster) {
-            points.push((c, t));
+            // Positions count from the segment's data; any 64-bit value can be stored there.
+            let pos = (data as u64)
+                .checked_add(c)
+                .ok_or(IndexError::NoIndex("a broken WebM index"))?;
+            points.push((pos, t));
         }
     }
     points.sort_unstable();
@@ -410,8 +419,8 @@ fn parse_webm(b: &[u8], file_size: Option<u64>) -> Result<MediaIndex, IndexError
             Piece {
                 start: secs(t),
                 end: next.map(|n| secs(n.1)).unwrap_or(total),
-                from: data as u64 + c,
-                to: next.map(|n| data as u64 + n.0).unwrap_or(last_end),
+                from: c,
+                to: next.map(|n| n.0).unwrap_or(last_end),
             }
         })
         .collect();
@@ -556,6 +565,39 @@ mod tests {
         }
     }
 
+    #[test]
+    fn mp4_sidx_values_that_wrap_are_refused() {
+        // sidx v1: 64-bit start time and first offset, one reference of (size, duration).
+        let sidx_v1 = |ept: u64, first: u64, size: u32, dur: u32| {
+            let mut d = vec![1, 0, 0, 0];
+            d.extend_from_slice(&1u32.to_be_bytes());
+            d.extend_from_slice(&1000u32.to_be_bytes());
+            d.extend_from_slice(&ept.to_be_bytes());
+            d.extend_from_slice(&first.to_be_bytes());
+            d.extend_from_slice(&[0, 0, 0, 1]);
+            d.extend_from_slice(&size.to_be_bytes());
+            d.extend_from_slice(&dur.to_be_bytes());
+            d.extend_from_slice(&0x9000_0000u32.to_be_bytes());
+            mp4_box(b"sidx", &d)
+        };
+        let file = |sidx: Vec<u8>| {
+            let mut f = mp4_box(b"ftyp", b"dash\0\0\0\0iso6");
+            f.extend(mp4_box(b"moov", &[7u8; 40]));
+            f.extend(sidx);
+            f
+        };
+        // The first offset, the end of the piece, then the end time go past u64::MAX.
+        for (ept, first) in [(0, u64::MAX), (0, u64::MAX - 200), (u64::MAX - 1000, 0)] {
+            assert!(matches!(
+                parse(&file(sidx_v1(ept, first, 1000, 2000)), None),
+                Err(IndexError::NoIndex(_))
+            ));
+        }
+        let ix = parse(&file(sidx_v1(5000, 1 << 40, 1000, 2000)), None).unwrap();
+        assert_eq!((ix.pieces[0].start, ix.pieces[0].end), (5.0, 7.0));
+        assert_eq!(ix.pieces[0].to - ix.pieces[0].from, 1000);
+    }
+
     // WebM builders: element = id bytes + 8-byte size + body.
     fn el(id: &[u8], body: &[u8]) -> Vec<u8> {
         let mut v = id.to_vec();
@@ -648,6 +690,30 @@ mod tests {
         assert!(matches!(
             parse(&f[..ebml.len() + 30], None),
             Err(IndexError::NeedMore(_))
+        ));
+    }
+
+    #[test]
+    fn webm_cluster_position_that_wraps_is_refused() {
+        let ebml = el(&[0x1A, 0x45, 0xDF, 0xA3], &uint(&[0x42, 0x82], 1));
+        let info = el(
+            &[0x15, 0x49, 0xA9, 0x66],
+            &uint(&[0x2A, 0xD7, 0xB1], 1_000_000),
+        );
+        let tracks = el(&[0x16, 0x54, 0xAE, 0x6B], &[5u8; 20]);
+        let cues = el(
+            &[0x1C, 0x53, 0xBB, 0x6B],
+            &[cue(0, 1000), cue(4000, u64::MAX)].concat(),
+        );
+        // A segment of unknown size: the last piece ends at the file size.
+        let mut f = ebml;
+        f.extend([
+            0x18, 0x53, 0x80, 0x67, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        ]);
+        f.extend([info, tracks, cues, el(&[0x1F, 0x43, 0xB6, 0x75], &[])].concat());
+        assert!(matches!(
+            parse(&f, Some(99_999)),
+            Err(IndexError::NoIndex(_))
         ));
     }
 }
