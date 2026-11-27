@@ -1,0 +1,138 @@
+<!--
+title: Chrome Downloads Slow? Why It Happens and 7 Fixes That Help (2026)
+description: Why Chrome downloads slowly or gets stuck on “Starting…”, how to tell if it’s Chrome, your network or the server, the parallel downloading flag, and when a download manager actually helps.
+og_title: Chrome downloads slow? 7 fixes that actually help
+crumb: Chrome downloads slow
+headline: Chrome downloads slow? Why it happens and what actually helps
+published: 2026-11-27
+-->
+<section class="lp-hero" aria-labelledby="lp-title">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Prism</a></li><li><a href="/guides/">Guides</a></li><li aria-current="page">Chrome downloads slow</li></ol></nav>
+      <p class="eyebrow">Guide</p>
+      <h1 class="lp-title" id="lp-title">Chrome downloads slow? Here’s what actually helps</h1>
+      <p class="lede">Chrome itself is rarely the slow part. It downloads every file over a single connection, so it’s only as fast as that one connection to the server — and many servers deliberately keep each connection slow. Here’s how to tell what’s going on, and the fixes that work in Chrome, Edge, Brave and other Chromium browsers.</p>
+      {{byline}}
+    </div>
+  </div>
+</section>
+
+<section class="section article-section" aria-label="Guide">
+  <div class="container">
+    <article class="article">
+      <div class="tldr">
+        <p>Short answer</p>
+        <ol>
+          <li>Download the same file in another browser. If it’s just as slow, Chrome isn’t the problem — the server or your network is.</li>
+          <li>Turn off extensions that touch downloads or traffic (VPNs, proxies, other download managers) and try again.</li>
+          <li>If big files from one site are always slow, that server limits each connection. A download manager that uses several connections fixes exactly that.</li>
+        </ol>
+      </div>
+
+      <nav class="toc" aria-label="Contents">
+        <p>In this guide</p>
+        <ol>
+          <li><a href="#why">Why Chrome downloads can be slow</a></li>
+          <li><a href="#test">1. Test: is it Chrome, the network or the server?</a></li>
+          <li><a href="#extensions">2. Rule out extensions</a></li>
+          <li><a href="#location">3. Check where Chrome saves files</a></li>
+          <li><a href="#vpn">4. Check the VPN or proxy</a></li>
+          <li><a href="#parallel">5. Try Chrome’s parallel downloading flag</a></li>
+          <li><a href="#manager">6. Hand big downloads to a download manager</a></li>
+          <li><a href="#update">7. Update Chrome and restart it</a></li>
+          <li><a href="#starting">Stuck on “Starting…” or at 100%</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="why">Why Chrome downloads can be slow</h2>
+      <ul>
+        <li><strong>One connection per file.</strong> Chrome fetches a file over one connection. File hosts, mirrors and some cloud services cap the speed of each connection, so one connection can’t reach your line speed.</li>
+        <li><strong>The network.</strong> Weak Wi-Fi, other devices streaming or updating, or a VPN.</li>
+        <li><strong>Something between Chrome and the file:</strong> an extension that inspects or reroutes traffic, a proxy, or a cloud-synced download folder.</li>
+      </ul>
+      <p>Clearing the cache, cookies or history doesn’t change download speed, so you can skip that common advice.</p>
+
+      <h2 id="test">1. Test: is it Chrome, the network or the server?</h2>
+      <p>Run a speed test, then download the same file in Edge or Firefox. Remember that speed tests show megabits and Chrome shows megabytes: 100 Mbps is about 12 MB/s.</p>
+      <ul>
+        <li><strong>Both browsers slow, speed test slow:</strong> it’s your connection. See <a href="/guides/download-faster/">how to download faster on a PC</a>.</li>
+        <li><strong>Both browsers slow, speed test fast:</strong> it’s the server. Try another mirror or more connections (fix 6).</li>
+        <li><strong>Only Chrome slow:</strong> it’s an extension, a setting or the Chrome profile. Fixes 2–4.</li>
+      </ul>
+
+      <h2 id="extensions">2. Rule out extensions</h2>
+      <p>The quickest test is an <strong>Incognito window</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>), where extensions are off unless you allowed them. If the download is fast there, open <code>chrome://extensions</code> and turn extensions off one by one. The usual suspects are VPN and proxy extensions, “download accelerator” extensions, and the browser extension of a download manager you no longer use (for example IDM Integration Module), which keeps taking over downloads for as long as it’s turned on.</p>
+
+      <h2 id="location">3. Check where Chrome saves files</h2>
+      <p>Open <code>chrome://settings/downloads</code>. If the location is a network drive, a USB stick or a folder that OneDrive, Dropbox or Google Drive syncs, the drive or the sync app can slow the download down. Pick a local folder on your internal drive, and move the file afterwards.</p>
+
+      <h2 id="vpn">4. Check the VPN or proxy</h2>
+      <p>A VPN app or extension sends the download through its own server, sometimes on another continent. Switch to a server near you, or pause the VPN for a trusted download and compare. Also check <strong>Settings → System → Open your computer’s proxy settings</strong> for a proxy you didn’t set up.</p>
+
+      <h2 id="parallel">5. Try Chrome’s parallel downloading flag</h2>
+      <p>Chrome and Edge have an experimental setting that splits a download into a few parts. If your version still offers it:</p>
+      <ol>
+        <li>Open <code>chrome://flags/#enable-parallel-downloading</code> (in Edge: <code>edge://flags/#enable-parallel-downloading</code>).</li>
+        <li>Set <strong>Parallel downloading</strong> to <strong>Enabled</strong> and click <strong>Relaunch</strong>.</li>
+      </ol>
+      <p>Keep your expectations realistic. Flags are experiments that can change or disappear, the browser uses only a few parts, and as a browser engineer <a href="https://textslashplain.com/2024/11/22/parallel-downloading/" rel="noopener">explains in detail</a>, parallel connections only help when the server throttles each connection or the network is unstable. On a fast server, your line is already the limit.</p>
+
+      <h2 id="manager">6. Hand big downloads to a download manager</h2>
+      <p>For large files from servers that limit each connection, a download manager is the reliable fix. It downloads one file over many connections, keeps every connection busy until the end, and resumes after a dropped connection instead of starting over.</p>
+      <p><a href="/">Prism</a> is free and open source, for Windows, macOS and Linux. Add the <a href="/browser-extension/">Prism extension</a> to Chrome, Edge, Brave, Opera or Vivaldi, and clicking a download link opens Prism instead of Chrome’s own download bar. Hold <kbd>Alt</kbd> while clicking to let Chrome download a file as usual.</p>
+      <figure>
+        <div class="shot">
+          <picture class="tv-dark"><source type="image/avif" srcset="/assets/img/capture-dark.avif"><img src="/assets/img/capture-dark.webp" width="1140" height="900" alt="Prism’s download window after clicking a link in Chrome: file name, size, folder and a Download button." loading="lazy" decoding="async"></picture>
+          <picture class="tv-light"><source type="image/avif" srcset="/assets/img/capture-light.avif"><img src="/assets/img/capture-light.webp" width="1140" height="900" alt="The same download window in the light theme." loading="lazy" decoding="async"></picture>
+        </div>
+        <figcaption>Click a link in Chrome and Prism takes the download over.</figcaption>
+      </figure>
+      <p>In our tests, a 1 GiB file from a server that caps each connection downloaded about 15× faster this way (<a href="/#benchmarks">benchmarks</a>). On a server without limits, every tool reaches the same speed: your line’s.</p>
+
+      <h2 id="update">7. Update Chrome and restart it</h2>
+      <p>Open <code>chrome://settings/help</code>; Chrome checks for an update and asks you to relaunch. A browser that has been open for weeks with hundreds of tabs can also slow down in general — a restart is a cheap test.</p>
+
+      <h2 id="starting">Stuck on “Starting…” or at 100%</h2>
+      <ul>
+        <li><strong>“Starting…” for a long time:</strong> usually the server preparing the file (common for generated zips and exports), or a slow redirect chain. Waiting or retrying is all you can do in the browser.</li>
+        <li><strong>A pause at 100%:</strong> Chrome and your antivirus check the finished file. Large archives take a few seconds longer. If a file is blocked, Chrome says so in <code>chrome://downloads</code>.</li>
+        <li><strong>“Failed – Network error”:</strong> see <a href="/guides/resume-failed-download/">how to resume a failed download</a>.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="faq" aria-labelledby="faq-title" style="padding-top:0">
+  <div class="container faq-wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2 class="h2" id="faq-title">Slow Chrome downloads, answered.</h2>
+    </div>
+    <div class="accordion reveal d1" data-faq>
+      <details class="acc" open><summary>Why are my Chrome downloads so slow when my internet is fast?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Chrome downloads each file over one connection, and many servers limit how fast one connection may go. Speed tests use many connections to nearby servers, so they look much faster. Extensions, VPNs and a cloud-synced download folder can also slow Chrome down.</p></div></details>
+      <details class="acc"><summary>Does the parallel downloading flag make Chrome faster?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Sometimes, on servers that throttle each connection. It is an experimental flag, it splits a file into only a few parts, and it doesn’t help when the server or your line is already the limit.</p></div></details>
+      <details class="acc"><summary>Is Edge or Firefox faster than Chrome for downloads?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Not meaningfully. They all download a file over a single connection by default. If one browser is much faster than another on the same file, look for an extension or a proxy setting in the slow one.</p></div></details>
+      <details class="acc"><summary>How do I make Chrome download faster?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Fix the bottleneck: use a cable or 5 GHz Wi-Fi, pause other downloads and the VPN, save to a local drive, and turn off extensions that reroute traffic. For big files from slow servers, send the download to a download manager that uses several connections, such as Prism.</p></div></details>
+      <details class="acc"><summary>Can I still use Chrome’s own downloads with a download manager installed?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Yes. With Prism’s extension, hold <kbd>Alt</kbd> while clicking a link to let Chrome download it, or click the extension’s icon and choose <strong>Pause capture</strong>.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="more-guides-title" style="padding-top:0">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Guides</p>
+      <h2 class="h2" id="more-guides-title">More guides.</h2>
+    </div>
+    {{guides}}
+  </div>
+</section>
+
+{{cta}}

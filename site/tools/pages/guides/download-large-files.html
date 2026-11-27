@@ -1,0 +1,148 @@
+<!--
+title: How to Download Large Files Faster and Without Failing (2026 Guide)
+description: Downloading a 10, 50 or 100 GB file? Check space and the 4 GB FAT32 limit, stop sleep from killing it, speed it up with multiple connections, resume after drops and verify it with a SHA-256 checksum.
+og_title: How to download large files fast — and without failing
+crumb: Download large files
+headline: How to download large files faster and without failing
+published: 2026-11-27
+-->
+<section class="lp-hero" aria-labelledby="lp-title">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Prism</a></li><li><a href="/guides/">Guides</a></li><li aria-current="page">Download large files</li></ol></nav>
+      <p class="eyebrow">Guide</p>
+      <h1 class="lp-title" id="lp-title">How to download large files fast — and without failing</h1>
+      <p class="lede">A 50 GB game backup, a Linux ISO or a local AI model. With large files, speed matters less than one thing: getting a complete, working file on the first try. Six steps, from the checks before you start to the checksum at the end.</p>
+      {{byline}}
+    </div>
+  </div>
+</section>
+
+<section class="section article-section" aria-label="Guide">
+  <div class="container">
+    <article class="article">
+      <div class="tldr">
+        <p>Short answer</p>
+        <ol>
+          <li>Check free space — and that the drive isn’t FAT32, which can’t store files over 4 GB.</li>
+          <li>Use a cable, and stop the computer from sleeping during the download.</li>
+          <li>Use a download manager: several connections for speed, automatic resume for reliability.</li>
+          <li>Compare the SHA-256 checksum when the publisher lists one.</li>
+        </ol>
+      </div>
+
+      <nav class="toc" aria-label="Contents">
+        <p>In this guide</p>
+        <ol>
+          <li><a href="#space">1. Check space and the file system</a></li>
+          <li><a href="#connection">2. Give it a stable connection</a></li>
+          <li><a href="#sleep">3. Don’t let the computer sleep</a></li>
+          <li><a href="#manager">4. Use a download manager, not the browser</a></li>
+          <li><a href="#night">5. Schedule it for the night</a></li>
+          <li><a href="#verify">6. Verify the file with a checksum</a></li>
+          <li><a href="#time">How long will it take?</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="space">1. Check space and the file system</h2>
+      <p>You need the file’s full size free on the target drive — and if it’s an archive, room to unpack it too, often about twice the size.</p>
+      <p>Then check the file system. Many USB sticks and SD cards come formatted as <strong>FAT32</strong>, which can’t hold any single file larger than 4 GB; the download fails or the copy stops at exactly 4 GB. Use a drive formatted as <strong>NTFS</strong> (Windows), <strong>APFS</strong> (Mac), <strong>ext4</strong> (Linux) or <strong>exFAT</strong> (all three). On Windows, right-click the drive in File Explorer → <strong>Properties</strong> to see its file system.</p>
+
+      <h2 id="connection">2. Give it a stable connection</h2>
+      <p>On a two-hour download, every Wi-Fi hiccup is a chance to fail. Plug in an Ethernet cable if you can; otherwise stay close to the router on 5 GHz. Pause cloud sync, game launchers and other big downloads so they don’t compete for the line. If you use a VPN, pick a server close to you or pause it for a trusted source.</p>
+
+      <h2 id="sleep">3. Don’t let the computer sleep</h2>
+      <p>Sleep closes every connection, and many browsers then mark the download as failed. Either set sleep to <em>Never</em> while you download:</p>
+      <ul>
+        <li><strong>Windows 11:</strong> Settings → System → Power &amp; battery → Screen, sleep &amp; hibernate timeouts.</li>
+        <li><strong>macOS:</strong> System Settings → Battery → Options (on a desktop Mac: Energy) → turn on <em>Prevent automatic sleeping on power adapter when the display is off</em>.</li>
+        <li><strong>Linux:</strong> your desktop’s power settings.</li>
+      </ul>
+      <p>— or use a download manager that keeps the computer awake by itself while it works, and lets it sleep again when it’s done. Prism does that on Windows, macOS and Linux.</p>
+
+      <h2 id="manager">4. Use a download manager, not the browser</h2>
+      <p>Browsers handle a 50 MB file fine. For 50 GB, a download manager wins on every point that matters:</p>
+      <ul>
+        <li><strong>Speed:</strong> it fetches one file over several connections at once. On servers that cap each connection — common for big files — that is many times faster; 15× in our 1 GiB test (<a href="/#benchmarks">benchmarks</a>).</li>
+        <li><strong>Resume:</strong> after a dropped connection, a crash or a reboot it continues where it stopped, instead of starting at 0%.</li>
+        <li><strong>No surprises at the end:</strong> a good one checks free space before it starts and writes straight into the final file, so there’s no long “assembling” step at 99%.</li>
+      </ul>
+      <p><a href="/">Prism</a> is a free, open-source download manager for Windows, macOS and Linux that does all of this, with up to 32 connections per file. For AI models from Hugging Face it downloads only the files you need and <a href="/hugging-face/">checks each one against its SHA-256</a> automatically.</p>
+      <figure>
+        <div class="shot">
+          <picture class="tv-dark"><source type="image/avif" srcset="/assets/img/details-dark.avif"><img src="/assets/img/details-dark.webp" width="1140" height="900" alt="Prism downloading a large file over 16 connections, with a map of finished and remaining parts." loading="lazy" decoding="async"></picture>
+          <picture class="tv-light"><source type="image/avif" srcset="/assets/img/details-light.avif"><img src="/assets/img/details-light.webp" width="1140" height="900" alt="The same download details in the light theme." loading="lazy" decoding="async"></picture>
+        </div>
+        <figcaption>When a connection finishes its part, it takes over half of the largest part left, so the end of the download doesn’t crawl.</figcaption>
+      </figure>
+      <p>For very popular large files, such as Linux ISOs, the publisher often offers a <strong>torrent</strong> too. It’s just as fast or faster and checks every piece as it arrives. See <a href="/guides/magnet-links/">how to open magnet links</a>.</p>
+
+      <h2 id="night">5. Schedule it for the night</h2>
+      <p>If the line is busy in the evening, or your provider has a night-time allowance, let the download run while you sleep. In Prism, put the download in a queue with a start time; on Windows it can even wake the computer to start, and on every system it can shut the computer down or put it to sleep when the queue is done.</p>
+      <figure>
+        <div class="shot">
+          <picture class="tv-dark"><source type="image/avif" srcset="/assets/img/scheduler-dark.avif"><img src="/assets/img/scheduler-dark.webp" width="1140" height="900" alt="Prism’s scheduler: a queue set to start at night and shut the computer down when it finishes." loading="lazy" decoding="async"></picture>
+          <picture class="tv-light"><source type="image/avif" srcset="/assets/img/scheduler-light.avif"><img src="/assets/img/scheduler-light.webp" width="1140" height="900" alt="The scheduler in the light theme." loading="lazy" decoding="async"></picture>
+        </div>
+      </figure>
+
+      <h2 id="verify">6. Verify the file with a checksum</h2>
+      <p>Publishers of large files often list a SHA-256 checksum next to the download. If your file’s checksum matches, it’s complete and unchanged, byte for byte. Run this in the folder with the file:</p>
+      <ul>
+        <li><strong>Windows (PowerShell):</strong> <code>Get-FileHash .\file.iso -Algorithm SHA256</code></li>
+        <li><strong>macOS (Terminal):</strong> <code>shasum -a 256 file.iso</code></li>
+        <li><strong>Linux:</strong> <code>sha256sum file.iso</code></li>
+      </ul>
+      <p>If the values differ, don’t use the file: download it again, ideally from another mirror.</p>
+
+      <h2 id="time">How long will it take?</h2>
+      <p>At full line speed, without any other traffic:</p>
+      <div class="table-wrap lp-table">
+        <table>
+          <thead><tr><th>File size</th><th>100 Mbps</th><th>300 Mbps</th><th>1 Gbps</th></tr></thead>
+          <tbody>
+            <tr><td>4 GB</td><td>about 6 min</td><td>about 2 min</td><td>under 1 min</td></tr>
+            <tr><td>20 GB</td><td>about 28 min</td><td>about 10 min</td><td>about 3 min</td></tr>
+            <tr><td>50 GB</td><td>about 70 min</td><td>about 24 min</td><td>about 7 min</td></tr>
+            <tr><td>100 GB</td><td>about 2 h 20 min</td><td>about 47 min</td><td>about 14 min</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>If you’re far slower than this, the server or the Wi-Fi is the bottleneck — see <a href="/guides/download-faster/">how to download faster on a PC</a>.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="faq" aria-labelledby="faq-title" style="padding-top:0">
+  <div class="container faq-wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2 class="h2" id="faq-title">Large downloads, answered.</h2>
+    </div>
+    <div class="accordion reveal d1" data-faq>
+      <details class="acc" open><summary>What is the best way to download a very large file?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Use a download manager over a cable connection, on a drive with enough space that isn’t FAT32, and keep the computer from sleeping. A download manager resumes after interruptions and can use several connections for speed. Verify the file with the publisher’s SHA-256 checksum at the end.</p></div></details>
+      <details class="acc"><summary>Why does my large download stop at exactly 4 GB?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>The target drive is formatted as FAT32, which can’t store files over 4 GB. Save to a drive formatted as NTFS, APFS, ext4 or exFAT instead.</p></div></details>
+      <details class="acc"><summary>Will my download continue if my PC goes to sleep?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>No — sleep closes every connection. A browser may then mark it as failed. Set sleep to Never while downloading, or use a download manager that keeps the computer awake while it works and resumes if anything interrupts it.</p></div></details>
+      <details class="acc"><summary>How do I check that a large download isn’t corrupted?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Compare its SHA-256 checksum with the one the publisher lists: <code>Get-FileHash</code> in Windows PowerShell, <code>shasum -a 256</code> on a Mac, <code>sha256sum</code> on Linux. Matching values mean the file is complete and unchanged.</p></div></details>
+      <details class="acc"><summary>Is a torrent faster than a direct download for big files?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>For popular files with many people sharing them, often yes, and every piece is checked as it arrives. For rare files with few peers, a direct download from a good server is usually faster.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="more-guides-title" style="padding-top:0">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Guides</p>
+      <h2 class="h2" id="more-guides-title">More guides.</h2>
+    </div>
+    {{guides}}
+  </div>
+</section>
+
+{{cta}}

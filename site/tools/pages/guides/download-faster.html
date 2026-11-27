@@ -1,0 +1,161 @@
+<!--
+title: How to Download Faster on a PC: 9 Fixes That Actually Work (2026)
+description: Slow downloads on Windows, Mac or Linux? Find the real bottleneck in two minutes, then fix it: Mbps vs MB/s, Wi-Fi, background updates, VPNs, mirrors and multi-connection downloads.
+og_title: How to download faster on a PC — 9 fixes that actually work
+crumb: Download faster
+headline: How to download faster on a PC: 9 fixes that actually work
+published: 2026-11-27
+-->
+<section class="lp-hero" aria-labelledby="lp-title">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Prism</a></li><li><a href="/guides/">Guides</a></li><li aria-current="page">Download faster</li></ol></nav>
+      <p class="eyebrow">Guide</p>
+      <h1 class="lp-title" id="lp-title">How to download faster on a PC</h1>
+      <p class="lede">Most “speed up your internet” tips don’t touch the real problem. A slow download has exactly one bottleneck — your line, your Wi-Fi, something else using the connection, or the server. Find which one it is, and the fix is usually two minutes away.</p>
+      {{byline}}
+    </div>
+  </div>
+</section>
+
+<section class="section article-section" aria-label="Guide">
+  <div class="container">
+    <article class="article">
+      <div class="tldr">
+        <p>Short answer</p>
+        <ol>
+          <li>Run a speed test and divide the result by 8: a 100 Mbps plan downloads at about <strong>12 MB/s</strong>, not 100.</li>
+          <li>If the download is far below that, plug in a cable or move to 5 GHz Wi-Fi, and pause whatever else is downloading.</li>
+          <li>If only <em>some</em> sites are slow, the server is limiting you. Pick a closer mirror, or use a download manager that opens several connections at once.</li>
+        </ol>
+      </div>
+
+      <nav class="toc" aria-label="Contents">
+        <p>In this guide</p>
+        <ol>
+          <li><a href="#bottleneck">Find the bottleneck first</a></li>
+          <li><a href="#mbps">1. Mbps vs MB/s: check you’re not already at full speed</a></li>
+          <li><a href="#cable">2. Use a cable, or the right Wi-Fi band</a></li>
+          <li><a href="#background">3. Stop whatever else is downloading</a></li>
+          <li><a href="#updates">4. Limit Windows Update’s background downloads</a></li>
+          <li><a href="#vpn">5. Pause the VPN or pick a closer server</a></li>
+          <li><a href="#mirror">6. Download from a closer mirror</a></li>
+          <li><a href="#connections">7. Use more than one connection</a></li>
+          <li><a href="#disk">8. Save to a fast, local drive</a></li>
+          <li><a href="#router">9. Restart the router and update the network driver</a></li>
+          <li><a href="#myths">What doesn’t work</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="bottleneck">Find the bottleneck first</h2>
+      <p>Open a speed test (Speedtest by Ookla, fast.com or your provider’s own) on the same PC, then start your download and compare. Three outcomes, three different fixes:</p>
+      <ul>
+        <li><strong>The speed test is slow too.</strong> The problem is your connection at home: Wi-Fi, other devices, the router or the plan itself. Fixes 2–5 and 9.</li>
+        <li><strong>The speed test is fast, every download is slow.</strong> Something on this PC: a VPN, background apps, a slow target drive. Fixes 3–5 and 8.</li>
+        <li><strong>The speed test is fast, only one site is slow.</strong> That server is the bottleneck. It may be far away, busy, or limiting how fast each connection can go. Fixes 6 and 7.</li>
+      </ul>
+
+      <h2 id="mbps">1. Mbps vs MB/s: check you’re not already at full speed</h2>
+      <p>Internet plans and speed tests are measured in <strong>megabits</strong> per second (Mbps). Browsers and download managers show <strong>megabytes</strong> per second (MB/s). One byte is eight bits, so divide by 8:</p>
+      <div class="table-wrap lp-table">
+        <table>
+          <thead><tr><th>Your plan</th><th>Best realistic download speed</th></tr></thead>
+          <tbody>
+            <tr><td>50 Mbps</td><td>about 6 MB/s</td></tr>
+            <tr><td>100 Mbps</td><td>about 12 MB/s</td></tr>
+            <tr><td>300 Mbps</td><td>about 35 MB/s</td></tr>
+            <tr><td>1 Gbps</td><td>about 110–117 MB/s</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A few percent go to protocol overhead, so a 100 Mbps line showing 11.5 MB/s is already maxed out. Nothing on the PC can make it faster — only a faster plan can.</p>
+
+      <h2 id="cable">2. Use a cable, or the right Wi-Fi band</h2>
+      <p>Wi-Fi is the most common reason a fast plan gives slow downloads. Walls, distance and neighbours’ networks all cut its speed, and it gets worse the further you are from the router.</p>
+      <ul>
+        <li><strong>An Ethernet cable</strong> removes the problem completely. For a big download, it’s worth plugging in even a laptop.</li>
+        <li><strong>On Wi-Fi, use 5 GHz or 6 GHz</strong> instead of 2.4 GHz when you’re in the same room or the next one. Many routers show the bands as two network names; others pick automatically.</li>
+        <li><strong>Move closer</strong>, or move the router out of a cupboard. A mesh system or a cabled access point helps in large homes.</li>
+      </ul>
+
+      <h2 id="background">3. Stop whatever else is downloading</h2>
+      <p>Every device and app on your network shares the same line. Game launchers, cloud sync (OneDrive, Google Drive, Dropbox, iCloud), backups and 4K streams on the TV can each take most of it.</p>
+      <p>On Windows, open <strong>Task Manager</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Esc</kbd>) and sort the <strong>Processes</strong> tab by the <strong>Network</strong> column to see what is using the connection right now. On a Mac, open <strong>Activity Monitor → Network</strong>. Pause the culprits until your download is done.</p>
+
+      <h2 id="updates">4. Limit Windows Update’s background downloads</h2>
+      <p>Windows downloads updates in the background, and by default it can also share them with other PCs. If downloads are slow right after Patch Tuesday, this is often why. In Windows 11:</p>
+      <ol>
+        <li>Open <strong>Settings → Windows Update → Advanced options → Delivery Optimization</strong>.</li>
+        <li>Turn off <strong>Allow downloads from other devices</strong> if you don’t need it.</li>
+        <li>Under <strong>Advanced options</strong>, set a limit for how much bandwidth background updates may use.</li>
+      </ol>
+
+      <h2 id="vpn">5. Pause the VPN or pick a closer server</h2>
+      <p>A VPN sends everything through its own server, often in another country, and encrypts it on the way. That usually costs speed. For a large download from a site you trust, try a VPN server close to you, or pause the VPN and compare. The same goes for proxies and “data saver” features.</p>
+
+      <h2 id="mirror">6. Download from a closer mirror</h2>
+      <p>Linux distributions, open-source projects and many game and driver sites publish the same file on several servers (“mirrors”). A mirror in your country is often several times faster than the default one on another continent. Look for a <em>Mirrors</em> or <em>Other download locations</em> link next to the download button.</p>
+
+      <h2 id="connections">7. Use more than one connection</h2>
+      <p>A browser downloads a file over a single connection. Many servers — file hosts, mirrors, some cloud storage — cap the speed <em>per connection</em>, so one connection never reaches your line speed no matter how fast it is.</p>
+      <p>A download manager splits the file into parts and fetches them over several connections at once. In our tests on a server that caps each connection, a 1 GiB file came down at <strong>4 MiB/s over one connection and 61 MiB/s over many</strong> — about 15× faster (<a href="/#benchmarks">benchmarks</a>).</p>
+      <figure>
+        <div class="shot">
+          <picture class="tv-dark"><source type="image/avif" srcset="/assets/img/details-dark.avif"><img src="/assets/img/details-dark.webp" width="1140" height="900" alt="Prism downloading one file over 16 connections, each shown with its own speed, plus a map of the file’s parts." loading="lazy" decoding="async"></picture>
+          <picture class="tv-light"><source type="image/avif" srcset="/assets/img/details-light.avif"><img src="/assets/img/details-light.webp" width="1140" height="900" alt="The same download details in the light theme." loading="lazy" decoding="async"></picture>
+        </div>
+        <figcaption>One file, 16 connections: each part downloads at the same time.</figcaption>
+      </figure>
+      <p><a href="/">Prism</a> is a free, open-source download manager that does this on Windows, macOS and Linux: 8 connections by default, up to 32, and it notices when a server allows fewer and remembers that per site. Its browser extension sends downloads from Chrome, Edge or Firefox to it automatically.</p>
+      <p class="note"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span><strong>The honest part:</strong> if the server doesn’t limit connections, your line is the limit. On a normal 200 Mbps line, Prism, aria2 and curl all landed at the same ~25 MiB/s in our tests. More connections help with slow servers and unstable networks, not with a slow plan.</span></p>
+
+      <h2 id="disk">8. Save to a fast, local drive</h2>
+      <p>At gigabit speeds, the drive can become the bottleneck. Saving to an old USB stick, a network share or a folder that a cloud app syncs while you download slows things down. Download to an internal SSD first, then move the file. Antivirus scanning can also pause a download at the very end; that’s normal and takes seconds, not minutes.</p>
+
+      <h2 id="router">9. Restart the router and update the network driver</h2>
+      <p>Routers that have run for months sometimes slow down; a restart (unplug for 30 seconds) clears that. On Windows, check <strong>Device Manager → Network adapters</strong> or your PC maker’s support page for a newer Wi-Fi or Ethernet driver, especially on a new or freshly reinstalled PC. If speeds are still far below your plan on a cable, call your provider with the speed test results.</p>
+
+      <h2 id="myths">What doesn’t work</h2>
+      <ul>
+        <li><strong>“Internet booster” and RAM-cleaner apps.</strong> They can’t make your line or a server any faster.</li>
+        <li><strong>Registry and TCP tweaks.</strong> Modern Windows, macOS and Linux tune TCP automatically. Old tweaks from 2008 guides are more likely to hurt.</li>
+        <li><strong>Changing DNS to speed up a download.</strong> DNS only turns a name into an address before the download starts; it doesn’t change how fast the file arrives.</li>
+        <li><strong>Closing browser tabs.</strong> Idle tabs use almost no bandwidth. A tab that is streaming video does — pause that one.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="faq" aria-labelledby="faq-title" style="padding-top:0">
+  <div class="container faq-wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2 class="h2" id="faq-title">Download speed, answered.</h2>
+    </div>
+    <div class="accordion reveal d1" data-faq>
+      <details class="acc" open><summary>Why is my download speed slower than my internet speed?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Often it isn’t: plans are sold in megabits per second and downloads are shown in megabytes per second, so 100 Mbps means about 12 MB/s. If it really is slower, the usual causes are Wi-Fi, other apps using the line, a VPN, or a server that limits the speed of each connection.</p></div></details>
+      <details class="acc"><summary>Does a download manager really make downloads faster?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Only when the server is the bottleneck. On servers that cap each connection, downloading over several connections at once can be many times faster — 15× in our test. When the server doesn’t limit you, your line is the limit for every tool. A download manager still helps by resuming failed downloads instead of starting over.</p></div></details>
+      <details class="acc"><summary>How many connections should I use for one download?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Around 8 is a good default. Go up to 16 or 32 for servers that are clearly slow per connection. Some servers allow only a few connections; a good download manager notices that and uses what the server allows instead of failing.</p></div></details>
+      <details class="acc"><summary>Is Ethernet really faster than Wi-Fi?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Usually, yes, and it is far more stable. Wi-Fi speed drops with distance, walls and interference from nearby networks. On fast plans (500 Mbps and up), a cable is often the only way to get the full speed.</p></div></details>
+      <details class="acc"><summary>Why does a download start fast and then slow down?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Some servers allow a fast burst and then throttle. It can also be another app starting its own download, Wi-Fi conditions changing, or the drive filling its fast cache. Pausing and resuming will not help with a throttling server; more connections or another mirror will.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="more-guides-title" style="padding-top:0">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Guides</p>
+      <h2 class="h2" id="more-guides-title">More guides.</h2>
+    </div>
+    {{guides}}
+  </div>
+</section>
+
+{{cta}}

@@ -10,6 +10,14 @@ published (pages.yml deletes it before deploying).
   and `404.html` (noindex). The pages target real queries from Google's autocomplete
   (download manager for pc, download manager chrome extension, idm alternative for mac,
   hugging face download slow, download gguf from huggingface, ...).
+- Guides and comparisons (`ARTICLES` in `build-pages.py`, sources in `tools/pages/guides/*.html` and
+  `tools/pages/best-download-manager.html`, hub `/guides/`): how-to articles that answer real queries
+  (download faster on pc, chrome download slow fix, resume failed download, download large files,
+  how to download magnet links, make torrents download faster, best download manager). Each has a
+  visible byline, `published`/`updated` meta (Article JSON-LD), a FAQ and links to the other guides.
+  Rules: solve the reader's problem first and say plainly when Prism does *not* help; facts about other
+  apps must be checkable and listed under "Sources"; re-check the comparison every few months and bump
+  `updated`. No mass-produced pages (Google's scaled-content policy).
 - JSON-LD: `WebSite`, `Person`, `SoftwareApplication`, `SoftwareSourceCode` on the home page
   (the landing pages copy them), `WebPage` + `BreadcrumbList` on each landing page, and
   `FAQPage` written from each page's visible FAQ. Google stopped showing FAQ rich results in

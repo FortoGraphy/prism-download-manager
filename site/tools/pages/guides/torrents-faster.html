@@ -1,0 +1,127 @@
+<!--
+title: How to Make Torrents Download Faster: 8 Tips That Work (and 3 Myths)
+description: Torrent downloading slow even with many seeds? Why it happens and how to fix it: seed counts, opening a port, upload limits, VPNs, Wi-Fi and choosing files, plus the speed tricks that don’t work.
+og_title: How to make torrents download faster — 8 tips that work
+crumb: Faster torrents
+headline: How to make torrents download faster: 8 tips that work, and 3 myths
+published: 2026-11-27
+-->
+<section class="lp-hero" aria-labelledby="lp-title">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Prism</a></li><li><a href="/guides/">Guides</a></li><li aria-current="page">Faster torrents</li></ol></nav>
+      <p class="eyebrow">Guide</p>
+      <h1 class="lp-title" id="lp-title">How to make torrents download faster</h1>
+      <p class="lede">A torrent is only as fast as the people sharing it and how many of them can reach you. Most slow torrents come down to three things: too few seeds, a closed port, or an upload limit that makes other peers stop sending. These tips work in any BitTorrent client.</p>
+      {{byline}}
+    </div>
+  </div>
+</section>
+
+<section class="section article-section" aria-label="Guide">
+  <div class="container">
+    <article class="article">
+      <div class="tldr">
+        <p>Short answer</p>
+        <ol>
+          <li>Pick torrents with many <strong>seeds</strong> (people with the whole file).</li>
+          <li>Let other peers connect to you: allow the client’s port in the router (UPnP or port forwarding) and the firewall.</li>
+          <li>Don’t throttle uploads to zero — limit them to about 80% of your upload speed instead.</li>
+          <li>Use a cable, pause other heavy traffic, and download only the files you need.</li>
+        </ol>
+      </div>
+
+      <nav class="toc" aria-label="Contents">
+        <p>In this guide</p>
+        <ol>
+          <li><a href="#seeds">1. Choose well-seeded torrents</a></li>
+          <li><a href="#port">2. Open the port so peers can reach you</a></li>
+          <li><a href="#upload">3. Set the upload limit right</a></li>
+          <li><a href="#files">4. Download only the files you need</a></li>
+          <li><a href="#fewer">5. Run fewer torrents at once</a></li>
+          <li><a href="#network">6. Use a cable and free up the line</a></li>
+          <li><a href="#vpn">7. Pick the right VPN server, or none</a></li>
+          <li><a href="#patience">8. Give a new or rare torrent time</a></li>
+          <li><a href="#myths">Myths that don’t help</a></li>
+          <li><a href="#prism">Torrents in Prism</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="seeds">1. Choose well-seeded torrents</h2>
+      <p><strong>Seeds</strong> (seeders) have the complete file; <strong>peers</strong> or leechers are still downloading. More seeds means more sources and more speed. When the same file is offered several times, take the one with the most seeds — and from an official source when there is one, such as a distribution’s own download page.</p>
+
+      <h2 id="port">2. Open the port so peers can reach you</h2>
+      <p>Two peers behind home routers can’t connect to each other unless one of them accepts incoming connections. If yours doesn’t, you can only talk to peers that do — often a fraction of everyone sharing the file. Opening the port is the single biggest fix for “many seeds, low speed”.</p>
+      <ul>
+        <li><strong>UPnP or NAT-PMP:</strong> turn it on in the router and in your client, and the client opens its port by itself.</li>
+        <li><strong>Port forwarding:</strong> otherwise, forward the client’s listening port (shown in its connection settings) to your computer in the router’s settings.</li>
+        <li><strong>Firewall:</strong> allow the client on private networks when your system asks.</li>
+      </ul>
+      <p>Many clients have a connection test or show an icon when the port is reachable. Some internet providers use carrier-grade NAT, which makes incoming connections impossible; then a VPN with port forwarding is the only way around it.</p>
+
+      <h2 id="upload">3. Set the upload limit right</h2>
+      <p>BitTorrent is give and take: peers prefer sending to peers that send back. Limiting uploads to almost nothing makes others stop sending to you. But maxing out the upload hurts too, because your downloads need a little upload bandwidth to acknowledge data. The sweet spot is an upload limit of about <strong>80% of your measured upload speed</strong>.</p>
+
+      <h2 id="files">4. Download only the files you need</h2>
+      <p>Many torrents contain extras: other languages, samples, bonus material. Untick what you don’t want when adding the torrent, and all the bandwidth goes to the files you do want.</p>
+
+      <h2 id="fewer">5. Run fewer torrents at once</h2>
+      <p>Ten torrents at once split your connection ten ways, and every torrent finishes later. Queue them so that two or three run at a time; the first ones finish sooner and start seeding to others.</p>
+
+      <h2 id="network">6. Use a cable and free up the line</h2>
+      <p>A torrent keeps hundreds of connections open, which weak Wi-Fi handles badly. Plug in a cable if you can, and pause streaming, cloud sync and game updates while it runs. The general tips in <a href="/guides/download-faster/">how to download faster on a PC</a> apply here too.</p>
+
+      <h2 id="vpn">7. Pick the right VPN server, or none</h2>
+      <p>A VPN adds a hop and usually blocks incoming connections (see tip 2). If you use one, choose a nearby server that allows peer-to-peer traffic, and one with port forwarding if your provider offers it. For legal downloads such as Linux ISOs, comparing with the VPN off shows how much it costs you.</p>
+
+      <h2 id="patience">8. Give a new or rare torrent time</h2>
+      <p>A torrent speeds up after the first minutes, as the client finds more peers through trackers, the DHT and other peers. A torrent with one or two seeds on slow connections will never be fast — check whether the same file is available as a direct download.</p>
+
+      <h2 id="myths">Myths that don’t help</h2>
+      <ul>
+        <li><strong>“Torrent booster” apps.</strong> They can’t create seeds that don’t exist, and some come bundled with adware.</li>
+        <li><strong>Setting thousands of connections.</strong> Past a few hundred, more connections just overload the router.</li>
+        <li><strong>Pasting huge tracker lists into every torrent.</strong> Extra trackers can help a torrent that has none or whose trackers are dead. For a healthy torrent, they add nothing.</li>
+      </ul>
+
+      <h2 id="prism">Torrents in Prism</h2>
+      <p><a href="/">Prism</a>, a free and open-source download manager, opens magnet links and .torrent files next to your ordinary downloads. You pick the files you want when adding a torrent, and the torrent resumes after a restart. It finds peers through trackers and the DHT.</p>
+      <p class="note"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span><strong>To be fair:</strong> Prism doesn’t accept incoming torrent connections yet and has no port or upload settings, so tips 2 and 3 can’t be tuned in it. It’s great for the occasional torrent alongside everything else. If you download rare torrents often, a dedicated client such as qBittorrent, with an open port, will usually be faster.</span></p>
+      <p>New to magnet links? Start with <a href="/guides/magnet-links/">how to open and download magnet links</a>.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="faq" aria-labelledby="faq-title" style="padding-top:0">
+  <div class="container faq-wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2 class="h2" id="faq-title">Slow torrents, answered.</h2>
+    </div>
+    <div class="accordion reveal d1" data-faq>
+      <details class="acc" open><summary>Why is my torrent downloading slowly even with many seeds?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Most often your port is closed, so you can only connect to the few peers that accept incoming connections. Turn on UPnP or forward the client’s port, allow it through the firewall, and check that a VPN isn’t blocking incoming connections. An upload limit set close to zero also slows downloads down.</p></div></details>
+      <details class="acc"><summary>Does limiting upload speed make torrents download faster?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Only up to a point. A maxed-out upload slows downloads, so a limit of about 80% of your upload speed helps. Limiting it to almost zero has the opposite effect: other peers send less to clients that don’t share.</p></div></details>
+      <details class="acc"><summary>Does a VPN slow down torrents?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Usually a little, from the extra hop and encryption, and a lot if it blocks incoming connections. A nearby server that allows peer-to-peer traffic and supports port forwarding keeps the loss small.</p></div></details>
+      <details class="acc"><summary>Do more trackers make a torrent faster?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Only when the torrent’s own trackers are dead or it has very few peers. Healthy torrents already find peers through their trackers, the DHT and peer exchange.</p></div></details>
+      <details class="acc"><summary>What is a good number of seeds?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>There’s no magic number, but a few dozen seeds usually fill an average home connection, while one or two seeds rarely do. Seeds on fast connections count for more than many on slow ones.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="more-guides-title" style="padding-top:0">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Guides</p>
+      <h2 class="h2" id="more-guides-title">More guides.</h2>
+    </div>
+    {{guides}}
+  </div>
+</section>
+
+{{cta}}

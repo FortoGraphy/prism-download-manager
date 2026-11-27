@@ -1,0 +1,137 @@
+<!--
+title: How to Resume a Failed Download in Chrome, Edge or Firefox (2026)
+description: “Failed – Network error” at 95%? How to resume an interrupted download in Chrome, Edge and Firefox, what .crdownload and .part files are, why some downloads can’t resume, and how to never start over again.
+og_title: How to resume a failed or interrupted download
+crumb: Resume a failed download
+headline: How to resume a failed or interrupted download in Chrome, Edge and Firefox
+published: 2026-11-27
+-->
+<section class="lp-hero" aria-labelledby="lp-title">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Prism</a></li><li><a href="/guides/">Guides</a></li><li aria-current="page">Resume a failed download</li></ol></nav>
+      <p class="eyebrow">Guide</p>
+      <h1 class="lp-title" id="lp-title">How to resume a failed download</h1>
+      <p class="lede">The Wi-Fi drops at 95% of a 6 GB file and the browser says “Failed”. Often you can still continue from where it stopped — if you don’t click the wrong button. Here’s how in Chrome, Edge and Firefox, why some downloads can’t be resumed, and how to make sure it never costs you the whole file again.</p>
+      {{byline}}
+    </div>
+  </div>
+</section>
+
+<section class="section article-section" aria-label="Guide">
+  <div class="container">
+    <article class="article">
+      <div class="tldr">
+        <p>Short answer</p>
+        <ol>
+          <li>Open the browser’s download list: <kbd>Ctrl</kbd>+<kbd>J</kbd> in Chrome and Edge, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd> in Firefox (<kbd>⌘</kbd> on a Mac).</li>
+          <li>Click <strong>Resume</strong> on the failed download. Don’t cancel or remove it first — that deletes the part already downloaded.</li>
+          <li>If there’s only <strong>Retry</strong>, the server can’t continue a download and it will start from zero. A download manager can’t change that, but it can stop it happening for every other file.</li>
+        </ol>
+      </div>
+
+      <nav class="toc" aria-label="Contents">
+        <p>In this guide</p>
+        <ol>
+          <li><a href="#chrome">Resume in Chrome and Edge</a></li>
+          <li><a href="#firefox">Resume in Firefox</a></li>
+          <li><a href="#cant">Why a download can’t be resumed</a></li>
+          <li><a href="#errors">What the error messages mean</a></li>
+          <li><a href="#partial">.crdownload and .part files</a></li>
+          <li><a href="#never">Never start a big download over again</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="chrome">Resume in Chrome and Edge</h2>
+      <ol>
+        <li>Press <kbd>Ctrl</kbd>+<kbd>J</kbd> (Mac: <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>) or open <code>chrome://downloads</code> — in Edge, <code>edge://downloads</code>.</li>
+        <li>Find the download marked as failed or interrupted.</li>
+        <li>Click <strong>Resume</strong>. The download continues from the last byte saved, if the server allows it.</li>
+      </ol>
+      <p>Chrome and Edge also try to resume on their own after short network drops. If a download has been sitting at “Failed – Network error” for a while, a manual Resume after your connection is back usually works.</p>
+
+      <h2 id="firefox">Resume in Firefox</h2>
+      <ol>
+        <li>Open the downloads list with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd> (Mac: <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>), or the arrow icon in the toolbar.</li>
+        <li>Click the retry arrow next to the failed download, or right-click it and choose <strong>Resume</strong> or <strong>Retry</strong>.</li>
+      </ol>
+      <p>Firefox continues from the partly downloaded file when the server supports it; otherwise it starts again.</p>
+
+      <h2 id="cant">Why a download can’t be resumed</h2>
+      <p>To continue, the browser asks the server for “the file from byte 5,812,000 onwards” (an HTTP range request). That works only when all of these are true:</p>
+      <ul>
+        <li><strong>The server supports range requests.</strong> Most file servers do. Some dynamically generated downloads (exports, on-the-fly zips) don’t.</li>
+        <li><strong>The link still works.</strong> Cloud storage and many download sites give out links that expire after minutes or hours. After that, resuming fails with “Forbidden” — open the download page again to get a fresh link.</li>
+        <li><strong>The partial file is still there.</strong> Cancelling or removing the download from the list deletes it, and so do some cleanup tools.</li>
+        <li><strong>The file on the server hasn’t changed.</strong> If it was replaced with a new version, the old part is useless and the download must start over.</li>
+      </ul>
+
+      <h2 id="errors">What the error messages mean</h2>
+      <div class="table-wrap lp-table">
+        <table>
+          <thead><tr><th>Message</th><th>What happened and what to do</th></tr></thead>
+          <tbody>
+            <tr><td>Failed – Network error / Network issue</td><td>The connection dropped: Wi-Fi, sleep, a VPN reconnecting. Fix the connection, then click Resume.</td></tr>
+            <tr><td>Failed – Forbidden</td><td>The server refused the request, usually because the link expired or needs you to be signed in. Start the download again from the website.</td></tr>
+            <tr><td>Failed – No file</td><td>The file is gone from the server, or the link was wrong.</td></tr>
+            <tr><td>Failed – Disk full</td><td>Not enough space. Free some up or choose another drive, then resume.</td></tr>
+            <tr><td>Failed – Virus detected / Blocked</td><td>Your antivirus or the browser blocked the file. Don’t override this unless you trust the source completely.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="partial">.crdownload and .part files</h2>
+      <p>While a file downloads, Chrome and Edge store it as <code>name.crdownload</code>, and Firefox as <code>name.part</code>. They hold the bytes received so far.</p>
+      <ul>
+        <li>As long as the download is still in the browser’s list, use Resume there.</li>
+        <li>Renaming the file doesn’t complete it. An incomplete video may partly play; an incomplete zip or installer won’t open.</li>
+        <li>Once the download has been removed from the list, browsers can’t pick up the partial file again. You’ll have to download it again.</li>
+      </ul>
+
+      <h2 id="never">Never start a big download over again</h2>
+      <p>Browsers do resume, but they give up easily, and closing the browser or a crash can lose the progress. For large files, a download manager is built for exactly this. <a href="/">Prism</a>, a free and open-source download manager for Windows, macOS and Linux:</p>
+      <ul>
+        <li><strong>Saves progress continuously</strong>, only after the data is safely on disk, so a crash, a reboot or a power cut costs seconds, not gigabytes.</li>
+        <li><strong>Checks the file hasn’t changed</strong> on the server before continuing (size, ETag and Last-Modified), so you never end up with a corrupted mix of two versions.</li>
+        <li><strong>Retries dropped connections by itself</strong>, and in our tests finished a download from a server that randomly cut connections where aria2 gave up.</li>
+        <li><strong>Keeps the computer awake</strong> while it downloads, so the PC doesn’t fall asleep halfway through.</li>
+      </ul>
+      <p>Its <a href="/browser-extension/">browser extension</a> hands downloads from Chrome, Edge, Brave, Opera, Vivaldi and Firefox to Prism with one click.</p>
+      <p class="note"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span><strong>One limit applies to every tool:</strong> if the server doesn’t support resuming, or the link has expired, nothing can continue the old download. A download manager just makes sure that it rarely has to.</span></p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="faq" aria-labelledby="faq-title" style="padding-top:0">
+  <div class="container faq-wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2 class="h2" id="faq-title">Failed downloads, answered.</h2>
+    </div>
+    <div class="accordion reveal d1" data-faq>
+      <details class="acc" open><summary>Can I resume a download in Chrome after it failed?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Usually yes. Open <code>chrome://downloads</code> and click Resume on the failed download. It works if the server supports range requests, the link hasn’t expired and the partial file still exists. If Chrome only offers Retry, the download starts from the beginning.</p></div></details>
+      <details class="acc"><summary>Why does my download keep failing with a network error?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>The connection drops for a moment: weak Wi-Fi, the computer going to sleep, a VPN reconnecting, or an overloaded server closing the connection. Use a cable if you can, stop the PC from sleeping, and use a download manager that reconnects and continues by itself.</p></div></details>
+      <details class="acc"><summary>How do I open a .crdownload file?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>You don’t: it’s an unfinished download. Resume it from <code>chrome://downloads</code> while it’s still listed there. Renaming it won’t complete the file.</p></div></details>
+      <details class="acc"><summary>Can a download manager resume a download that Chrome started?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Not from Chrome’s partial file. Start the download in the download manager instead — with Prism’s extension that happens automatically when you click the link — and from then on it can always be resumed.</p></div></details>
+      <details class="acc"><summary>Why does “Resume” start from 0%?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>The server doesn’t support continuing a download, or the file on the server changed, so the old part can’t be reused. Every browser and download manager has to start over in that case.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="more-guides-title" style="padding-top:0">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Guides</p>
+      <h2 class="h2" id="more-guides-title">More guides.</h2>
+    </div>
+    {{guides}}
+  </div>
+</section>
+
+{{cta}}
