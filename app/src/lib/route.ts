@@ -23,7 +23,12 @@ const WITH_ID = ["capture", "batch", "video", "complete", "details", "progress"]
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, "").replace(/^\/+/, "");
   const [kind = "", ...rest] = path.split("/");
-  const arg = decodeURIComponent(rest.join("/"));
+  let arg = "";
+  try {
+    arg = decodeURIComponent(rest.join("/"));
+  } catch {
+    return { name: "main" };
+  }
   switch (kind) {
     case "addurl":
     case "mini":

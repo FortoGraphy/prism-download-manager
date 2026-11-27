@@ -14,8 +14,8 @@ Don't open a public issue, discussion or pull request for it.
 A useful report includes:
 
 * the Prism version, the operating system, and the browser if the extension is involved;
-* the component: app, download engine, native messaging host, browser extension, updater, or
-  the build and release workflows;
+* the component: app, prism-web, download engine, native messaging host, browser extension,
+  updater, or the build and release workflows;
 * steps or a proof of concept to reproduce it;
 * the impact: who is affected, and under which conditions.
 
@@ -28,9 +28,10 @@ A useful report includes:
 
 ## Scope
 
-In scope: the desktop app, the download, video and torrent engines, the native messaging host
-and its browser registration, the browser extension, the local connection between them, the
-in-app updater, and the build and release workflows.
+In scope: the desktop app, prism-web, the download, video and torrent engines, the native
+messaging host and its browser registration, the browser extension, the local connection between
+them, the in-app updater, and the build and release workflows. Protect prism-web's bearer token
+like a password, and use TLS (a reverse proxy) beyond loopback: plain HTTP exposes the token.
 
 Out of scope:
 

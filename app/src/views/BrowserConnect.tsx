@@ -101,13 +101,19 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
 
   const name = SHORT[current] ?? current;
   const paste = OS === "mac" ? "⌘ V" : "Ctrl V";
+  const copyStoreLink = async () => {
+    if (await copyText(firefox ? FIREFOX_ADDON_URL : EXTENSION_STORE_URL)) toast(t("Store link copied"), { kind: "success", ms: 1800 });
+  };
   const openPage = async () => {
     const copied = await copyText(PAGE[current]);
-    let opened = true;
-    try {
-      await api.openBrowser(current);
-    } catch {
-      opened = false;
+    let opened = false;
+    if (!webMode) {
+      try {
+        await api.openBrowser(current);
+        opened = true;
+      } catch {
+        // The address is on the clipboard even when the browser can't start.
+      }
     }
     toast(copied ? t("Address copied") : t("Type {address}", { address: PAGE[current] }), {
       kind: copied ? "success" : undefined,
@@ -118,15 +124,17 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
     });
   };
   const openStore = async () => {
+    if (webMode) {
+      await copyStoreLink();
+      return;
+    }
     try {
       await api.openExtensionStore(current);
     } catch {
       toast(t("Couldn't open the browser"), { body: t("Copy the store link and open it in your browser."), ms: 6000 });
     }
   };
-  const copyStoreLink = async () => {
-    if (await copyText(firefox ? FIREFOX_ADDON_URL : EXTENSION_STORE_URL)) toast(t("Store link copied"), { kind: "success", ms: 1800 });
-  };
+  const pageAction = webMode ? t("Copy address") : t("Copy & open {browser}", { browser: name });
   const addLabel = firefox ? "Add to Firefox" : (ADD_LABEL[current] ?? "Add to Chrome");
   const copyFolder = async () => {
     if (folder && (await copyText(folder))) toast(t("Folder path copied"), { kind: "success", ms: 1800 });
@@ -170,15 +178,22 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
             <div className="bstep__txt">
               <div className="bstep__t">{t("Remove the Prism you added by hand")}</div>
               <div className="bstep__d">
-                {tr("The store version updates by itself. On {address} click {button} under Prism. The button copies the address and opens {browser}.", {
-                  address: <code className="selectable">{PAGE[current]}</code>,
-                  button: <b>Remove</b>,
-                  browser: name,
-                })}
+                {webMode ? (
+                  <>
+                    <code className="selectable">{PAGE[current]}</code>{" "}
+                    {t("Open {browser}, then click the address bar, press {keys} and Enter.", { browser: name, keys: paste })}
+                  </>
+                ) : (
+                  tr("The store version updates by itself. On {address} click {button} under Prism. The button copies the address and opens {browser}.", {
+                    address: <code className="selectable">{PAGE[current]}</code>,
+                    button: <b>Remove</b>,
+                    browser: name,
+                  })
+                )}
               </div>
             </div>
             <button type="button" className="btn btn--sm" onClick={openPage}>
-              <Icon name="copy" size={14} /> {t("Copy & open {browser}", { browser: name })}
+              <Icon name="copy" size={14} /> {pageAction}
             </button>
           </li>
         )}
@@ -191,14 +206,18 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
                 ? t("Edge asks once to allow extensions from other stores: click {button} at the top of the page.", { button: "Allow" })
                 : current === "opera"
                   ? t("Opera first offers its free “{addon}” add-on: add it, then come back to the page.", { addon: "Install Chrome Extensions" })
-                  : t("The store page opens in {browser}.", { browser: name })}{" "}
-              <button type="button" className="linkbtn" onClick={copyStoreLink}>
-                {t("Copy link")}
-              </button>
+                  : webMode
+                    ? t("Copy the store link and open it in your browser.")
+                    : t("The store page opens in {browser}.", { browser: name })}{" "}
+              {!webMode && (
+                <button type="button" className="linkbtn" onClick={copyStoreLink}>
+                  {t("Copy link")}
+                </button>
+              )}
             </div>
           </div>
           <button type="button" className="btn btn--primary" onClick={openStore}>
-            <Icon name="browser" size={15} /> {t("Open in {browser}", { browser: name })}
+            <Icon name={webMode ? "copy" : "browser"} size={15} /> {webMode ? t("Copy link") : t("Open in {browser}", { browser: name })}
           </button>
         </li>
         <li className="bstep">
@@ -270,21 +289,28 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
                 <div className="bstep__txt">
                   <div className="bstep__t">{t("Open the add-ons debugging page")}</div>
                   <div className="bstep__d">
-                    {tr("The button copies {address} and opens {browser} — click its address bar, press {keys} and {enter}.", {
-                      address: <code className="selectable">{PAGE[current]}</code>,
-                      browser: name,
-                      keys: paste.split(" ").map((k, i) => (
-                        <span key={k}>
-                          {i > 0 && " "}
-                          <span className="kbd">{k}</span>
-                        </span>
-                      )),
-                      enter: <span className="kbd">Enter</span>,
-                    })}
+                    {webMode ? (
+                      <>
+                        <code className="selectable">{PAGE[current]}</code>{" "}
+                        {t("Open {browser}, then click the address bar, press {keys} and Enter.", { browser: name, keys: paste })}
+                      </>
+                    ) : (
+                      tr("The button copies {address} and opens {browser} — click its address bar, press {keys} and {enter}.", {
+                        address: <code className="selectable">{PAGE[current]}</code>,
+                        browser: name,
+                        keys: paste.split(" ").map((k, i) => (
+                          <span key={k}>
+                            {i > 0 && " "}
+                            <span className="kbd">{k}</span>
+                          </span>
+                        )),
+                        enter: <span className="kbd">Enter</span>,
+                      })
+                    )}
                   </div>
                 </div>
                 <button type="button" className="btn btn--sm" onClick={openPage}>
-                  <Icon name="copy" size={14} /> {t("Copy & open {browser}", { browser: name })}
+                  <Icon name="copy" size={14} /> {pageAction}
                 </button>
               </li>
               <li className="bstep">
@@ -329,11 +355,18 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
                 <div className="bstep__txt">
                   <div className="bstep__t">{t("Open the extensions page")}</div>
                   <div className="bstep__d">
-                    {tr("The button copies {address} and opens {browser}.", { address: <code className="selectable">{PAGE[current]}</code>, browser: name })}
+                    {webMode ? (
+                      <>
+                        <code className="selectable">{PAGE[current]}</code>{" "}
+                        {t("Open {browser}, then click the address bar, press {keys} and Enter.", { browser: name, keys: paste })}
+                      </>
+                    ) : (
+                      tr("The button copies {address} and opens {browser}.", { address: <code className="selectable">{PAGE[current]}</code>, browser: name })
+                    )}
                   </div>
                 </div>
                 <button type="button" className="btn btn--sm" onClick={openPage}>
-                  <Icon name="copy" size={14} /> {t("Copy & open {browser}", { browser: name })}
+                  <Icon name="copy" size={14} /> {pageAction}
                 </button>
               </li>
               <li className="bstep">

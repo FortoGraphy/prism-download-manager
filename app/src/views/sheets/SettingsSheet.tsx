@@ -4,7 +4,7 @@ import { type ReactNode, type RefObject, useEffect, useRef, useState } from "rea
 import { ListField, NumberField, RateField, Row, Segmented, Select, Slider, Switch, TextField } from "../../components/Controls";
 import { BrandTile } from "../../components/LogoMark";
 import { Icon, type IconName } from "../../design/icons";
-import { type DeepPartial, patchSettings } from "../../lib/actions";
+import { type DeepPartial, hasBlockedWebSettings, patchSettings, WEB_SETTINGS_RECOVERY_PATCH } from "../../lib/actions";
 import { api, webMode, type HfContext, type IntegrationStatus, type ToolStatus } from "../../lib/api";
 import { formatDate } from "../../lib/format";
 import { LANGUAGES, t, tk } from "../../lib/i18n";
@@ -158,6 +158,18 @@ export function SettingsSheet({ section }: { section?: string }) {
       <section className="scontent" aria-label={t(meta.label)}>
         <div className="sbody" key={cur} ref={body}>
           <h1>{t(meta.label)}</h1>
+          {webMode && hasBlockedWebSettings(s) && (
+            <Group title={t("Desktop-only settings")}>
+              <Row
+                title={t("Settings from the desktop app")}
+                hint={t("These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.")}
+              >
+                <button type="button" className="btn btn--primary" onClick={() => save(WEB_SETTINGS_RECOVERY_PATCH)}>
+                  {t("Remove desktop-only values")}
+                </button>
+              </Row>
+            </Group>
+          )}
           <SectionBody id={cur} s={s} />
         </div>
       </section>
@@ -462,21 +474,19 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
                 { value: "auto", label: t("Automatic") },
                 { value: "defender", label: "Microsoft Defender" },
                 { value: "clamav", label: "ClamAV" },
-                { value: "custom", label: t("Custom command") },
+                ...(webMode ? [] : [{ value: "custom" as const, label: t("Custom command") }]),
               ]}
               width={200}
             />
           </Row>
-          {s.antivirus.kind === "custom" && (
+          {!webMode && s.antivirus.kind === "custom" && (
             <>
               <Row title={t("Program")}>
                 <div className="withbtn">
                   <TextField value={s.antivirus.command} onCommit={(v) => save({ antivirus: { command: v } })} label={t("Scanner program")} mono />
-                  {!webMode && (
-                    <button type="button" className="btn" onClick={() => void pickFile([{ name: t("Programs"), extensions: ["exe", "cmd", "bat", "sh"] }]).then((p) => p && save({ antivirus: { command: p } }))}>
-                      {t("Browse…")}
-                    </button>
-                  )}
+                  <button type="button" className="btn" onClick={() => void pickFile([{ name: t("Programs"), extensions: ["exe", "cmd", "bat", "sh"] }]).then((p) => p && save({ antivirus: { command: p } }))}>
+                    {t("Browse…")}
+                  </button>
                 </div>
               </Row>
               <Row title={t("Arguments")} hint={t("[FILE] is replaced by the downloaded file path")}>
@@ -898,14 +908,16 @@ function Video({ s }: { s: Settings }) {
         </Row>
         <Toggle title={t("Number playlist videos")} hint={t("Starts each file name with the video's position in the playlist: 01 - Title")} value={s.video.numberPlaylistVideos} onChange={(v) => save({ video: { numberPlaylistVideos: v } })} />
       </Group>
-      <Group title={t("Custom tool paths")}>
-        <Row title="yt-dlp" hint={t("Empty = managed by Prism")}>
-          <TextField value={s.video.ytdlpPath} onCommit={(v) => save({ video: { ytdlpPath: v } })} label={t("yt-dlp path")} mono placeholder={t("Managed")} />
-        </Row>
-        <Row title="ffmpeg" hint={t("Empty = managed / system")}>
-          <TextField value={s.video.ffmpegPath} onCommit={(v) => save({ video: { ffmpegPath: v } })} label={t("ffmpeg path")} mono placeholder={t("Managed")} />
-        </Row>
-      </Group>
+      {!webMode && (
+        <Group title={t("Custom tool paths")}>
+          <Row title="yt-dlp" hint={t("Empty = managed by Prism")}>
+            <TextField value={s.video.ytdlpPath} onCommit={(v) => save({ video: { ytdlpPath: v } })} label={t("yt-dlp path")} mono placeholder={t("Managed")} />
+          </Row>
+          <Row title="ffmpeg" hint={t("Empty = managed / system")}>
+            <TextField value={s.video.ffmpegPath} onCommit={(v) => save({ video: { ffmpegPath: v } })} label={t("ffmpeg path")} mono placeholder={t("Managed")} />
+          </Row>
+        </Group>
+      )}
     </>
   );
 }
@@ -1067,13 +1079,16 @@ function About() {
       <h2>Prism</h2>
       <p className="text-secondary">{t("Version {version}", { version })}</p>
       <div className="inline" style={{ justifyContent: "center" }}>
-        <button type="button" className="btn" onClick={() => void checkForUpdates(true)}>
-          <Icon name="refresh-url" size={15} /> {t("Check for updates")}
-        </button>
+        {!webMode && (
+          <button type="button" className="btn" onClick={() => void checkForUpdates(true)}>
+            <Icon name="refresh-url" size={15} /> {t("Check for updates")}
+          </button>
+        )}
         <button type="button" className="btn btn--ghost" onClick={() => useUi.getState().openSheet({ kind: "whatsnew" })}>
           <Icon name="star" size={15} /> {t("What's new")}
         </button>
       </div>
+      {webMode && <p className="t-small text-tertiary">{t("Updates are available in the desktop app.")}</p>}
       <p className="lead">{t("One beam, many rays. A fast multi-connection download manager with browser integration, video downloading, queues, a scheduler and a site grabber.")}</p>
       <button type="button" className="linkbtn about__star" onClick={() => void openUrl(REPO_URL)}>
         {t("Prism is open source. Star it on GitHub")}

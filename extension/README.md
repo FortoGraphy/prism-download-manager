@@ -23,9 +23,11 @@ npm run e2e          # Playwright + real Chromium + real native host + mock app 
 
 Install for development:
 
-1. Build the host: `cargo build -p prism-native-host --release`.
-2. Register it: `target/release/prism-native-host register` (all browsers; per-user, no admin).
-   The Prism app does this itself on every start / from *Settings › Browser integration › Repair*.
+1. For native messaging (the default), build the host: `cargo build -p prism-native-host --release`.
+2. Register it only for that path: `target/release/prism-native-host register` (all browsers;
+   per-user, no admin). The Prism app does this itself on every start / from *Settings › Browser
+   integration › Repair*. With a prism-web server URL set in Options, no native host or
+   registration is needed.
 3. Chromium-family: `chrome://extensions` → Developer mode → *Load unpacked* → `extension/build/chromium`.
    Firefox: `about:debugging#/runtime/this-firefox` → *Load Temporary Add-on* → `extension/build/firefox/manifest.json`
    (or install `prism-firefox.zip` in Developer Edition/Nightly with signing disabled).
@@ -74,10 +76,12 @@ of them can win, so disable them while using Prism.
   stream opens the Prism menu over it, or the app's video window without the in-page button), Download selection links,
   all links, all images, all videos (collected in every frame with `scripting.executeScript`).
 * **Options** — capture on/off, video button, bypass key, extension list, MIME list, min size,
-  excluded sites, video sites, *Sync from Prism*, plus optional prism-web URL and bearer token.
+  excluded sites, video sites, *Sync from Prism*, plus optional prism-web server root URL and
+  bearer token.
 * **Direct HTTP transport** — when Options has a server URL, requests go to
   `POST {baseUrl}/v1/message` with `Authorization: Bearer <token>` instead of the native host.
-  Leave the URL blank (the default) to use native messaging. Use HTTPS beyond loopback.
+  Leave the URL blank (the default) to use native messaging. The token and download metadata
+  cross the network, so use HTTPS beyond loopback.
 * **Native port** — one lazy `connectNative('dev.prism.host')` port kept open (keeps the MV3
   worker alive), id-correlated requests with timeouts, reconnect on demand (5 s back-off when the
   host is missing), one-shot `sendNativeMessage` fallback if the port dies mid-request, 1-min

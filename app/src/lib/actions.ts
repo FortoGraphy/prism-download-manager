@@ -1,6 +1,6 @@
 // User-level actions shared by the toolbar, context menu, keyboard shortcuts and dialogs.
 
-import { api } from "./api";
+import { api, webMode } from "./api";
 import { t } from "./i18n";
 import { canPause, canResume, isTorrentLink } from "./present";
 import { hexEncode } from "./route";
@@ -68,11 +68,11 @@ export const actions = {
   moveToQueue: (ids: string[], queueId: string | null) => void attempt(api.assignToQueue(ids, queueId), t("Could not move to queue")),
   moveInQueue: (ids: string[], delta: number) => void attempt(api.moveInQueue(ids, delta), t("Could not reorder")),
 
-  /** Primary activation: open finished files, show details for everything else. */
+  /** Primary activation: open finished files; prism-web has no file opener, so show details. */
   activate: (id: string) => {
     const it = useApp.getState().items[id];
     if (!it) return;
-    if (it.status === "completed") actions.open(id);
+    if (it.status === "completed" && !webMode) actions.open(id);
     else actions.details(id);
   },
 
@@ -99,3 +99,19 @@ export async function patchSettings(patch: DeepPartial<Settings>) {
 }
 
 export type DeepPartial<T> = { [K in keyof T]?: T[K] extends (infer U)[] ? U[] : T[K] extends object ? DeepPartial<T[K]> : T[K] };
+
+/** prism-web validates the resulting settings, so these must be cleared in one patch. */
+export const WEB_SETTINGS_RECOVERY_PATCH: DeepPartial<Settings> = {
+  antivirus: { kind: "auto", command: "", args: "" },
+  video: { ytdlpPath: "", ffmpegPath: "" },
+};
+
+export function hasBlockedWebSettings(s: Settings): boolean {
+  return (
+    s.antivirus.kind === "custom" ||
+    !!s.antivirus.command ||
+    !!s.antivirus.args ||
+    !!s.video.ytdlpPath ||
+    !!s.video.ffmpegPath
+  );
+}

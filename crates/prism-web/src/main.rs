@@ -115,8 +115,12 @@ async fn main() {
         println!("WARNING: authentication is disabled; anyone who can reach {url} controls this downloader.");
     }
 
-    let server = axum::serve(listener, web::router(core.clone(), auth, ipc_auth))
-        .with_graceful_shutdown(async { let _ = tokio::signal::ctrl_c().await; });
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+    let server = axum::serve(listener, web::router(core.clone(), auth, ipc_auth, shutdown_rx))
+        .with_graceful_shutdown(async move {
+            let _ = tokio::signal::ctrl_c().await;
+            let _ = shutdown_tx.send(true);
+        });
     if let Err(e) = server.await {
         tracing::error!("web server stopped: {e}");
     }

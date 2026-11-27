@@ -25,6 +25,14 @@ function usedKeys(): Map<string, string> {
 
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 const forms = (entry: string | PluralEntry) => (typeof entry === "string" ? [entry] : Object.values(entry));
+const ENGLISH_ONLY = new Set([
+  "Other finish actions need the desktop app.",
+  "Updates are available in the desktop app.",
+  "Desktop-only settings",
+  "Settings from the desktop app",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.",
+  "Remove desktop-only values",
+]);
 
 describe("translations", () => {
   const keys = usedKeys();
@@ -37,7 +45,7 @@ describe("translations", () => {
     if (code === "en") continue;
     it(`${code} has every text, with the same placeholders`, () => {
       const catalog = CATALOGS[code];
-      const missing = [...keys.keys()].filter((k) => !(k in catalog));
+      const missing = [...keys.keys()].filter((k) => !(k in catalog) && !ENGLISH_ONLY.has(k));
       expect(missing, `missing in ${code}.json`).toEqual([]);
       for (const [key, entry] of Object.entries(catalog)) {
         for (const form of forms(entry)) {

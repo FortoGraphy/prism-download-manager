@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 use std::convert::Infallible;
 use std::path::{Component, PathBuf};
 use std::sync::Arc;
+use tokio::sync::watch;
 
 include!(concat!(env!("OUT_DIR"), "/assets.rs"));
 
@@ -23,12 +24,14 @@ include!(concat!(env!("OUT_DIR"), "/assets.rs"));
 struct AppState {
     core: Core,
     auth: Auth,
+    shutdown: watch::Receiver<bool>,
 }
 
-pub fn router(core: Core, auth: Auth, ipc_auth: ipc::IpcAuth) -> Router {
+pub fn router(core: Core, auth: Auth, ipc_auth: ipc::IpcAuth, shutdown: watch::Receiver<bool>) -> Router {
     let state = Arc::new(AppState {
         core: core.clone(),
         auth,
+        shutdown,
     });
     let web = Router::new()
         .route("/", get(index))
@@ -193,17 +196,23 @@ async fn events(
     }
     let core = state.core.clone();
     let rx = core.subscribe();
-    let stream = unfold((rx, core), |(mut rx, core)| async move {
-        match rx.recv().await {
+    let shutdown = state.shutdown.clone();
+    let stream = unfold((rx, core, shutdown), |(mut rx, core, mut shutdown)| async move {
+        let event = tokio::select! {
+            biased;
+            _ = shutdown.wait_for(|shutting_down| *shutting_down) => return None,
+            event = rx.recv() => event,
+        };
+        match event {
             Ok(event) => {
                 let data = serde_json::to_string(&event).unwrap_or_else(|_| "{}".into());
-                Some((Ok(Event::default().data(data)), (rx, core)))
+                Some((Ok(Event::default().data(data)), (rx, core, shutdown)))
             }
             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
                 // A slow browser missed events: resend the full list so rows recover.
                 let resync = CoreEvent::ItemsAdded(core.bootstrap().items);
                 let data = serde_json::to_string(&resync).unwrap_or_else(|_| "{}".into());
-                Some((Ok(Event::default().data(data)), (rx, core)))
+                Some((Ok(Event::default().data(data)), (rx, core, shutdown)))
             }
             Err(tokio::sync::broadcast::error::RecvError::Closed) => None,
         }
@@ -336,6 +345,7 @@ fn html_response(auth: bool, body: Vec<u8>) -> ([(header::HeaderName, &'static s
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::HttpBody as _;
 
     #[test]
     fn injection_adds_web_config() {
@@ -357,7 +367,45 @@ mod tests {
         .unwrap();
         let auth = crate::auth::Auth::new(dir.path(), 8080, true, None).unwrap();
         let ipc_auth = crate::ipc::IpcAuth::new(dir.path().join("ipc.json"), None);
-        let _ = router(core.clone(), auth, ipc_auth);
+        let (_, shutdown_rx) = watch::channel(false);
+        let _ = router(core.clone(), auth, ipc_auth, shutdown_rx);
+        core.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn events_stream_ends_on_shutdown_signal() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::start(prism_core::manager::CoreOptions {
+            data_dir: dir.path().to_path_buf(),
+            ipc: false,
+            clipboard: false,
+        })
+        .await
+        .unwrap();
+        let auth = crate::auth::Auth::new(dir.path(), 8080, true, None).unwrap();
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        let state = Arc::new(AppState {
+            core: core.clone(),
+            auth,
+            shutdown: shutdown_rx,
+        });
+        let response = events(State(state), HeaderMap::new()).await.unwrap().into_response();
+        let mut body = Box::pin(response.into_body());
+        let before = tokio::time::timeout(
+            std::time::Duration::from_millis(50),
+            std::future::poll_fn(|cx| body.as_mut().poll_frame(cx)),
+        )
+        .await;
+        assert!(!matches!(before, Ok(None)), "stream ended before shutdown");
+
+        shutdown_tx.send(true).unwrap();
+        let next = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            std::future::poll_fn(|cx| body.as_mut().poll_frame(cx)),
+        )
+        .await
+        .expect("stream did not end after shutdown");
+        assert!(next.is_none());
         core.shutdown().await;
     }
 

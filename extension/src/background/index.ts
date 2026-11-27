@@ -114,9 +114,15 @@ async function handle(msg: InternalMessage, sender: chrome.runtime.MessageSender
     case 'setPaused':
       await updateState({ paused: msg.paused });
       return { ok: true };
-    case 'openApp':
+    case 'openApp': {
+      const { remoteUrl } = await getState();
+      if (remoteUrl) {
+        await api.tabs.create({ url: remoteUrl });
+        return { ok: true };
+      }
       await native.request({ type: 'open', page: msg.page ?? 'main' }, { timeoutMs: 12000 });
       return { ok: true };
+    }
     case 'syncSettings':
       await hello(false, true);
       return { ok: true, state: await getState() };

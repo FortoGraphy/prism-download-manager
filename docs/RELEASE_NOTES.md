@@ -3,6 +3,16 @@
 A fast, open-source download manager for Windows, Linux and macOS, with browser integration
 and video downloads.
 
+## Unreleased
+
+* **Prism Web**: a standalone Linux x64 server (`prism-web-linux-x64.tar.gz`) serves the existing
+  Prism UI without a desktop shell. The browser extension can connect directly to it with a URL
+  and bearer token; native messaging stays the default. See the
+  [installation guide](guide/installation.md#prism-web-linux-x64-only) and
+  [BUILD.md](../BUILD.md#prism-web-standalone-linux-binary).
+
+---
+
 ## What's new in 1.2.7
 
 * **Security: only Prism's own extension can talk to Prism**
