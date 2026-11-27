@@ -1,7 +1,7 @@
 // Tools from the main window and the completion window: opening the Tools window, and the
 // quick conversions of the list's menu (they run right away and report in toasts).
 
-import { api, onCoreEvent } from "./api";
+import { api, onCoreEvent, webMode } from "./api";
 import { t } from "./i18n";
 import { baseName, kindByName, type MediaTarget, problemText, TARGET_NAMES, type ToolsRequest } from "./media";
 import { fullPath } from "./paths";
@@ -41,7 +41,7 @@ function listen() {
       toast(t("Converted to {format}", { format: TARGET_NAMES[target] }), {
         kind: "success",
         body: baseName(out),
-        action: { label: t("Show in folder"), run: () => void attempt(api.revealPath(out), t("Could not open the folder")) },
+        ...(webMode ? {} : { action: { label: t("Show in folder"), run: () => void attempt(api.revealPath(out), t("Could not open the folder")) } }),
         ms: 6000,
       });
     } else if (j.state === "failed") {

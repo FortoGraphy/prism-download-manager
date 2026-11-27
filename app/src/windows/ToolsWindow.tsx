@@ -3,7 +3,7 @@ import { NumberField, Segmented } from "../components/Controls";
 import { ProgressBar } from "../components/Visuals";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
-import { api, inTauri, onAppEvent, onCoreEvent } from "../lib/api";
+import { api, inTauri, onAppEvent, onCoreEvent, webMode } from "../lib/api";
 import { formatBytes } from "../lib/format";
 import { t } from "../lib/i18n";
 import {
@@ -247,13 +247,13 @@ export default function ToolsWindow({ request }: { request: ToolsRequest }) {
       <div
         className={`wbody tools${over ? " is-over" : ""}`}
         onDragOver={(e) => {
-          if (inTauri) return;
+          if (inTauri || webMode) return;
           e.preventDefault();
           setOver(true);
         }}
-        onDragLeave={() => !inTauri && setOver(false)}
+        onDragLeave={() => !inTauri && !webMode && setOver(false)}
         onDrop={(e) => {
-          if (inTauri) return;
+          if (inTauri || webMode) return;
           e.preventDefault();
           setOver(false);
           void add(Array.from(e.dataTransfer.files).map((f) => demoPath(f.name)));
@@ -283,16 +283,25 @@ export default function ToolsWindow({ request }: { request: ToolsRequest }) {
         )}
 
         {files.length === 0 && reading.length === 0 ? (
-          <button type="button" className={`tdrop${over ? " is-over" : ""}`} onClick={() => void pick()}>
-            <span className="tdrop__icon">
-              <Icon name={tab === "convert" ? "convert" : "shrink"} size={26} />
-            </span>
-            <b>{t("Drop pictures, music or videos here")}</b>
-            <span className="t-small text-tertiary">{tab === "convert" ? t("Or choose files. Several at once get the same format.") : t("Or choose files. Prism fits each one under the size you pick.")}</span>
-            <span className="btn btn--sm">
-              <Icon name="folder-open" size={14} /> {t("Choose files…")}
-            </span>
-          </button>
+          webMode ? (
+            <div className="tdrop">
+              <span className="tdrop__icon">
+                <Icon name={tab === "convert" ? "convert" : "shrink"} size={26} />
+              </span>
+              <b>{t("Pick a finished download in the list to convert it.")}</b>
+            </div>
+          ) : (
+            <button type="button" className={`tdrop${over ? " is-over" : ""}`} onClick={() => void pick()}>
+              <span className="tdrop__icon">
+                <Icon name={tab === "convert" ? "convert" : "shrink"} size={26} />
+              </span>
+              <b>{t("Drop pictures, music or videos here")}</b>
+              <span className="t-small text-tertiary">{tab === "convert" ? t("Or choose files. Several at once get the same format.") : t("Or choose files. Prism fits each one under the size you pick.")}</span>
+              <span className="btn btn--sm">
+                <Icon name="folder-open" size={14} /> {t("Choose files…")}
+              </span>
+            </button>
+          )
         ) : (
           <div className={`tfiles${over ? " is-over" : ""}`} role="list" aria-label={t("Files")}>
             {files.map((f) => {
@@ -348,12 +357,14 @@ export default function ToolsWindow({ request }: { request: ToolsRequest }) {
                 </div>
               </div>
             ))}
-            <div className="tfiles__more">
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => void pick()}>
-                <Icon name="plus" size={14} /> {t("Add files…")}
-              </button>
-              <span className="t-small text-tertiary">{t("or drop more here")}</span>
-            </div>
+            {!webMode && (
+              <div className="tfiles__more">
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => void pick()}>
+                  <Icon name="plus" size={14} /> {t("Add files…")}
+                </button>
+                <span className="t-small text-tertiary">{t("or drop more here")}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -476,17 +487,19 @@ export default function ToolsWindow({ request }: { request: ToolsRequest }) {
             </div>
           </section>
         )}
-        <input
-          ref={picker}
-          type="file"
-          multiple
-          hidden
-          onChange={(e) => {
-            const names = Array.from(e.target.files ?? []).map((f) => demoPath(f.name));
-            e.target.value = "";
-            if (names.length) void add(names);
-          }}
-        />
+        {!webMode && (
+          <input
+            ref={picker}
+            type="file"
+            multiple
+            hidden
+            onChange={(e) => {
+              const names = Array.from(e.target.files ?? []).map((f) => demoPath(f.name));
+              e.target.value = "";
+              if (names.length) void add(names);
+            }}
+          />
+        )}
       </div>
 
       <footer className="dialog__footer">
@@ -552,7 +565,7 @@ function JobRow({ job: j, fetching }: { job: MediaJob; fetching: { downloaded: n
             <Icon name="close" size={13} />
           </button>
         )}
-        {j.state === "done" && j.output && (
+        {!webMode && j.state === "done" && j.output && (
           <>
             <button type="button" className="btn btn--sm" onClick={() => void attempt(api.openFile(j.output!), t("Could not open the file"))}>
               {t("Open")}

@@ -4,6 +4,7 @@
   "Increase {label}": "{label} erhöhen",
   "Unlimited": "Unbegrenzt",
   "Close": "Schließen",
+  "Pick a finished download in the list to convert it.": "Wählen Sie einen abgeschlossenen Download in der Liste aus, um ihn zu konvertieren.",
   "Dismiss": "Ausblenden",
   "{count} segments": {
     "one": "{count} Segment",

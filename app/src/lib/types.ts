@@ -389,6 +389,8 @@ export type CoreEvent =
   | { type: "postActionPending"; payload: { action: PostAction; seconds: number } }
   | { type: "playSound"; payload: { kind: string } }
   | { type: "notify"; payload: { title: string; body: string } }
+  | { type: "openTorrent"; payload: { source: string } }
+  | { type: "openModel"; payload: { source: string } }
   | { type: "clipboardUrls"; payload: string[] }
   | { type: "grabber"; payload: { project_id: string; event: GrabberEvent } }
   | { type: "toolsProgress"; payload: { tool: string; downloaded: number; total?: number | null } }

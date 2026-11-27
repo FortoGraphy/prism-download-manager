@@ -4,7 +4,7 @@ import { Modal } from "../../components/Modal";
 import { FileTile } from "../../components/Visuals";
 import { Icon } from "../../design/icons";
 import { actions } from "../../lib/actions";
-import { api, type ItemPatch } from "../../lib/api";
+import { api, webMode, type ItemPatch } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 import { t, tr } from "../../lib/i18n";
 import { categoryIcon, displayName } from "../../lib/present";
@@ -106,9 +106,11 @@ function CategoryDialog({ open, category, onClose }: { open: boolean; category?:
       <Field label={t("Save folder")} hint={t("Leave empty to use the default download folder.")}>
         <div className="withbtn">
           <TextField value={dir} onChange={setDir} icon="folder" label={t("Save folder")} placeholder={t("Default folder")} />
-          <button type="button" className="btn" onClick={() => void browse(dir, setDir)}>
-            {t("Browse…")}
-          </button>
+          {!webMode && (
+            <button type="button" className="btn" onClick={() => void browse(dir, setDir)}>
+              {t("Browse…")}
+            </button>
+          )}
         </div>
       </Field>
     </Modal>
@@ -167,9 +169,11 @@ function PropertiesDialog({ id, onClose }: { id: string | null; onClose: () => v
       icon={<FileTile item={item} size={24} thumbWidth={36} />}
       footer={
         <>
-          <button type="button" className="btn btn--ghost" onClick={() => actions.reveal(item.id)}>
-            <Icon name="folder-open" size={15} /> {t("Show in folder")}
-          </button>
+          {!webMode && (
+            <button type="button" className="btn btn--ghost" onClick={() => actions.reveal(item.id)}>
+              <Icon name="folder-open" size={15} /> {t("Show in folder")}
+            </button>
+          )}
           <span className="spacer" />
           <button type="button" className="btn btn--ghost" onClick={onClose}>
             {t("Cancel")}
@@ -189,9 +193,11 @@ function PropertiesDialog({ id, onClose }: { id: string | null; onClose: () => v
       <Field label={t("Save to")}>
         <div className="withbtn">
           <TextField value={f.saveDir} onChange={(v) => set("saveDir", v)} icon="folder" label={t("Save folder")} />
-          <button type="button" className="btn" onClick={() => void browse(f.saveDir, (v) => set("saveDir", v))}>
-            {t("Browse…")}
-          </button>
+          {!webMode && (
+            <button type="button" className="btn" onClick={() => void browse(f.saveDir, (v) => set("saveDir", v))}>
+              {t("Browse…")}
+            </button>
+          )}
         </div>
       </Field>
       <div className="row2">

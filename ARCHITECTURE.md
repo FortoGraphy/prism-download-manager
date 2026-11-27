@@ -12,7 +12,7 @@ a fast multi-segment engine, deep browser integration, video grabbing, and a pre
 | Desktop shell | **Tauri 2.12** (`app/src-tauri`) | Tiny binaries, native WebView (WebView2 / WebKitGTK / WKWebView), tray, notifications, single-instance, autostart plugins. Tauri 3 is still alpha. |
 | UI | **React 19 + TypeScript + Vite**, hand-written CSS with design tokens (CSS variables), `motion` for animation, `@tanstack/react-virtual` for the list, `zustand` for state | Fast iteration, mature ecosystem; CSS variables give us precise control over the glass material system. |
 | Browser extension | **Manifest V3** (Chromium family) + Firefox build from the same TypeScript source | One codebase, two manifests. |
-| Browser ↔ app | **Native messaging host** (`prism-native-host`, tiny Rust binary) → loopback HTTP to the app with a per-install bearer token | Native messaging is the only sanctioned channel from MV3; loopback keeps the host stateless and lets it auto-launch the app. |
+| Browser ↔ app | **Native messaging host** (`prism-native-host`, tiny Rust binary) → loopback HTTP to the app with a per-install bearer token; optional direct HTTP to `prism-web` | Native messaging is the default; loopback keeps the host stateless and lets it auto-launch the app. The extension can instead be pointed at a prism-web URL in its Options. |
 | Video | **yt-dlp + ffmpeg**, managed (downloaded, checksum-verified, auto-updated) by `prism-core::video` | yt-dlp is the best-maintained extractor set; we accelerate plain HTTP formats with our own segmented engine. |
 | Storage | **SQLite** (WAL, `synchronous=NORMAL`, checkpoints) | Crash-safe history, queues, settings and resumable segment state. |
 | Torrent | **librqbit** (Apache-2.0) behind `prism-core::torrent` | Pure Rust, embeddable, magnet + .torrent, works on Windows/Linux/macOS. |
@@ -25,6 +25,7 @@ crates/
   prism-engine/            download engine library (no UI, no DB)
   prism-core/              application core: manager, db, queues, scheduler, grabber, video, ipc, platform
   prism-native-host/       native messaging host binary (browser <-> app bridge)
+  prism-web/               standalone Linux HTTP server (embedded UI, no desktop shell)
   prism-testserver/        configurable local HTTP test server (throttle, drops, no-range, redirects, auth, limits) for tests + benchmarks
 app/                       Vite + React UI
   src-tauri/               Tauri 2 shell (commands, events, tray, windows)
@@ -163,7 +164,7 @@ Extension → host → app messages are JSON objects `{ "type": ..., ... }`:
 | `status` | — | Health check for the integration status page. |
 
 Host → app is `POST /v1/message` with `Authorization: Bearer <token>`; the host launches the app (`prism --background`) if `ipc.json` is missing or stale and waits up to 5 s.
-Native messaging host name: `dev.prism.host`.
+Native messaging host name: `dev.prism.host`. With prism-web, the extension can send the same messages directly to e.g. `http://127.0.0.1:8080/v1/message` with the configured bearer token; native messaging stays the default.
 
 ## 7. UI architecture
 
@@ -195,5 +196,5 @@ All OS-specific code sits behind `prism-core::platform::{power, shell, autostart
 ## 10. Security notes
 
 * The IPC server binds to `127.0.0.1` only and requires a 256-bit random bearer token stored in the user's app data dir.
-* The extension only talks to the native host (no open ports exposed to web pages).
+* By default the extension talks only to the native host, which reaches the desktop app over loopback HTTP. If prism-web is configured in the extension's Options, download metadata goes directly to that HTTP server instead; it requires a bearer token and TLS beyond loopback.
 * Downloaded yt-dlp/ffmpeg binaries are SHA-256 verified against the publisher's checksum files before use.

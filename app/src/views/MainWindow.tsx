@@ -4,7 +4,7 @@ import { handleDrop } from "../lib/drop";
 import { win } from "../lib/win";
 import { Icon } from "../design/icons";
 import { actions } from "../lib/actions";
-import { api } from "../lib/api";
+import { api, onCoreEvent, webMode } from "../lib/api";
 import { t } from "../lib/i18n";
 import { useApp } from "../lib/store";
 import { attempt, toast, useUi } from "../lib/ui";
@@ -153,20 +153,20 @@ function useGlobalShortcuts() {
 /** Toasts for failures / notifications coming from the core while the main window is open. */
 function useCoreNotifications() {
   useEffect(() => {
+    // Web toasts are handled at App level so dialog routes don't unmount them.
+    if (webMode) return;
     let off: (() => void) | undefined;
-    void import("../lib/api").then(({ onCoreEvent }) =>
-      onCoreEvent((e) => {
-        if (e.type === "failed") toast(t("Download failed"), { kind: "error", body: `${e.payload.fileName}${e.payload.error ? ` — ${e.payload.error}` : ""}` });
-        else if (e.type === "queueFinished") toast(t("{name} finished", { name: e.payload.name }), { kind: "success" });
-        else if (e.type === "notify") toast(e.payload.title, { body: e.payload.body });
-        else if (e.type === "clipboardUrls" && e.payload.length)
-          toast(e.payload.length > 1 ? t("{count} links copied", { count: e.payload.length }) : t("Link copied"), {
-            body: e.payload[0],
-            // The core opens the Download Links window for the batch itself (#37).
-            action: { label: t("Download"), run: () => (e.payload.length > 1 ? void attempt(api.batchFromText(e.payload.join("\n")), t("Could not add the links")) : void actions.addUrl(e.payload[0])) },
-          });
-      }).then((u) => (off = u)),
-    );
+    void onCoreEvent((e) => {
+      if (e.type === "failed") toast(t("Download failed"), { kind: "error", body: `${e.payload.fileName}${e.payload.error ? ` — ${e.payload.error}` : ""}` });
+      else if (e.type === "queueFinished") toast(t("{name} finished", { name: e.payload.name }), { kind: "success" });
+      else if (e.type === "notify") toast(e.payload.title, { body: e.payload.body });
+      else if (e.type === "clipboardUrls" && e.payload.length)
+        toast(e.payload.length > 1 ? t("{count} links copied", { count: e.payload.length }) : t("Link copied"), {
+          body: e.payload[0],
+          // The core opens the Download Links window for the batch itself (#37).
+          action: { label: t("Download"), run: () => (e.payload.length > 1 ? void attempt(api.batchFromText(e.payload.join("\n")), t("Could not add the links")) : void actions.addUrl(e.payload[0])) },
+        });
+    }).then((u) => (off = u));
     return () => off?.();
   }, []);
 }

@@ -45,7 +45,7 @@ export type InternalMessage =
   | { kind: 'setPaused'; paused: boolean }
   | { kind: 'openApp'; page?: 'main' | 'browserIntegration' | 'settings' }
   | { kind: 'syncSettings' }
-  | { kind: 'saveSettings'; settings: unknown };
+  | { kind: 'saveSettings'; settings: unknown; remoteUrl?: string; remoteToken?: string };
 
 export interface PopupState {
   connection: ConnectionInfo;

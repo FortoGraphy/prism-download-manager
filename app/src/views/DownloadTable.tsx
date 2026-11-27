@@ -6,6 +6,7 @@ import { openMenuAt } from "../components/MenuHost";
 import { FileTile, ProgressBar } from "../components/Visuals";
 import { Icon } from "../design/icons";
 import { actions } from "../lib/actions";
+import { webMode } from "../lib/api";
 import { type ColumnDef, gridTemplate, minRowWidth, resolveColumns } from "../lib/columns";
 import { formatBytes, formatDate, formatDuration, formatSpeed } from "../lib/format";
 import { t } from "../lib/i18n";
@@ -333,13 +334,13 @@ const Row = memo(function Row({ id, index, top, cols, selected, fresh, compact, 
       </div>
       <div className="row-actions" onMouseDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         {item.status === "completed" ? (
-          <IconButton icon="open-file" label={t("Open")} size={16} onClick={() => actions.open(id)} />
+          !webMode && <IconButton icon="open-file" label={t("Open")} size={16} onClick={() => actions.open(id)} />
         ) : canPause(status) ? (
           <IconButton icon="pause" label={t("Pause")} size={16} onClick={() => actions.pause([id])} />
         ) : (
           <IconButton icon="resume" label={t("Resume")} size={16} onClick={() => actions.resume([id])} />
         )}
-        <IconButton icon="folder-open" label={t("Show in folder")} size={16} onClick={() => actions.reveal(id)} />
+        {!webMode && <IconButton icon="folder-open" label={t("Show in folder")} size={16} onClick={() => actions.reveal(id)} />}
         <IconButton icon="link" label={t("Copy link")} size={16} onClick={() => void actions.copyLinks([id])} />
       </div>
     </div>

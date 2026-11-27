@@ -4,7 +4,7 @@ import { openMenuAt } from "../components/MenuHost";
 import { FileTile } from "../components/Visuals";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
-import { api } from "../lib/api";
+import { api, webMode } from "../lib/api";
 import { fileExtension, formatBytes, hostOf } from "../lib/format";
 import { t, tk, tr } from "../lib/i18n";
 import { categoryIcon, displayName } from "../lib/present";
@@ -116,9 +116,11 @@ export default function BatchWindow({ id }: { id: string }) {
         <span className="field__label">{t("Save to")}</span>
         <div className="withbtn">
           <TextField value={dir} onChange={setDir} icon="folder" label={t("Save folder")} placeholder={t("Category folders (default)")} />
-          <button type="button" className="btn" onClick={async () => setDir((await pickFolder(dir)) ?? dir)}>
-            {t("Browse…")}
-          </button>
+          {!webMode && (
+            <button type="button" className="btn" onClick={async () => setDir((await pickFolder(dir)) ?? dir)}>
+              {t("Browse…")}
+            </button>
+          )}
         </div>
       </div>
       <footer className="dialog__footer">
@@ -129,6 +131,11 @@ export default function BatchWindow({ id }: { id: string }) {
           {t("Select none")}
         </button>
         <span className="spacer" />
+        {webMode && (
+          <button type="button" className="btn btn--ghost btn--sm" onClick={cancel}>
+            {t("Cancel")}
+          </button>
+        )}
         <span className="sumtext">
           {tr("{selected} of {total} · {size}", { selected: <b>{sel.length}</b>, total: entries.length, size: <b>{formatBytes(sel.reduce((s, e) => s + (e.size ?? 0), 0))}</b> })}
         </span>

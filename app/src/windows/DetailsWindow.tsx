@@ -5,7 +5,7 @@ import { useItemDetails } from "../components/useItemDetails";
 import { ConnectionLanes, FileMap, FileTile, ProgressBar, SpeedChart } from "../components/Visuals";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
-import { api } from "../lib/api";
+import { api, webMode } from "../lib/api";
 import { formatBytes, formatDuration, formatSpeed } from "../lib/format";
 import { t, tr } from "../lib/i18n";
 import { canPause, formatPct, progressOf, statusView } from "../lib/present";
@@ -29,6 +29,11 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
         <div className="wempty">
           <Icon name="info" size={22} />
           <p>{t("This download no longer exists.")}</p>
+          {webMode && (
+            <button type="button" className="btn btn--ghost" onClick={() => void win.close()}>
+              {t("Close")}
+            </button>
+          )}
         </div>
       </WindowFrame>
     );
@@ -191,13 +196,17 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
               {t("Cancel")}
             </button>
           ))}
-        <button type="button" className="btn" onClick={() => void attempt(api.revealItem(id), t("Could not open the folder"))}>
-          <Icon name="folder-open" size={15} /> {t("Folder")}
-        </button>
-        {status === "completed" ? (
-          <button type="button" className="btn btn--primary" onClick={() => void attempt(api.openItem(id), t("Could not open the file"))}>
-            <Icon name="open-file" size={15} /> {t("Open")}
+        {!webMode && (
+          <button type="button" className="btn" onClick={() => void attempt(api.revealItem(id), t("Could not open the folder"))}>
+            <Icon name="folder-open" size={15} /> {t("Folder")}
           </button>
+        )}
+        {status === "completed" ? (
+          !webMode && (
+            <button type="button" className="btn btn--primary" onClick={() => void attempt(api.openItem(id), t("Could not open the file"))}>
+              <Icon name="open-file" size={15} /> {t("Open")}
+            </button>
+          )
         ) : canPause(status) ? (
           <button type="button" className="btn btn--primary" onClick={() => void attempt(api.pauseItems([id]), t("Could not pause"))}>
             <Icon name="pause" size={15} /> {t("Pause")}
@@ -205,6 +214,11 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
         ) : (
           <button type="button" className="btn btn--primary" onClick={() => void attempt(api.startItems([id]), t("Could not resume"))}>
             <Icon name="resume" size={15} /> {t("Resume")}
+          </button>
+        )}
+        {webMode && (
+          <button type="button" className="btn btn--ghost" onClick={() => void win.close()}>
+            {t("Close")}
           </button>
         )}
       </footer>

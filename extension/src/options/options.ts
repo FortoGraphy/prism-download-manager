@@ -1,7 +1,7 @@
 import { api, sendInternal } from '../shared/api';
 import { prismMark } from '../shared/icons';
 import type { CaptureSettings } from '../shared/protocol';
-import { DEFAULT_SETTINGS, STATE_KEY, type StoredState, normalizeState } from '../shared/settings';
+import { DEFAULT_SETTINGS, STATE_KEY, type StoredState, normalizeRemoteUrl, normalizeState } from '../shared/settings';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const form = $<HTMLFormElement>('form');
@@ -24,6 +24,8 @@ function fill(s: CaptureSettings, st?: StoredState): void {
   $<HTMLTextAreaElement>('excludedSites').value = s.excludedSites.join('\n');
   $<HTMLTextAreaElement>('videoSites').value = s.videoSites.join('\n');
   if (st) {
+    $<HTMLInputElement>('remoteUrl').value = st.remoteUrl;
+    $<HTMLInputElement>('remoteToken').value = st.remoteToken;
     $('source-line').textContent =
       st.settingsSource === 'app'
         ? `Settings follow the Prism app${st.appVersion ? ` (v${st.appVersion})` : ''}. Saving here overrides them locally.`
@@ -53,7 +55,17 @@ async function load(): Promise<void> {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const r = await sendInternal<{ ok: boolean; state?: StoredState; error?: string }>({ kind: 'saveSettings', settings: read() });
+  const remoteUrl = $<HTMLInputElement>('remoteUrl').value;
+  if (remoteUrl.trim() && !normalizeRemoteUrl(remoteUrl)) {
+    setStatus('Enter an http(s) server root URL without credentials', 'bad');
+    return;
+  }
+  const r = await sendInternal<{ ok: boolean; state?: StoredState; error?: string }>({
+    kind: 'saveSettings',
+    settings: read(),
+    remoteUrl,
+    remoteToken: $<HTMLInputElement>('remoteToken').value,
+  });
   if (r?.ok && r.state) {
     fill(r.state.settings, r.state);
     setStatus('Saved.', 'ok');

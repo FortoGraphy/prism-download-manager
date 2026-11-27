@@ -34,18 +34,20 @@ function chip(c: ConnectionInfo): string {
   return `<span class="chip bad" id="conn" data-state="${c.state}"><span class="dot"></span>Not connected</span>`;
 }
 
-function alertCard(c: ConnectionInfo): string {
+function alertCard(c: ConnectionInfo, remote = false): string {
   if (c.state === 'connected' || c.state === 'unknown') return '';
   const missing = c.state === 'host_missing';
-  const title = missing ? 'Browser integration isn’t installed' : 'Prism isn’t reachable';
+  const title = missing ? 'Browser integration isn’t installed' : remote ? 'Prism web isn’t reachable' : 'Prism isn’t reachable';
   const hint = missing
     ? 'Fix: open Prism › Settings › Browser integration and click Repair.'
-    : 'Start Prism, or open Prism › Settings › Browser integration › Repair. Downloads stay in the browser meanwhile.';
+    : remote
+      ? 'Check the server URL and bearer token in Options, and that the server is running. Downloads stay in the browser meanwhile.'
+      : 'Start Prism, or open Prism › Settings › Browser integration › Repair. Downloads stay in the browser meanwhile.';
   return `<section class="alert glass" id="fix">
     <span class="ic">${icons.alert(18)}</span><b>${title}</b>
     <p>${hint}${c.error ? `<br><span class="small">Details: ${esc(c.error)}</span>` : ''}</p>
     <div class="actions">
-      ${missing ? '' : `<button class="btn primary" data-act="launch">${icons.external(14)}Start Prism</button>`}
+      ${missing ? '' : remote ? `<button class="btn primary" data-act="options">${icons.gear(14)}Options</button>` : `<button class="btn primary" data-act="launch">${icons.external(14)}Start Prism</button>`}
       <button class="btn" data-act="retry">${icons.refresh(14)}Retry</button>
     </div>
   </section>`;
@@ -65,6 +67,7 @@ function mediaMeta(m: MediaItem): string {
 function render(): void {
   if (!state) return;
   const { connection, media, state: st } = state;
+  const remote = !!st.remoteUrl;
   const capturing = st.settings.captureEnabled && !st.paused;
   app.innerHTML = `
     <header class="top">
@@ -72,7 +75,7 @@ function render(): void {
       <div class="brand"><b>Prism</b><span class="muted">Download manager</span></div>
       ${chip(connection)}
     </header>
-    ${alertCard(connection)}
+    ${alertCard(connection, remote)}
     <section class="row glass">
       <div class="tx"><b>Capture downloads</b><span>${
         !st.settings.captureEnabled ? 'Disabled in settings' : st.paused ? 'Paused — the browser downloads files itself' : 'Matching files open in Prism'
@@ -103,7 +106,7 @@ function render(): void {
       <button class="btn" data-act="collect" data-mode="videos">${icons.film(18)}All videos</button>
     </section>
     <footer class="foot">
-      <button class="btn ghost" data-act="open">${prismMark(16)}Open Prism</button>
+      <button class="btn ghost" data-act="open">${prismMark(16)}Open Prism${remote ? ' Web' : ''}</button>
       <span class="spacer"></span>
       <button class="btn ghost icon" data-act="options" title="Options" aria-label="Options">${icons.gear(16)}</button>
     </footer>`;

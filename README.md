@@ -72,6 +72,7 @@ Grab the file for your system from the **[latest release](https://github.com/For
 | **Ubuntu / Debian / Mint** | `Prism_<version>_amd64.deb` |
 | **Fedora / openSUSE** | `Prism-<version>-1.x86_64.rpm` |
 | **Any Linux** | `Prism_<version>_amd64.AppImage` |
+| **Linux x64 only — self-hosted** | `prism-web-linux-x64.tar.gz` — standalone HTTP server, no desktop shell; [install guide](docs/guide/installation.md#prism-web-linux-x64-only) · [build notes](BUILD.md#prism-web-standalone-linux-binary) |
 
 > **First start:** the installers are not code-signed (certificates cost money).
 > Windows: *More info → Run anyway*. macOS: run `xattr -dr com.apple.quarantine /Applications/Prism.app`
@@ -151,6 +152,7 @@ crates/prism-core         app logic: manager, SQLite, queues, scheduler, grabber
 crates/prism-video        yt-dlp / ffmpeg management, quality choices, muxing
 crates/prism-torrent      BitTorrent / magnet
 crates/prism-native-host  browser ↔ app bridge (native messaging) and browser registration
+crates/prism-web          standalone Linux HTTP server (embedded UI, no desktop shell)
 crates/prism-testserver   configurable HTTP server for tests and benchmarks
 app/                      React UI + Tauri 2 shell
 extension/                MV3 extension (Chromium + Firefox)
@@ -161,8 +163,9 @@ site/                     prismdl.site
 
 <details><summary><b>Is it really free?</b></summary>
 
-Yes. MIT-licensed, no ads, no trial, no account, no telemetry. The extension talks only to
-the app on your own computer.
+Yes. MIT-licensed, no ads, no trial, no account, no telemetry. Native messaging is the default
+and stays on your computer; if you set up prism-web, the extension sends download metadata to
+that server instead. See the [browser extension guide](docs/guide/browser-extension.md).
 </details>
 
 <details><summary><b>Windows / macOS says the app is unsafe.</b></summary>

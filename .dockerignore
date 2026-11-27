@@ -1,0 +1,13 @@
+.git
+**/node_modules
+app/dist
+
+# Keep the rest of target/ out of the context, but allow the prebuilt
+# prism-web binary the Dockerfile copies. Parent dirs must be unignored
+# explicitly for Docker's ! rules to reach the file.
+target/*
+!target/x86_64-unknown-linux-gnu/
+target/x86_64-unknown-linux-gnu/*
+!target/x86_64-unknown-linux-gnu/release/
+target/x86_64-unknown-linux-gnu/release/*
+!target/x86_64-unknown-linux-gnu/release/prism-web

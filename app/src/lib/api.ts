@@ -3,6 +3,7 @@
 // an in-memory demo backend instead.
 
 import type { MediaFile, MediaJob, MediaRequest, ShrinkPlan, ToolsRequest } from "./media";
+import { hexEncode } from "./route";
 import type {
   BatchInfo,
   Bootstrap,
@@ -24,12 +25,17 @@ import type {
 import type { VideoChapter } from "./videoPart";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+export const webMode = typeof window !== "undefined" && "__PRISM_WEB__" in window;
 
 type InvokeFn = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
 let invokeImpl: InvokeFn | null = null;
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (webMode) {
+    const remote = await import("./remote");
+    return remote.invoke<T>(cmd, args);
+  }
   if (!invokeImpl) {
     if (inTauri) {
       const core = await import("@tauri-apps/api/core");
@@ -44,6 +50,10 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 
 /** Subscribe to core events. Returns an unsubscribe function. */
 export async function onCoreEvent(handler: (e: CoreEvent) => void): Promise<() => void> {
+  if (webMode) {
+    const remote = await import("./remote");
+    return remote.subscribe(handler);
+  }
   if (inTauri) {
     const { listen } = await import("@tauri-apps/api/event");
     return listen<CoreEvent>("core", (e) => handler(e.payload));
@@ -54,6 +64,10 @@ export async function onCoreEvent(handler: (e: CoreEvent) => void): Promise<() =
 
 /** Subscribe to a named app event emitted by the shell (e.g. `update-progress`). */
 export async function onAppEvent<T>(name: string, handler: (payload: T) => void): Promise<() => void> {
+  if (webMode) {
+    const remote = await import("./remote");
+    return remote.subscribeApp(name, handler as (payload: unknown) => void);
+  }
   if (inTauri) {
     const { listen } = await import("@tauri-apps/api/event");
     return listen<T>(name, (e) => handler(e.payload));
@@ -226,7 +240,15 @@ export const api = {
   /** Removes finished jobs; returns the ones left. */
   mediaClear: () => invoke<MediaJob[]>("media_clear"),
   /** Opens (or brings forward) the Tools window for a tab, files and a size. */
-  openTools: (request: ToolsRequest) => invoke<void>("open_tools", { request }),
+  openTools: (request: ToolsRequest) => {
+    if (webMode) {
+      const tab = request.tab === "shrink" ? "shrink" : "convert";
+      const arg = request.paths?.length ? `/${hexEncode(JSON.stringify(request))}` : "";
+      location.hash = `#/tools/${tab}${arg}`;
+      return Promise.resolve();
+    }
+    return invoke<void>("open_tools", { request });
+  },
   openFile: (path: string) => invoke<void>("open_file", { path }),
   revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   addTorrent: (args: {
@@ -301,11 +323,42 @@ export const api = {
   repairIntegration: () => invoke<IntegrationStatus>("repair_integration"),
   extensionDir: () => invoke<string | null>("extension_dir"),
 
-  openDetails: (id: string) => invoke<void>("open_details", { id }),
-  openWindow: (kind: string, id?: string) => invoke<void>("open_window", { kind, id }),
-  toggleMini: () => invoke<boolean>("toggle_mini"),
-  toggleDropzone: () => invoke<boolean>("toggle_dropzone"),
-  showMain: () => invoke<void>("show_main"),
+  openDetails: (id: string) => {
+    if (webMode) {
+      location.hash = `#/details/${id}`;
+      return Promise.resolve();
+    }
+    return invoke<void>("open_details", { id });
+  },
+  openWindow: (kind: string, id?: string) => {
+    // Web mode has one tab: a "window" is just a hash route. The server's open_window is a no-op.
+    if (webMode) {
+      location.hash = `#/${kind}${id ? `/${id}` : ""}`;
+      return Promise.resolve();
+    }
+    return invoke<void>("open_window", { kind, id });
+  },
+  toggleMini: () => {
+    if (webMode) {
+      location.hash = location.hash === "#/mini" ? "" : "#/mini";
+      return Promise.resolve(true);
+    }
+    return invoke<boolean>("toggle_mini");
+  },
+  toggleDropzone: () => {
+    if (webMode) {
+      location.hash = location.hash === "#/dropzone" ? "" : "#/dropzone";
+      return Promise.resolve(true);
+    }
+    return invoke<boolean>("toggle_dropzone");
+  },
+  showMain: () => {
+    if (webMode) {
+      location.hash = "";
+      return Promise.resolve();
+    }
+    return invoke<void>("show_main");
+  },
   mainWindowStartsVisible: () => invoke<boolean>("main_window_starts_visible"),
   appRunId: () => invoke<number>("app_run_id"),
   /** Whether the OS puts a material (Mica / vibrancy) behind the window. */

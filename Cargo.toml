@@ -6,6 +6,7 @@ members = [
   "crates/prism-native-host",
   "crates/prism-testserver",
   "crates/prism-video",
+  "crates/prism-web",
   "crates/prism-torrent",
   "app/src-tauri",
 ]

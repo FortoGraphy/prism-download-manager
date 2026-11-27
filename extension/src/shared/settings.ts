@@ -107,6 +107,22 @@ export function normalizeSettings(input: unknown, base: CaptureSettings = DEFAUL
   };
 }
 
+/** Base URL of a prism-web server; empty means use native messaging. */
+export function normalizeRemoteUrl(v: unknown): string {
+  if (typeof v !== 'string') return '';
+  try {
+    const u = new URL(v.trim());
+    if ((u.protocol !== 'http:' && u.protocol !== 'https:') || u.username || u.password) return '';
+    return u.origin;
+  } catch {
+    return '';
+  }
+}
+
+export function normalizeRemoteToken(v: unknown): string {
+  return typeof v === 'string' ? v.trim() : '';
+}
+
 /** Persisted extension state (chrome.storage.local key `prism.state`). */
 export interface StoredState {
   settings: CaptureSettings;
@@ -115,12 +131,16 @@ export interface StoredState {
   /** `app`: settings follow the app (refreshed on every hello); `local`: user edited them in Options. */
   settingsSource: 'app' | 'local';
   appVersion?: string;
+  /** Root URL of a prism-web server (e.g. `http://127.0.0.1:8787`); empty = native messaging. */
+  remoteUrl: string;
+  /** Bearer token sent to that server; stored locally, never logged. */
+  remoteToken: string;
 }
 
 export const STATE_KEY = 'prism.state';
 
 export function defaultState(): StoredState {
-  return { settings: { ...DEFAULT_SETTINGS }, paused: false, settingsSource: 'app' };
+  return { settings: { ...DEFAULT_SETTINGS }, paused: false, settingsSource: 'app', remoteUrl: '', remoteToken: '' };
 }
 
 export function normalizeState(raw: unknown): StoredState {
@@ -131,6 +151,8 @@ export function normalizeState(raw: unknown): StoredState {
     settings: normalizeSettings(r.settings),
     paused: typeof r.paused === 'boolean' ? r.paused : d.paused,
     settingsSource: r.settingsSource === 'local' ? 'local' : 'app',
+    remoteUrl: normalizeRemoteUrl(r.remoteUrl),
+    remoteToken: normalizeRemoteToken(r.remoteToken),
     ...(typeof r.appVersion === 'string' ? { appVersion: r.appVersion } : {}),
   };
 }

@@ -43,16 +43,81 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - name: Rust tests (engine, core, video, torrent, native host)
-        run: cargo test --workspace --exclude prism-app
-      - name: Frontend deps
+      # prism-web's build.rs embeds app/dist, so the UI must exist before Rust tests.
+      - name: Frontend deps and build (app)
         run: |
           npm ci --prefix app
-          npm ci --prefix extension
-      - name: Frontend + extension build (both needed by tauri-build)
-        run: |
           npm run build --prefix app
-          npm run build --prefix extension
+      - name: Rust tests (workspace + prism-web)
+        run: |
+          cargo test --workspace --exclude prism-app
+          cargo test -p prism-web
+      - name: Smoke test prism-web token transport
+        if: runner.os == 'Linux'
+        env:
+          PRISM_WEB_TOKEN: ci-smoke-token
+        run: |
+          set -euo pipefail
+          cargo build -p prism-web
+          DATA_DIR=$(mktemp -d)
+          PORT=18080
+          BASE="http://127.0.0.1:$PORT"
+          target/debug/prism-web --host 127.0.0.1 --port "$PORT" --data-dir "$DATA_DIR" >"$DATA_DIR/server.log" 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true; rm -rf "$DATA_DIR"' EXIT
+          ready=false
+          for _ in $(seq 1 50); do
+            if curl -fsS "$BASE/v1/health" >"$DATA_DIR/health.json" 2>/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 0.2
+          done
+          [ "$ready" = true ] || { echo "prism-web did not start"; exit 1; }
+          grep -q '"ok":true' "$DATA_DIR/health.json"
+
+          # /api/config is deliberately public without a bearer; an invalid bearer is rejected.
+          code=$(curl -sS -o "$DATA_DIR/config.json" -w '%{http_code}' "$BASE/api/config")
+          [ "$code" = 200 ] || { echo "config without bearer: expected 200, got $code"; exit 1; }
+          grep -q '"auth":true' "$DATA_DIR/config.json"
+          code=$(curl -sS -o "$DATA_DIR/bad-config.json" -w '%{http_code}' -H 'Authorization: Bearer wrong-token' "$BASE/api/config")
+          [ "$code" = 401 ] || { echo "config with wrong bearer: expected 401, got $code"; exit 1; }
+
+          code=$(curl -sS -o "$DATA_DIR/hello.json" -w '%{http_code}' \
+            -H "Authorization: Bearer $PRISM_WEB_TOKEN" -H 'Content-Type: application/json' \
+            -d '{"id":"ci","type":"hello","version":"ci-smoke"}' "$BASE/v1/message")
+          [ "$code" = 200 ] || { echo "message with token: expected 200, got $code"; exit 1; }
+          grep -q '"ok":true' "$DATA_DIR/hello.json"
+          grep -q '"id":"ci"' "$DATA_DIR/hello.json"
+
+          reject() {
+            local label=$1 code
+            shift
+            code=$(curl -sS -o "$DATA_DIR/reject.json" -w '%{http_code}' "$@")
+            [ "$code" = 401 ] || { echo "$label: expected 401, got $code"; exit 1; }
+          }
+          reject "message without bearer" -H 'Content-Type: application/json' \
+            -d '{"id":"ci","type":"hello"}' "$BASE/v1/message"
+          reject "message with wrong bearer" -H 'Authorization: Bearer wrong-token' \
+            -H 'Content-Type: application/json' -d '{"id":"ci","type":"hello"}' "$BASE/v1/message"
+      - name: Validate Docker Compose config
+        if: runner.os == 'Linux'
+        env:
+          PRISM_WEB_TOKEN: ci-smoke-token
+        run: |
+          set -euo pipefail
+          docker compose config --quiet
+          CONFIG=$(docker compose config)
+          grep -q 'host_ip: 127.0.0.1' <<<"$CONFIG"
+          grep -q 'published: "8080"' <<<"$CONFIG"
+          if env -u PRISM_WEB_TOKEN docker compose config --quiet 2>/dev/null; then
+            echo 'compose accepted a missing PRISM_WEB_TOKEN'
+            exit 1
+          fi
+      - name: Frontend deps (extension)
+        run: npm ci --prefix extension
+      - name: Frontend build (extension, needed by tauri-build)
+        run: npm run build --prefix extension
       - name: Sidecar (debug)
         run: node scripts/build-sidecar.mjs --debug
       - name: Clippy (whole workspace incl. app shell)

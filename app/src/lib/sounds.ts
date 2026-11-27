@@ -1,3 +1,4 @@
+import { webMode } from "./api";
 import { tk } from "./i18n";
 
 /** "Download complete" sounds to choose from (Settings › Sounds). "classic" is complete.wav;
@@ -17,9 +18,9 @@ export const COMPLETE_SOUNDS: { id: string; name: string }[] = [
   { id: "sparkle", name: tk("Sparkle") },
 ];
 
-/** Linux plays sounds through the system's player, from the app (#41): WebKitGTK's audio could
- *  stop the windows from updating. Elsewhere the window plays them. */
-export const NATIVE_SOUNDS = typeof navigator !== "undefined" && /Linux/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent);
+/** Linux desktop plays sounds through the system's player, from the app (#41): WebKitGTK's audio could
+ *  stop the windows from updating. prism-web is a browser, so even Linux uses the shipped wav files. */
+export const NATIVE_SOUNDS = !webMode && typeof navigator !== "undefined" && /Linux/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent);
 
 /** The file (without .wav) under /sounds that plays for `kind`; an unknown complete sound
  *  falls back to the classic one. */

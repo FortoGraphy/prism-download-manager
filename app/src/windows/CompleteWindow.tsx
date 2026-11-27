@@ -4,7 +4,7 @@ import { FileTile } from "../components/Visuals";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
 import { patchSettings } from "../lib/actions";
-import { api } from "../lib/api";
+import { api, webMode } from "../lib/api";
 import { formatBytes, formatDuration, formatSpeed } from "../lib/format";
 import { t } from "../lib/i18n";
 import { fullPath } from "../lib/paths";
@@ -23,7 +23,9 @@ export default function CompleteWindow({ id }: { id: string }) {
   };
   const run = async (p: Promise<void>, fail: string) => {
     await attempt(p, fail);
-    await close();
+    // In web mode the action routed this tab to Tools; closing would return to the list.
+    if (!webMode) await close();
+    else if (dontShow) await patchSettings({ general: { showCompletionDialog: false } });
   };
 
   const took = item?.finishedAt && item.lastTryAt ? (item.finishedAt - item.lastTryAt) / 1000 : null;
@@ -35,7 +37,7 @@ export default function CompleteWindow({ id }: { id: string }) {
   // still-pressed mouse to the OS with the real file, so it drops into WhatsApp,
   // a mail, Explorer… exactly like dragging it from a folder.
   // Windows and macOS: Linux has no drag-out yet (the command says so), so nothing to grab there.
-  const canDrag = !!item && item.status === "completed" && !/Linux/i.test(navigator.userAgent);
+  const canDrag = !webMode && !!item && item.status === "completed" && !/Linux/i.test(navigator.userAgent);
   const onDragStart = (e: React.DragEvent) => {
     e.preventDefault();
     if (canDrag) void attempt(api.startFileDrag(id), t("Could not drag the file"));
@@ -96,12 +98,21 @@ export default function CompleteWindow({ id }: { id: string }) {
         >
           <Icon name="copy" size={15} />
         </button>
-        <button type="button" className="btn" disabled={!item} onClick={() => void run(api.revealItem(id), t("Could not open the folder"))}>
-          <Icon name="folder-open" size={15} /> {t("Open folder")}
-        </button>
-        <button type="button" className="btn btn--primary" autoFocus disabled={!item} onClick={() => void run(api.openItem(id), t("Could not open the file"))}>
-          <Icon name="open-file" size={15} /> {t("Open")}
-        </button>
+        {!webMode && (
+          <button type="button" className="btn" disabled={!item} onClick={() => void run(api.revealItem(id), t("Could not open the folder"))}>
+            <Icon name="folder-open" size={15} /> {t("Open folder")}
+          </button>
+        )}
+        {!webMode && (
+          <button type="button" className="btn btn--primary" autoFocus disabled={!item} onClick={() => void run(api.openItem(id), t("Could not open the file"))}>
+            <Icon name="open-file" size={15} /> {t("Open")}
+          </button>
+        )}
+        {webMode && (
+          <button type="button" className="btn btn--primary" autoFocus onClick={() => void close()}>
+            {t("Close")}
+          </button>
+        )}
       </footer>
     </WindowFrame>
   );

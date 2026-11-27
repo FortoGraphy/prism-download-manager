@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Checkbox, RateField, Segmented, Stepper, Switch, TextField } from "../../components/Controls";
 import { FileTile } from "../../components/Visuals";
 import { Icon, type IconName } from "../../design/icons";
-import { api } from "../../lib/api";
+import { api, webMode } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 import { t, tk } from "../../lib/i18n";
 import { displayName } from "../../lib/present";
@@ -22,6 +22,8 @@ const AFTER: { type: PostAction["type"]; label: string; icon: IconName }[] = [
   { type: "lock", label: tk("Lock screen"), icon: "lock" },
   { type: "command", label: tk("Run command"), icon: "external" },
 ];
+
+const FINISH_ACTIONS = webMode ? AFTER.filter((a) => a.type === "none" || a.type === "sound") : AFTER;
 
 type Repeat = "once" | "daily" | "days";
 
@@ -73,7 +75,11 @@ export function SchedulerSheet({ initial }: { initial?: string }) {
   const next = nextRuns.find(([id]) => id === draft.id)?.[1];
 
   const save = async () => {
-    const res = await attempt(api.upsertQueue(draft), t("Could not save the queue"));
+    // A queue seeded by the desktop app can still carry a finish action prism-web rejects.
+    const queue = FINISH_ACTIONS.some((a) => a.type === draft.schedule.onComplete.type)
+      ? draft
+      : { ...draft, schedule: { ...draft.schedule, onComplete: { type: "none" as const } } };
+    const res = await attempt(api.upsertQueue(queue), t("Could not save the queue"));
     if (res) {
       useApp.setState({ queues: res });
       toast(t("{name} saved", { name: draft.name }), { kind: "success", ms: 1800 });
@@ -220,7 +226,7 @@ export function SchedulerSheet({ initial }: { initial?: string }) {
               <span>{t("When finished")}</span>
               <div>
                 <div className="after">
-                  {AFTER.map((a) => (
+                  {FINISH_ACTIONS.map((a) => (
                     <button
                       key={a.type}
                       type="button"
@@ -233,7 +239,8 @@ export function SchedulerSheet({ initial }: { initial?: string }) {
                     </button>
                   ))}
                 </div>
-                {s.onComplete.type === "command" && (
+                {webMode && <p className="hint">{t("Other finish actions need the desktop app.")}</p>}
+                {!webMode && s.onComplete.type === "command" && (
                   <div style={{ marginTop: 8 }}>
                     <TextField
                       value={s.onComplete.value}

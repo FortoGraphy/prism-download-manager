@@ -3,7 +3,7 @@ import { TextField } from "../components/Controls";
 import { LogoMark } from "../components/LogoMark";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
-import { api } from "../lib/api";
+import { api, webMode } from "../lib/api";
 import { t } from "../lib/i18n";
 import { isTorrentLink, looksLikeUrl } from "../lib/present";
 import { hexEncode } from "../lib/route";
@@ -37,7 +37,9 @@ export default function AddUrlWindow() {
       if (model) await api.openWindow("model", hexEncode(url.trim()));
       else if (torrent) await api.openWindow("torrent", hexEncode(url.trim()));
       else await api.addUrl({ url: url.trim(), username: auth ? user : undefined, password: auth ? pass : undefined });
-      await win.close();
+      // In web mode the core event has already routed this tab to the next dialog; closing
+      // here would send it back to the main view.
+      if (!webMode) await win.close();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

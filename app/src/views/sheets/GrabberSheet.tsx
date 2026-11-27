@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox, Field, ListField, NumberField, Segmented, Stepper, Switch, TextField } from "../../components/Controls";
 import { ProgressBar } from "../../components/Visuals";
 import { Icon, type IconName } from "../../design/icons";
-import { api, onCoreEvent } from "../../lib/api";
+import { api, onCoreEvent, webMode } from "../../lib/api";
 import { fileExtension, formatBytes, hostOf } from "../../lib/format";
 import { t, tk, tr } from "../../lib/i18n";
 import { fileVisual } from "../../lib/present";
@@ -388,9 +388,11 @@ function Results({ projectId, files }: { projectId: string; files: FoundFile[] }
       <div className="results__foot">
         <div className="withbtn">
           <TextField value={dir} onChange={setDir} icon="folder" label={t("Save folder")} />
-          <button type="button" className="btn" onClick={async () => setDir((await pickFolder(dir)) ?? dir)}>
-            {t("Browse…")}
-          </button>
+          {!webMode && (
+            <button type="button" className="btn" onClick={async () => setDir((await pickFolder(dir)) ?? dir)}>
+              {t("Browse…")}
+            </button>
+          )}
         </div>
         <Checkbox checked={keep} onChange={setKeep}>
           {t("Keep the site’s folder structure")}

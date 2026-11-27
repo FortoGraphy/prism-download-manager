@@ -4,6 +4,7 @@
   "Increase {label}": "زيادة {label}",
   "Unlimited": "غير محدود",
   "Close": "إغلاق",
+  "Pick a finished download in the list to convert it.": "اختر تنزيلًا مكتملًا من القائمة لتحويله.",
   "Dismiss": "تجاهل",
   "{count} segments": {
     "zero": "{count} جزء",

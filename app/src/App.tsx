@@ -6,9 +6,10 @@ import { TooltipHost } from "./components/TooltipHost";
 import { setLanguage, t } from "./lib/i18n";
 import { applyPreviewParams } from "./lib/previewParams";
 import { type Route, parseRoute } from "./lib/route";
-import { api } from "./lib/api";
+import { actions } from "./lib/actions";
+import { api, onCoreEvent, webMode } from "./lib/api";
 import { useApp } from "./lib/store";
-import { attempt } from "./lib/ui";
+import { attempt, toast } from "./lib/ui";
 import { MainWindow } from "./views/MainWindow";
 
 // Secondary windows are separate webviews; each only loads its own chunk.
@@ -61,6 +62,7 @@ export function App() {
   const reduced = useApp((s) => s.settings?.appearance.motion);
   // Set before the views render; changing the language remounts them in the new one.
   const lang = setLanguage(useApp((s) => s.settings?.general.language));
+  useCoreNotifications();
 
   useEffect(() => {
     const on = () => setRoute(parseRoute(location.hash));
@@ -82,7 +84,7 @@ export function App() {
     <MotionConfig reducedMotion={reduced === "reduced" ? "always" : reduced === "full" ? "never" : "user"}>
       {ready && (
         <Suspense fallback={null}>
-          <View key={lang} route={route} />
+          <View key={`${lang}:${route.name}:${"id" in route ? route.id : "source" in route ? route.source : ""}`} route={route} />
         </Suspense>
       )}
       <TooltipHost />
@@ -90,4 +92,25 @@ export function App() {
       <ToastHost />
     </MotionConfig>
   );
+}
+
+/** Core toasts live above the routed views so dialog routes don't unmount them. */
+function useCoreNotifications() {
+  useEffect(() => {
+    // Desktop toasts are handled by MainWindow; only web routes need an App-level listener.
+    if (!webMode) return;
+    let off: (() => void) | undefined;
+    void onCoreEvent((e) => {
+      if (e.type === "failed") toast(t("Download failed"), { kind: "error", body: `${e.payload.fileName}${e.payload.error ? ` — ${e.payload.error}` : ""}` });
+      else if (e.type === "queueFinished") toast(t("{name} finished", { name: e.payload.name }), { kind: "success" });
+      else if (e.type === "notify") toast(e.payload.title, { body: e.payload.body });
+      else if (e.type === "clipboardUrls" && e.payload.length)
+        toast(e.payload.length > 1 ? t("{count} links copied", { count: e.payload.length }) : t("Link copied"), {
+          body: e.payload[0],
+          // The core opens the Download Links window for the batch itself (#37).
+          action: { label: t("Download"), run: () => (e.payload.length > 1 ? void attempt(api.batchFromText(e.payload.join("\n")), t("Could not add the links")) : void actions.addUrl(e.payload[0])) },
+        });
+    }).then((u) => (off = u));
+    return () => off?.();
+  }, []);
 }

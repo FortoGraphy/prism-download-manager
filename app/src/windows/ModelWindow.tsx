@@ -4,7 +4,7 @@ import { openMenuAt } from "../components/MenuHost";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
 import { patchSettings } from "../lib/actions";
-import { api, type HfContext, type HfHit, type HfPresent, type HfRepo } from "../lib/api";
+import { api, webMode, type HfContext, type HfHit, type HfPresent, type HfRepo } from "../lib/api";
 import { formatBytes } from "../lib/format";
 import { getLocale, t } from "../lib/i18n";
 import { openUrl } from "../lib/links";
@@ -388,16 +388,18 @@ export default function ModelWindow({ source }: { source: string }) {
               <span className="field__label">{t("Save to")}</span>
               <div className="withbtn">
                 <TextField value={folder} onChange={setFolder} icon="folder" label={t("Save folder")} />
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={async () => {
-                    const p = await pickFolder(folder);
-                    if (p) setFolder(p);
-                  }}
-                >
-                  {t("Browse…")}
-                </button>
+                {!webMode && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={async () => {
+                      const p = await pickFolder(folder);
+                      if (p) setFolder(p);
+                    }}
+                  >
+                    {t("Browse…")}
+                  </button>
+                )}
               </div>
               {ctx?.lmStudio && (
                 <button type="button" className="linkbtn t-small hf-lmstudio" onClick={() => setFolder(`${ctx.lmStudio}/${repo.id}`.replace(/[\\/]+/g, ctx.lmStudio?.includes("\\") ? "\\" : "/"))}>

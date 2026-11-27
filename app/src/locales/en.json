@@ -90,5 +90,11 @@
   "{count} downloads and their files will be deleted. The files can't be restored.": {
     "one": "{count} download and its file will be deleted. The file can't be restored.",
     "other": "{count} downloads and their files will be deleted. The files can't be restored."
-  }
+  },
+  "Other finish actions need the desktop app.": "Other finish actions need the desktop app.",
+  "Updates are available in the desktop app.": "Updates are available in the desktop app.",
+  "Desktop-only settings": "Desktop-only settings",
+  "Settings from the desktop app": "Settings from the desktop app",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.": "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.",
+  "Remove desktop-only values": "Remove desktop-only values"
 }

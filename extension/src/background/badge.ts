@@ -21,4 +21,7 @@ export function showUnreachable(on: boolean, title?: string): void {
 export function reflectConnection(c: ConnectionInfo): void {
   if (c.state === 'connected') showUnreachable(false);
   else if (c.state === 'host_missing') showUnreachable(true, 'browser integration not installed');
+  else if (c.state === 'app_down') {
+    showUnreachable(true, c.errorCode === 'unauthorized' ? 'check Prism web token in Options' : 'server or app not reachable');
+  }
 }

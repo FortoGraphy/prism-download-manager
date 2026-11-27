@@ -12,6 +12,7 @@ Download the latest version from the **[Releases page](https://github.com/FortoG
 | Ubuntu, Debian, Mint, Pop!_OS, elementary | `Prism_<version>_amd64.deb` | |
 | Fedora, openSUSE, RHEL | `Prism-<version>-1.x86_64.rpm` | |
 | Any other Linux | `Prism_<version>_amd64.AppImage` | |
+| Linux x64 only — self-hosted | `prism-web-linux-x64.tar.gz` | Standalone HTTP server, no desktop shell. See [Prism Web](#prism-web-linux-x64-only) below. |
 
 Every release also contains `SHA256SUMS.txt` so you can verify downloads.
 
@@ -85,6 +86,26 @@ the app itself also registers Brave, Vivaldi and Opera for your user on every st
 
 The tray icon needs an AppIndicator-capable desktop (KDE, Cinnamon, XFCE, MATE work out of the
 box; on GNOME install the *AppIndicator and KStatusNotifierItem Support* extension).
+
+## Prism Web (Linux x64 only)
+
+`prism-web` is a standalone HTTP server that serves the same Prism UI as the desktop app, without
+the desktop shell (there are no file or folder opening controls). It is Linux x64 only and ships
+as `prism-web-linux-x64.tar.gz`.
+
+Authentication depends on `PRISM_WEB_TOKEN`. Set it to a long random secret and the UI and the
+extension share that one bearer token; no token files are written. Without it, prism-web generates
+a UI token, printed as `Access token:` and saved in `web-ui.json` in its data dir, and a separate
+extension token in `ipc.json` (the path is printed as `IPC info:`). Keep the tokens private —
+anyone with one can control your downloads. Commands and setup are in
+[BUILD.md — prism-web](../../BUILD.md#prism-web-standalone-linux-binary).
+
+The extension uses native messaging by default. To connect it to prism-web instead, open its
+Options page and enter the server URL and the token; see the
+[browser extension guide](browser-extension.md) and the [BUILD.md section](../../BUILD.md#prism-web-standalone-linux-binary).
+
+The server binds to loopback (`127.0.0.1`) by default. Beyond loopback, put it behind a reverse
+proxy with TLS: over plain HTTP the token and all traffic are visible on the network.
 
 ## Updating
 
