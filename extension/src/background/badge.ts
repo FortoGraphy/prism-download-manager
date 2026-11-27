@@ -1,4 +1,5 @@
 import { api } from '../shared/api';
+import { t, tk } from '../shared/i18n';
 import type { ConnectionInfo } from '../shared/messages';
 
 const action = api.action;
@@ -15,10 +16,10 @@ export function setTabCount(tabId: number, count: number): void {
 export function showUnreachable(on: boolean, title?: string): void {
   action.setBadgeText({ text: on ? '!' : '' }).catch(() => {});
   if (on) action.setBadgeBackgroundColor({ color: '#e5484d' }).catch(() => {});
-  action.setTitle({ title: on ? `Prism — ${title ?? 'not reachable'}` : 'Prism' }).catch(() => {});
+  action.setTitle({ title: on ? `Prism — ${title ? t(title) : t('not reachable')}` : 'Prism' }).catch(() => {});
 }
 
 export function reflectConnection(c: ConnectionInfo): void {
   if (c.state === 'connected') showUnreachable(false);
-  else if (c.state === 'host_missing') showUnreachable(true, 'browser integration not installed');
+  else if (c.state === 'host_missing') showUnreachable(true, tk('browser integration not installed'));
 }

@@ -12,63 +12,63 @@
       <header class="hero">
         <span id="mark"></span>
         <div>
-          <h1>Prism browser integration</h1>
-          <p class="muted" id="source-line">Settings follow the Prism app.</p>
+          <h1 data-i18n='Prism browser integration'>Prism browser integration</h1>
+          <p class="muted" id="source-line" data-i18n='Settings follow the Prism app.'>Settings follow the Prism app.</p>
         </div>
         <span class="spacer"></span>
-        <button class="btn" id="sync" type="button">Sync from Prism</button>
+        <button class="btn" id="sync" type="button" data-i18n='Sync from Prism'>Sync from Prism</button>
       </header>
 
       <form id="form" class="glass card" autocomplete="off">
         <section class="field toggle">
-          <div><label for="captureEnabled">Capture downloads</label><p class="muted small">Hand matching browser downloads to Prism.</p></div>
+          <div><label for="captureEnabled" data-i18n='Capture downloads'>Capture downloads</label><p class="muted small" data-i18n='Hand matching browser downloads to Prism.'>Hand matching browser downloads to Prism.</p></div>
           <label class="switch"><input type="checkbox" id="captureEnabled" /><span></span></label>
         </section>
         <section class="field toggle">
-          <div><label for="showVideoButton">Show “Download” button on videos</label><p class="muted small">A floating button appears when you hover a video.</p></div>
+          <div><label for="showVideoButton" data-i18n='Show “Download” button on videos'>Show “Download” button on videos</label><p class="muted small" data-i18n='A floating button appears when you hover a video.'>A floating button appears when you hover a video.</p></div>
           <label class="switch"><input type="checkbox" id="showVideoButton" /><span></span></label>
         </section>
         <section class="field">
-          <label for="bypassKey">Bypass key</label>
-          <p class="muted small">Hold this key while clicking a link to let the browser download it.</p>
+          <label for="bypassKey" data-i18n='Bypass key'>Bypass key</label>
+          <p class="muted small" data-i18n='Hold this key while clicking a link to let the browser download it.'>Hold this key while clicking a link to let the browser download it.</p>
           <select id="bypassKey">
-            <option value="alt">Alt</option>
-            <option value="shift">Shift</option>
-            <option value="ctrl">Ctrl</option>
-            <option value="meta">⌘ / Win</option>
-            <option value="none">None</option>
+            <option value="alt" data-i18n='Alt'>Alt</option>
+            <option value="shift" data-i18n='Shift'>Shift</option>
+            <option value="ctrl" data-i18n='Ctrl'>Ctrl</option>
+            <option value="meta" data-i18n='⌘ / Win'>⌘ / Win</option>
+            <option value="none" data-i18n='None'>None</option>
           </select>
         </section>
         <section class="field">
-          <label for="extensions">File types to capture</label>
-          <p class="muted small">Extensions separated by spaces. Wildcards allowed (e.g. <code>R0*</code>).</p>
+          <label for="extensions" data-i18n='File types to capture'>File types to capture</label>
+          <p class="muted small" data-i18n='Extensions separated by spaces. Wildcards allowed (e.g. R0*).'>Extensions separated by spaces. Wildcards allowed (e.g. R0*).</p>
           <textarea id="extensions" rows="4" spellcheck="false"></textarea>
         </section>
         <section class="field">
-          <label for="mimeTypes">MIME types to capture</label>
-          <p class="muted small">One per line. Entries ending in <code>/</code>, <code>-</code> or <code>*</code> are prefixes.</p>
+          <label for="mimeTypes" data-i18n='MIME types to capture'>MIME types to capture</label>
+          <p class="muted small" data-i18n='One per line. Entries ending in /, - or * are prefixes.'>One per line. Entries ending in /, - or * are prefixes.</p>
           <textarea id="mimeTypes" rows="5" spellcheck="false"></textarea>
         </section>
         <section class="field">
-          <label for="minSize">Minimum size (KB)</label>
-          <p class="muted small">Smaller downloads (when the size is known) stay in the browser. 0 = no limit.</p>
+          <label for="minSize" data-i18n='Minimum size (KB)'>Minimum size (KB)</label>
+          <p class="muted small" data-i18n='Smaller downloads (when the size is known) stay in the browser. 0 = no limit.'>Smaller downloads (when the size is known) stay in the browser. 0 = no limit.</p>
           <input id="minSize" type="number" min="0" step="1" />
         </section>
         <section class="field">
-          <label for="excludedSites">Never capture on these sites</label>
-          <p class="muted small">One per line: <code>example.com</code>, <code>*.example.com</code> or <code>https://example.com/path/*</code>.</p>
+          <label for="excludedSites" data-i18n='Never capture on these sites'>Never capture on these sites</label>
+          <p class="muted small" data-i18n='One per line: example.com, *.example.com or https://example.com/path/*.'>One per line: example.com, *.example.com or https://example.com/path/*.</p>
           <textarea id="excludedSites" rows="4" spellcheck="false"></textarea>
         </section>
         <section class="field">
-          <label for="videoSites">Sites resolved by Prism (quality picker)</label>
-          <p class="muted small">On these sites the video button asks the app for available formats.</p>
+          <label for="videoSites" data-i18n='Sites resolved by Prism (quality picker)'>Sites resolved by Prism (quality picker)</label>
+          <p class="muted small" data-i18n='On these sites the video button asks the app for available formats.'>On these sites the video button asks the app for available formats.</p>
           <textarea id="videoSites" rows="3" spellcheck="false"></textarea>
         </section>
         <footer class="actions">
           <span id="status" class="muted small" role="status"></span>
           <span class="spacer"></span>
-          <button class="btn" type="button" id="reset">Reset to defaults</button>
-          <button class="btn primary" type="submit">Save</button>
+          <button class="btn" type="button" id="reset" data-i18n='Reset to defaults'>Reset to defaults</button>
+          <button class="btn primary" type="submit" data-i18n='Save'>Save</button>
         </footer>
       </form>
     </div>

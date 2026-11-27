@@ -1,4 +1,5 @@
 /** Menu entries for the qualities an HLS/DASH manifest declares (`probeStream`). */
+import { t } from './i18n';
 import type { VideoOption } from './messages';
 import type { StreamVariant } from './protocol';
 
@@ -10,7 +11,7 @@ function variantHeight(v: StreamVariant): number {
 export function variantLabel(v: StreamVariant): string {
   const h = variantHeight(v);
   if (h) return `${h}p`;
-  return v.bandwidth ? `${Math.round(v.bandwidth / 1000)} kbps` : 'Stream';
+  return v.bandwidth ? `${Math.round(v.bandwidth / 1000)} kbps` : t('Stream');
 }
 
 /**

@@ -1,5 +1,6 @@
 /** Context menu items. Created on install/startup, handled at top level. */
 import { api } from '../shared/api';
+import { t, tk } from '../shared/i18n';
 import type { DownloadRequest, VideoRequest } from '../shared/protocol';
 import { filenameFromUrl, isHandoffUrl } from '../shared/rules';
 import { showUnreachable } from './badge';
@@ -9,12 +10,13 @@ import { native } from './native';
 
 type Ctx = chrome.contextMenus.ContextType;
 
+// Keys (marked with `tk`), translated when the menus are created.
 const ITEMS: Array<{ id: string; title: string; contexts: Ctx[] }> = [
-  { id: 'prism-link', title: 'Download with Prism', contexts: ['link', 'image', 'video', 'audio'] as Ctx[] },
-  { id: 'prism-selection', title: 'Download selection links with Prism', contexts: ['selection'] as Ctx[] },
-  { id: 'prism-all-links', title: 'Download all links with Prism', contexts: ['page', 'selection'] as Ctx[] },
-  { id: 'prism-all-images', title: 'Download all images with Prism', contexts: ['page', 'image'] as Ctx[] },
-  { id: 'prism-all-videos', title: 'Download all videos with Prism', contexts: ['page', 'video', 'audio'] as Ctx[] },
+  { id: 'prism-link', title: tk('Download with Prism'), contexts: ['link', 'image', 'video', 'audio'] as Ctx[] },
+  { id: 'prism-selection', title: tk('Download selection links with Prism'), contexts: ['selection'] as Ctx[] },
+  { id: 'prism-all-links', title: tk('Download all links with Prism'), contexts: ['page', 'selection'] as Ctx[] },
+  { id: 'prism-all-images', title: tk('Download all images with Prism'), contexts: ['page', 'image'] as Ctx[] },
+  { id: 'prism-all-videos', title: tk('Download all videos with Prism'), contexts: ['page', 'video', 'audio'] as Ctx[] },
 ];
 
 export async function createMenus(): Promise<void> {
@@ -22,7 +24,7 @@ export async function createMenus(): Promise<void> {
   if (!menus) return;
   await menus.removeAll();
   for (const it of ITEMS) {
-    menus.create({ id: it.id, title: it.title, contexts: it.contexts as [Ctx, ...Ctx[]] }, () => void api.runtime.lastError);
+    menus.create({ id: it.id, title: t(it.title), contexts: it.contexts as [Ctx, ...Ctx[]] }, () => void api.runtime.lastError);
   }
 }
 
