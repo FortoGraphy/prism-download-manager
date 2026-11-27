@@ -75,6 +75,43 @@ fn youtube_mp4_choices_prefer_h264_and_aac() {
 }
 
 #[test]
+fn a_preferred_codec_wins_at_the_same_quality() {
+    use prism_video::choices::compute_choices_preferring;
+    let v = video("youtube_bbb.json");
+    let at = |container, prefer, height| {
+        compute_choices_preferring(&v, container, prefer)
+            .into_iter()
+            .find(|c| c.kind == ChoiceKind::Video && c.height == Some(height))
+            .unwrap()
+    };
+    // #152: 1080p60 comes as H.264 (299), VP9 (303) and AV1 (399).
+    assert_eq!(at(Container::Mp4, None, 1080).label, "1080p60 · H.264");
+    let av1 = at(Container::Mp4, Some(VideoCodec::Av1), 1080);
+    assert_eq!(av1.video_format_id.as_deref(), Some("399"));
+    assert_eq!(av1.label, "1080p60 · AV1");
+    assert_eq!(
+        at(Container::Mp4, Some(VideoCodec::Vp9), 720).label,
+        "720p60 · VP9"
+    );
+    // The quality stays: 2160p has no H.264, so it keeps its usual codec.
+    assert_eq!(
+        at(Container::Mp4, Some(VideoCodec::H264), 2160).label,
+        "2160p60 · AV1"
+    );
+    // A codec the container can't hold is no preference: WebM has no H.264.
+    assert_eq!(
+        at(Container::Webm, Some(VideoCodec::H264), 1080).label,
+        "1080p60 · VP9"
+    );
+    // The setting's names, and anything else meaning no preference.
+    assert_eq!(VideoCodec::preferred(Some("AV1")), Some(VideoCodec::Av1));
+    assert_eq!(VideoCodec::preferred(Some("h264")), Some(VideoCodec::H264));
+    assert_eq!(VideoCodec::preferred(Some("vp9")), Some(VideoCodec::Vp9));
+    assert_eq!(VideoCodec::preferred(Some("")), None);
+    assert_eq!(VideoCodec::preferred(None), None);
+}
+
+#[test]
 fn youtube_mkv_and_webm_prefer_vp9_and_opus() {
     let v = video("youtube_bbb.json");
     for container in [Container::Mkv, Container::Webm] {

@@ -1,5 +1,6 @@
 //! The quality picker's probe: a page probed a moment ago answers from memory, and two requests
-//! for the same page while it is being probed run yt-dlp once.
+//! for the same page while it is being probed run yt-dlp once. The qualities follow the settings
+//! at the time of asking, also from memory (#152).
 
 use std::path::{Path, PathBuf};
 
@@ -7,9 +8,10 @@ use prism_core::manager::{Core, CoreOptions};
 
 /// A stand-in yt-dlp that appends a line to `runs.txt` for every probe (not `--version`), takes
 /// ~1 s, and prints a probe result.
-fn fake_ytdlp(dir: &Path) -> PathBuf {
+fn fake_ytdlp(dir: &Path, fixture: &str) -> PathBuf {
     let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../prism-video/tests/fixtures/generic_direct.json");
+        .join("../prism-video/tests/fixtures")
+        .join(fixture);
     let json: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(fixture).unwrap()).unwrap();
     std::fs::write(dir.join("probe.json"), json.to_string()).unwrap();
@@ -47,13 +49,12 @@ fn runs(dir: &Path) -> usize {
         .unwrap_or(0)
 }
 
-#[tokio::test]
-async fn probe_is_shared_while_running_and_reused_afterwards() {
-    let tmp = tempfile::tempdir().unwrap();
-    let bin = tmp.path().join("bin");
+/// A core whose yt-dlp is the stand-in printing `fixture`, with video tools that need no install.
+async fn core_with(tmp: &Path, fixture: &str) -> (Core, PathBuf) {
+    let bin = tmp.join("bin");
     std::fs::create_dir_all(&bin).unwrap();
-    let ytdlp = fake_ytdlp(&bin);
-    let data = tmp.path().join("data");
+    let ytdlp = fake_ytdlp(&bin, fixture);
+    let data = tmp.join("data");
     // A managed deno and ffmpeg so the probe doesn't go and install the video tools.
     let tools = data.join("tools");
     std::fs::create_dir_all(&tools).unwrap();
@@ -73,6 +74,13 @@ async fn probe_is_shared_while_running_and_reused_afterwards() {
     .unwrap();
     core.update_settings(&serde_json::json!({"video": {"ytdlpPath": ytdlp, "autoUpdate": false}}))
         .unwrap();
+    (core, bin)
+}
+
+#[tokio::test]
+async fn probe_is_shared_while_running_and_reused_afterwards() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (core, bin) = core_with(tmp.path(), "generic_direct.json").await;
 
     let url = "https://example.com/watch/1";
     let (a, b) = tokio::join!(
@@ -97,4 +105,37 @@ async fn probe_is_shared_while_running_and_reused_afterwards() {
         .await
         .unwrap();
     assert_eq!(runs(&bin), 2, "another page is probed");
+}
+
+#[tokio::test]
+async fn a_probe_from_memory_follows_the_codec_and_container_picked_since() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (core, bin) = core_with(tmp.path(), "youtube_bbb.json").await;
+    let url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ";
+    let label_1080 = |p: &serde_json::Value| {
+        p["choices"]
+            .as_array()
+            .and_then(|c| c.iter().find(|c| c["id"] == "v1080p60"))
+            .map(|c| c["label"].as_str().unwrap_or_default().to_string())
+            .unwrap_or_default()
+    };
+    let p = core.probe_video(url, Default::default()).await.unwrap();
+    assert_eq!(label_1080(&p), "1080p60 · H.264");
+
+    core.update_settings(&serde_json::json!({"video": {"preferredCodec": "av1"}}))
+        .unwrap();
+    let p = core.probe_video(url, Default::default()).await.unwrap();
+    assert_eq!(label_1080(&p), "1080p60 · AV1", "the codec picked since");
+
+    core.update_settings(
+        &serde_json::json!({"video": {"preferredCodec": "", "container": "webm"}}),
+    )
+    .unwrap();
+    let p = core.probe_video(url, Default::default()).await.unwrap();
+    assert_eq!(
+        label_1080(&p),
+        "1080p60 · VP9",
+        "the container picked since"
+    );
+    assert_eq!(runs(&bin), 1, "all from memory");
 }

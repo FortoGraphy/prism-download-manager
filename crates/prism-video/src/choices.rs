@@ -45,6 +45,17 @@ impl VideoCodec {
         }
     }
 
+    /// The codec picked in Settings › Video ("av1", "vp9", "h264"); anything else (empty
+    /// included) is no preference.
+    pub fn preferred(setting: Option<&str>) -> Option<Self> {
+        match setting?.trim().to_ascii_lowercase().as_str() {
+            "av1" => Some(VideoCodec::Av1),
+            "vp9" => Some(VideoCodec::Vp9),
+            "h264" => Some(VideoCodec::H264),
+            _ => None,
+        }
+    }
+
     pub fn label(self) -> Option<&'static str> {
         Some(match self {
             VideoCodec::H264 => "H.264",
@@ -286,6 +297,16 @@ fn audio_ok_in(codec: AudioCodec, container: Container) -> bool {
 
 /// Compute the quality-picker list for `info` targeting `container`.
 pub fn compute_choices(info: &VideoInfo, container: Container) -> Vec<Choice> {
+    compute_choices_preferring(info, container, None)
+}
+
+/// [`compute_choices`], with `prefer` winning over the other codecs the container takes at the
+/// same height and frame rate (#152); without it at that height, the usual order decides.
+pub fn compute_choices_preferring(
+    info: &VideoInfo,
+    container: Container,
+    prefer: Option<VideoCodec>,
+) -> Vec<Choice> {
     let formats = &info.formats;
     let duration = info.duration;
     let mut out = Vec::new();
@@ -316,7 +337,12 @@ pub fn compute_choices(info: &VideoInfo, container: Container) -> Vec<Choice> {
         let (height, hdr) = key;
         let candidates = &buckets[&key];
         let rank = |f: &Format| {
-            video_rank(VideoCodec::from_codec(f.vcodec.as_deref()), container, hdr).unwrap_or(20)
+            let codec = VideoCodec::from_codec(f.vcodec.as_deref());
+            match video_rank(codec, container, hdr) {
+                Some(_) if prefer == Some(codec) => 0,
+                Some(r) => r + 1,
+                None => 20,
+            }
         };
         let Some(best) = candidates.iter().copied().min_by(|a, b| {
             fps_bucket(b)

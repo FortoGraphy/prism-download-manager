@@ -1554,7 +1554,8 @@ impl Core {
                         st.video_probes
                             .retain(|_, (t, _)| t.elapsed() < std::time::Duration::from_secs(1800));
                         st.video_probes.get(&page_url).map(|(_, p)| p.clone())
-                    };
+                    }
+                    .map(|p| jobs::current_choices(self, p));
                     let choice = cached
                         .as_ref()
                         .and_then(|p| p.get("choices"))

@@ -711,6 +711,8 @@
   "Update yt-dlp now": "Aktualizovat yt-dlp nyní",
   "Defaults": "Výchozí nastavení",
   "Preferred quality": "Preferovaná kvalita",
+  "Preferred codec": "Preferovaný kodek",
+  "Used when a video comes in several codecs at the same quality": "Použije se, když je video ve stejné kvalitě ve více kodecích",
   "Container": "Kontejner",
   "Audio format": "Formát zvuku",
   "Embed subtitles": "Vložit titulky",

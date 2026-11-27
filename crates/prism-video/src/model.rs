@@ -54,6 +54,10 @@ pub struct VideoOptions {
     pub delete_temp_inputs: bool,
     /// Extra raw yt-dlp arguments appended before the URL (power users).
     pub extra_ytdlp_args: Vec<String>,
+    /// Codec preferred when a video has several at the same quality ("av1", "vp9", "h264");
+    /// `None` = Prism's usual order. See [`crate::choices::compute_choices_preferring`].
+    #[serde(deserialize_with = "empty_as_none")]
+    pub preferred_codec: Option<String>,
 }
 
 impl Default for VideoOptions {
@@ -70,6 +74,7 @@ impl Default for VideoOptions {
             concurrent_fragments: 8,
             delete_temp_inputs: true,
             extra_ytdlp_args: Vec::new(),
+            preferred_codec: None,
         }
     }
 }

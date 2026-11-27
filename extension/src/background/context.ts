@@ -48,7 +48,10 @@ export async function cookieHeaderFor(url: string, incognito: boolean, sent?: st
   let fromStore = '';
   try {
     let storeId: string | undefined;
-    if (incognito) storeId = pickCookieStoreId(await api.cookies.getAllCookieStores(), true);
+    if (incognito) {
+      storeId = pickCookieStoreId(await api.cookies.getAllCookieStores(), true);
+      if (!storeId) return mergeCookieHeaders(sent, '');
+    }
     const details: chrome.cookies.GetAllDetails = { url };
     if (storeId) details.storeId = storeId;
     const stored = await api.cookies.getAll(details);

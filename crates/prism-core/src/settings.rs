@@ -65,7 +65,7 @@ pub struct General {
     pub check_updates: bool,
     /// Finished downloads whose file was deleted from the computer leave the list (off by default).
     pub remove_deleted_files: bool,
-    /// UI language code ("en", "cs", "de", "es", "fr", "it", "id", "tr", "zh", "ar"); empty = the
+    /// UI language code ("en", "cs", "de", "es", "fr", "it", "id", "ru", "tr", "vi", "zh", "ar"); empty = the
     /// system's language.
     pub language: String,
     /// macOS (#34): no Dock icon while Prism waits in the menu bar (it's back while the main
@@ -431,6 +431,9 @@ pub struct Video {
     pub auto_update: bool,
     /// Preferred max height ("best" = 0).
     pub preferred_height: u32,
+    /// Codec picked when a video has several at the same quality: "av1", "vp9", "h264", or
+    /// empty for Prism's usual order (#152).
+    pub preferred_codec: String,
     pub container: String,
     pub audio_format: String,
     pub embed_subtitles: bool,
@@ -455,6 +458,7 @@ impl Default for Video {
             ffmpeg_path: String::new(),
             auto_update: true,
             preferred_height: 1080,
+            preferred_codec: String::new(),
             container: "mp4".into(),
             audio_format: "m4a".into(),
             embed_subtitles: false,

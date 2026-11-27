@@ -1,7 +1,32 @@
-# Prism 1.2.7 — One beam. Many rays.
+# Prism 1.2.8 — One beam. Many rays.
 
 A fast, open-source download manager for Windows, Linux and macOS, with browser integration
 and video downloads.
+
+## What's new in 1.2.8
+
+* **Security: a site's cookies and password stay with that site**
+  ([GHSA-gxhj-w822-gjmv](https://github.com/FortoGraphy/prism-download-manager/security/advisories/GHSA-gxhj-w822-gjmv)).
+  When a server passed a download on to another server, such as a CDN, Prism's further
+  connections to that server still carried the site's cookies and the user name and password
+  you gave it. Now only the site itself gets them. Also fixed: the browser extension no longer
+  fills in cookies of normal windows for a download from a private window, a Hugging Face token
+  is sent only over https, FTP addresses with line breaks are refused, and a broken MP4 file can
+  no longer crash Prism while it reads a video's index. Thanks to Vemast for the report and the
+  fixes!
+* **Hundreds of finished downloads no longer flood the desktop**
+  ([#153](https://github.com/FortoGraphy/prism-download-manager/issues/153)): at most three
+  Download complete windows, and three progress windows, are open at a time. The rest show in
+  the list, with a few notifications instead of one each. On Linux a sound plays at most once a
+  second.
+* **Pick the video codec you prefer**
+  ([#152](https://github.com/FortoGraphy/prism-download-manager/issues/152)): Settings → Video &
+  streams → Preferred codec. AV1, VP9 or H.264 wins when a video offers several at the same
+  quality; the quality itself doesn't change.
+* **Two more languages** for the app, thanks to thuyetbn (PR #157) and EmitterLight (PR #158)!
+* Every file of a release comes with a build provenance attestation, which
+  `gh attestation verify <file> -R FortoGraphy/prism-download-manager` checks, and the release
+  workflows run pinned versions of their actions. Thanks to Illumye (PRs #147 and #148)!
 
 ## What's new in 1.2.7
 

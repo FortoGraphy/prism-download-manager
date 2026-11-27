@@ -121,7 +121,9 @@ fn parse_mp4(b: &[u8]) -> Result<MediaIndex, IndexError> {
         if size < header {
             return Err(IndexError::NoIndex("a broken box"));
         }
-        let end = pos as u64 + size;
+        let end = (pos as u64)
+            .checked_add(size)
+            .ok_or(IndexError::NoIndex("a broken box"))?;
         let whole = end <= b.len() as u64;
         match kind {
             b"ftyp" | b"moov" => {
@@ -146,7 +148,10 @@ fn parse_mp4(b: &[u8]) -> Result<MediaIndex, IndexError> {
         }
         if !whole {
             // A box we skip, longer than what was read: the next one starts after it.
-            return Err(IndexError::NeedMore(end + 16));
+            let next = end
+                .checked_add(16)
+                .ok_or(IndexError::NoIndex("a broken box"))?;
+            return Err(IndexError::NeedMore(next));
         }
         pos = end as usize;
     }
@@ -531,6 +536,24 @@ mod tests {
             parse(b"<!DOCTYPE html><html>", None),
             Err(IndexError::NoIndex(_))
         ));
+    }
+
+    #[test]
+    fn mp4_large_box_size_does_not_overflow() {
+        // 24-byte ftyp followed by a 64-bit box whose size wraps pos + size to 0 in release mode.
+        let mut ftyp = Vec::new();
+        ftyp.extend_from_slice(&24u32.to_be_bytes());
+        ftyp.extend_from_slice(b"ftyp");
+        ftyp.extend_from_slice(&[0u8; 16]);
+        let wrap_size = u64::MAX - (ftyp.len() as u64) + 1;
+
+        for kind in [b"free", b"moov"] {
+            let mut buf = ftyp.clone();
+            buf.extend_from_slice(&1u32.to_be_bytes());
+            buf.extend_from_slice(kind);
+            buf.extend_from_slice(&wrap_size.to_be_bytes());
+            assert!(matches!(parse(&buf, None), Err(IndexError::NoIndex(_))));
+        }
     }
 
     // WebM builders: element = id bytes + 8-byte size + body.

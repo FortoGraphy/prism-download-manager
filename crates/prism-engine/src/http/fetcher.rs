@@ -152,11 +152,13 @@ impl HttpFetcher {
             HttpMethod::Get => reqwest::Method::GET,
             HttpMethod::Post => reqwest::Method::POST,
         };
+        let own_site = self.ctx.sources.is_own_site(url);
         let mut headers = self.ctx.headers.clone();
-        if headers.contains_key(header::AUTHORIZATION) && !self.ctx.sources.is_own_site(url) {
+        if !own_site {
             // A redirect target on another server (a CDN's signed link) doesn't get the site's
             // credentials, the same as the redirect itself (reqwest drops them across sites).
             headers.remove(header::AUTHORIZATION);
+            headers.remove(header::COOKIE);
         }
         let mut rb = client.request(method, url.clone()).headers(headers);
         if let Some((from, to)) = range {
@@ -171,7 +173,7 @@ impl HttpFetcher {
         {
             rb = rb.header(header::IF_RANGE, v);
         }
-        if let Some(a) = authorization {
+        if own_site && let Some(a) = authorization {
             rb = rb.header(header::AUTHORIZATION, a);
         }
         if let Some(b) = &self.ctx.body {
@@ -244,18 +246,24 @@ impl HttpFetcher {
             HttpMethod::Get => "GET",
             HttpMethod::Post => "POST",
         };
+        let own_site = self.ctx.sources.is_own_site(url);
         let mut rounds = 0;
         loop {
-            let resp = if self.ctx.auth.uses_ntlm() && !self.ntlm_ready {
+            let resp = if own_site && self.ctx.auth.uses_ntlm() && !self.ntlm_ready {
                 self.ntlm_handshake(&client, url, range, if_range).await?
             } else {
-                let auth = self.ctx.auth.authorization(method, url);
+                let auth = if own_site {
+                    self.ctx.auth.authorization(method, url)
+                } else {
+                    None
+                };
                 self.request(&client, url, range, if_range, auth)
                     .send()
                     .await
                     .map_err(map_send_error)?
             };
-            if resp.status() == StatusCode::UNAUTHORIZED
+            if own_site
+                && resp.status() == StatusCode::UNAUTHORIZED
                 && rounds < 2
                 && self.ctx.auth.has_credentials()
             {

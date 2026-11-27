@@ -259,6 +259,8 @@ export interface Settings {
     ffmpegPath: string;
     autoUpdate: boolean;
     preferredHeight: number;
+    /** "av1", "vp9", "h264", or "" for Prism's usual order (#152). */
+    preferredCodec?: string;
     container: string;
     audioFormat: string;
     embedSubtitles: boolean;

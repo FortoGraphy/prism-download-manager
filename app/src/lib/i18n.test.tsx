@@ -72,6 +72,9 @@ describe("t()", () => {
     expect(resolveLanguage("de", ["cs-CZ"])).toBe("de");
     expect(resolveLanguage("", ["pt-BR", "it-IT", "en"])).toBe("it");
     expect(resolveLanguage("", ["cs"])).toBe("cs");
+    expect(resolveLanguage("", ["vi-VN"])).toBe("vi");
+    expect(resolveLanguage("", ["vi"])).toBe("vi");
+    expect(resolveLanguage("", ["ru-RU"])).toBe("ru");
     expect(resolveLanguage("", ["ja-JP"])).toBe("en");
     expect(resolveLanguage("xx", ["cs"])).toBe("en");
     // Simplified Chinese for a Simplified (or plain) Chinese system, not for Traditional.
@@ -102,6 +105,16 @@ describe("t()", () => {
     } finally {
       delete CATALOGS.en["{count} test files"];
       delete CATALOGS.cs["{count} test files"];
+    }
+  });
+
+  it("uses Russian plural forms", () => {
+    setLanguage("ru");
+    try {
+      // one / few / many: 1 файл, 2 файла, 5 файлов
+      expect([1, 2, 5].map((count) => t("{count} files", { count }))).toEqual(["1 файл", "2 файла", "5 файлов"]);
+    } finally {
+      setLanguage("en");
     }
   });
 

@@ -33,18 +33,19 @@ jobs:
             bundles: app,dmg
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
         with:
+          toolchain: stable
           targets: ${{ matrix.target }}
       - name: Linux system packages
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libxdo-dev rpm
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           # No cache in a release build: a cache written by an earlier run would feed the signed bundles.
@@ -109,7 +110,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/make-portable.ps1 -Target ${{ matrix.target }}
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: prism-${{ matrix.name }}
           path: |
@@ -123,7 +124,7 @@ jobs:
             target/${{ matrix.target }}/release/bundle/**/*.sig
             packaging/out/*.zip
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: runner.os == 'Linux'
         with:
           name: prism-extension
@@ -136,11 +137,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Build provenance: a Sigstore certificate for the signature, then storing the attestation.
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: artifacts
       - name: Collect installers and checksums
@@ -152,8 +157,15 @@ jobs:
           python3 scripts/make-latest-json.py artifacts "${GITHUB_REF_NAME}" docs/RELEASE_NOTES.md > latest.json
           cat latest.json
           cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt && mv ../latest.json .
+      # Unsigned binaries can still be traced to this workflow and commit:
+      # gh attestation verify <file> -R FortoGraphy/prism-download-manager
+      # Done before the release exists, so no file is ever published without it.
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: out/*
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: out/*
           body_path: docs/RELEASE_NOTES.md

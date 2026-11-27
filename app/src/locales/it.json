@@ -697,6 +697,8 @@
   "Update yt-dlp now": "Aggiorna yt-dlp ora",
   "Defaults": "Predefiniti",
   "Preferred quality": "Qualità preferita",
+  "Preferred codec": "Codec preferito",
+  "Used when a video comes in several codecs at the same quality": "Usato quando un video è disponibile in più codec alla stessa qualità",
   "Container": "Contenitore",
   "Audio format": "Formato audio",
   "Embed subtitles": "Incorpora sottotitoli",

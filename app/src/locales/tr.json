@@ -683,6 +683,8 @@
   "Update yt-dlp now": "yt-dlp'yi şimdi güncelle",
   "Defaults": "Varsayılanlar",
   "Preferred quality": "Tercih edilen kalite",
+  "Preferred codec": "Tercih edilen codec",
+  "Used when a video comes in several codecs at the same quality": "Bir video aynı kalitede birden fazla codec ile sunulduğunda kullanılır",
   "Container": "Kapsayıcı",
   "Audio format": "Ses biçimi",
   "Embed subtitles": "Altyazıları göm",

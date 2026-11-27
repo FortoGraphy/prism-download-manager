@@ -1,0 +1,14 @@
+# The workflows pin every action to a commit SHA; this keeps those pins current.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # A compromised release is usually caught within days: wait a week before proposing it.
+    cooldown:
+      default-days: 7
+    # One pull request for all action updates of the week.
+    groups:
+      github-actions:
+        patterns: ["*"]

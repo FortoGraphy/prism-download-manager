@@ -45,8 +45,8 @@ const MIRROR = "https://hf-mirror.com";
 /** The texts search looks at: group names, and each setting's title and hint. */
 const TEXTS = ".group__t, .srow__t1, .srow__t2";
 
-/** Lower case without accents, so "Zvuky" finds "zvuky" and "stazeni" finds "stažení". */
-const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+/** Lower case without accents, so "Zvuky" finds "zvuky", "stazeni" finds "stažení" and "duong dan" finds "Đường dẫn". */
+const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/đ/g, "d");
 
 /** Each section's texts in the current language, from a static render of its body: the index
  *  follows whatever the sections show, and no effects run (nothing is asked from the core). */
@@ -848,6 +848,20 @@ function Video({ s }: { s: Settings }) {
             value={s.video.preferredHeight}
             onChange={(v) => save({ video: { preferredHeight: v } })}
             options={[2160, 1440, 1080, 720, 480].map((h) => ({ value: h, label: `${h}p` }))}
+            width={140}
+          />
+        </Row>
+        <Row title={t("Preferred codec")} hint={t("Used when a video comes in several codecs at the same quality")}>
+          <Select
+            label={t("Preferred codec")}
+            value={s.video.preferredCodec ?? ""}
+            onChange={(v) => save({ video: { preferredCodec: v } })}
+            options={[
+              { value: "", label: t("Automatic") },
+              { value: "av1", label: "AV1" },
+              { value: "vp9", label: "VP9" },
+              { value: "h264", label: "H.264" },
+            ]}
             width={140}
           />
         </Row>
