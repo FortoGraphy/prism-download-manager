@@ -85,7 +85,7 @@ export function Sidebar() {
     if (!cat) return;
     openMenuAt({ x: e.clientX, y: e.clientY }, [
       { label: t("Edit category…"), icon: "rename", onSelect: () => ui().openDialog({ kind: "category", category: cat }) },
-      ...(webMode ? [] : ([{ label: t("Open folder"), icon: "folder-open", disabled: !cat.saveDir, onSelect: () => cat.saveDir && void attempt(api.openPath(cat.saveDir)) }] as MenuEntry[])),
+      ...(webMode ? [] : ([{ label: t("Open folder"), icon: "folder-open", disabled: !cat.saveDir, onSelect: () => cat.saveDir && void attempt(api.openPath(cat.saveDir)) }] satisfies MenuEntry[])),
       { separator: true },
       { label: t("Delete category"), icon: "delete", danger: true, disabled: cat.builtin, onSelect: () => void attempt(api.deleteCategory(cat.id), t("Could not delete the category")) },
     ]);

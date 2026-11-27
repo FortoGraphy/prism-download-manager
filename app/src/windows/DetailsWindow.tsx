@@ -29,6 +29,11 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
         <div className="wempty">
           <Icon name="info" size={22} />
           <p>{t("This download no longer exists.")}</p>
+          {webMode && (
+            <button type="button" className="btn btn--ghost" onClick={() => void win.close()}>
+              {t("Close")}
+            </button>
+          )}
         </div>
       </WindowFrame>
     );
@@ -212,7 +217,7 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
           </button>
         )}
         {webMode && (
-          <button type="button" className="btn btn--primary" onClick={() => void win.close()}>
+          <button type="button" className="btn btn--ghost" onClick={() => void win.close()}>
             {t("Close")}
           </button>
         )}

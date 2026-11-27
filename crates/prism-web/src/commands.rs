@@ -3,6 +3,7 @@
 
 use prism_core::manager::{Core, ItemPatch, NewItem, StartMode, VideoDecision};
 use prism_core::events::{BatchEntry, CaptureSource};
+use prism_core::model::PostAction;
 use prism_torrent::TorrentSource;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -184,11 +185,6 @@ pub async fn invoke(core: &Core, cmd: &str, args: Value) -> Result<Value, String
             .inspect_torrent(arg(&args, "source")?)
             .await
             .map_err(|e| format!("{e:#}"))?)),
-        "read_torrent_file" => {
-            let path: PathBuf = arg(&args, "path")?;
-            let bytes = tokio::fs::read(path).await.map_err(|e| e.to_string())?;
-            Ok(json!(TorrentSource::File(bytes)))
-        }
         "add_torrent" => {
             let a: AddTorrentArgs = arg(&args, "args")?;
             Ok(json!(core
@@ -300,9 +296,12 @@ pub async fn invoke(core: &Core, cmd: &str, args: Value) -> Result<Value, String
             done()
         }
         "upsert_queue" => {
-            let r = core
-                .upsert_queue(arg(&args, "queue")?)
-                .map_err(|e| e.to_string())?;
+            let q: prism_core::model::Queue = arg(&args, "queue")?;
+            // Only harmless finish actions may come from a browser; shell and power actions stay desktop-only.
+            if !matches!(q.schedule.on_complete, PostAction::None | PostAction::Sound) {
+                return Err("queue finish action is not available in prism-web".into());
+            }
+            let r = core.upsert_queue(q).map_err(|e| e.to_string())?;
             core.arm_wake_timers();
             Ok(json!(r))
         }
@@ -357,38 +356,22 @@ pub async fn invoke(core: &Core, cmd: &str, args: Value) -> Result<Value, String
             .map_err(|e| e.to_string())?
             .len())),
 
-        "export_list" => {
+        "free_space" => {
             let path: PathBuf = arg(&args, "path")?;
-            std::fs::write(path, core.export_list().map_err(|e| e.to_string())?)
-                .map_err(|e| e.to_string())?;
-            done()
+            let state = core.bootstrap();
+            let allowed = path.starts_with(core.data_dir())
+                || path.starts_with(&state.settings.downloads.default_dir)
+                || state.categories.iter().filter_map(|c| c.save_dir.as_ref()).any(|dir| path.starts_with(dir));
+            if !allowed {
+                return Err("free space is only available for Prism folders".into());
+            }
+            Ok(json!(prism_core::platform::available_space(&path)))
         }
-        "import_list" => {
-            let path: PathBuf = arg(&args, "path")?;
-            let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-            Ok(json!(core.import_list(&text).map_err(|e| e.to_string())?))
+        // Browser clients cannot pick local files; path-taking commands stay desktop-only.
+        "read_torrent_file" | "export_list" | "import_list" | "export_settings"
+        | "import_settings" | "export_diagnostics" => {
+            Err("file commands are not available in prism-web".into())
         }
-        "export_settings" => {
-            let path: PathBuf = arg(&args, "path")?;
-            std::fs::write(path, core.export_settings().map_err(|e| e.to_string())?)
-                .map_err(|e| e.to_string())?;
-            done()
-        }
-        "import_settings" => {
-            let path: PathBuf = arg(&args, "path")?;
-            let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-            Ok(json!(core
-                .import_settings(&text)
-                .map_err(|e| e.to_string())?))
-        }
-        "export_diagnostics" => {
-            core.export_diagnostics(&arg::<PathBuf>(&args, "path")?)
-                .map_err(|e| e.to_string())?;
-            done()
-        }
-        "free_space" => Ok(json!(prism_core::platform::available_space(&arg::<PathBuf>(
-            &args, "path"
-        )?))),
 
         "tool_status" => Ok(core.tool_status().await),
         "ensure_tools" => core.ensure_tools().await.map_err(|e| format!("{e:#}")),
@@ -470,6 +453,84 @@ mod tests {
             json!(false)
         );
         assert!(invoke(&core, "nope", json!({})).await.is_err());
+        core.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn web_rejects_unsafe_queue_finish_actions() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::start(prism_core::manager::CoreOptions {
+            data_dir: dir.path().to_path_buf(),
+            ipc: false,
+            clipboard: false,
+        })
+        .await
+        .unwrap();
+
+        let queue = |action| {
+            json!({
+                "id": "web-test", "name": "Web queue", "maxConcurrent": 1,
+                "speedLimit": 0, "position": 99, "builtin": false, "running": false,
+                "schedule": {"enabled": true, "onComplete": action}
+            })
+        };
+        let before = core.queues().len();
+        for action in [
+            json!({"type": "command", "value": "sh -c touch /tmp/pwned"}),
+            json!({"type": "shutdown"}),
+            json!({"type": "sleep"}),
+            json!({"type": "lock"}),
+            json!({"type": "exit"}),
+        ] {
+            assert!(invoke(&core, "upsert_queue", json!({"queue": queue(action)}))
+                .await
+                .is_err());
+        }
+        assert_eq!(core.queues().len(), before);
+
+        let queue = queue(json!({"type": "sound"}));
+        invoke(&core, "upsert_queue", json!({"queue": queue}))
+            .await
+            .unwrap();
+        assert_eq!(core.queues().len(), before + 1);
+        assert!(core
+            .queues()
+            .iter()
+            .any(|q| q.schedule.on_complete == PostAction::Sound));
+        core.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn web_rejects_path_taking_commands() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::start(prism_core::manager::CoreOptions {
+            data_dir: dir.path().to_path_buf(),
+            ipc: false,
+            clipboard: false,
+        })
+        .await
+        .unwrap();
+        let victim = dir.path().join("victim.txt");
+        std::fs::write(&victim, b"keep").unwrap();
+
+        for cmd in [
+            "read_torrent_file",
+            "export_list",
+            "import_list",
+            "export_settings",
+            "import_settings",
+            "export_diagnostics",
+        ] {
+            assert!(
+                invoke(&core, cmd, json!({"path": victim.to_str().unwrap()}))
+                    .await
+                    .is_err(),
+                "{cmd} should be unavailable over HTTP"
+            );
+        }
+        assert_eq!(std::fs::read(&victim).unwrap(), b"keep");
+        assert!(invoke(&core, "free_space", json!({"path": victim})).await.is_ok());
+        assert!(invoke(&core, "free_space", json!({"path": "/etc/passwd"})).await.is_err());
         core.shutdown().await;
     }
 }

@@ -59,6 +59,9 @@ impl Args {
                 other => return Err(format!("unknown argument: {other}")),
             }
         }
+        if out.no_auth_token && !crate::auth::is_loopback_host(&out.host) {
+            return Err("--no-auth-token requires a loopback bind address".into());
+        }
         Ok(out)
     }
 
@@ -134,7 +137,7 @@ mod tests {
         let a = parse(&[
             "prism-web",
             "--host",
-            "0.0.0.0",
+            "127.0.0.1",
             "--port=9090",
             "--no-auth-token",
             "--download-dir=/downloads",
@@ -142,12 +145,23 @@ mod tests {
             "--warmup",
         ])
         .unwrap();
-        assert_eq!(a.host, "0.0.0.0");
+        assert_eq!(a.host, "127.0.0.1");
         assert_eq!(a.port, 9090);
         assert!(a.no_auth_token);
         assert_eq!(a.download_dir, Some(PathBuf::from("/downloads")));
         assert_eq!(a.ipc_file(), PathBuf::from("/host-ipc/ipc.json"));
         assert!(a.warmup);
+
+        // A token-protected server can still bind every interface (Docker).
+        let a = parse(&["prism-web", "--host", "0.0.0.0"]).unwrap();
+        assert_eq!(a.host, "0.0.0.0");
+    }
+
+    #[test]
+    fn refuses_no_auth_on_non_loopback_bind() {
+        assert!(parse(&["prism-web", "--host", "0.0.0.0", "--no-auth-token"]).is_err());
+        assert!(parse(&["prism-web", "--host", "example.com", "--no-auth-token"]).is_err());
+        assert!(parse(&["prism-web", "--no-auth-token"]).is_ok());
     }
 
     #[test]

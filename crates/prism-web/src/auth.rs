@@ -70,6 +70,13 @@ impl Auth {
     }
 }
 
+/// Accepts only loopback names/addresses (IPv4 and IPv6, with or without brackets).
+pub(crate) fn is_loopback_host(host: &str) -> bool {
+    let host = host.trim_matches(['[', ']']);
+    host.eq_ignore_ascii_case("localhost")
+        || host.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback())
+}
+
 pub(crate) fn random_token() -> String {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).expect("OS random source");
@@ -116,6 +123,16 @@ mod tests {
         assert!(a.token().is_none());
         assert!(a.authorized(&HeaderMap::new()));
         assert!(!dir.path().join("web-ui.json").exists());
+    }
+
+    #[test]
+    fn loopback_host_check() {
+        for host in ["localhost", "LOCALHOST", "127.0.0.1", "127.0.0.2", "::1", "[::1]"] {
+            assert!(is_loopback_host(host), "{host}");
+        }
+        for host in ["0.0.0.0", "example.com", "126.0.0.1", "::2", ""] {
+            assert!(!is_loopback_host(host), "{host}");
+        }
     }
 
     #[test]

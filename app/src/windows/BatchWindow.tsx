@@ -131,6 +131,11 @@ export default function BatchWindow({ id }: { id: string }) {
           {t("Select none")}
         </button>
         <span className="spacer" />
+        {webMode && (
+          <button type="button" className="btn btn--ghost btn--sm" onClick={cancel}>
+            {t("Cancel")}
+          </button>
+        )}
         <span className="sumtext">
           {tr("{selected} of {total} · {size}", { selected: <b>{sel.length}</b>, total: entries.length, size: <b>{formatBytes(sel.reduce((s, e) => s + (e.size ?? 0), 0))}</b> })}
         </span>

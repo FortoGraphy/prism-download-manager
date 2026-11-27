@@ -1,9 +1,12 @@
 use crate::auth::Auth;
 use crate::commands;
 use crate::ipc;
-use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::extract::{Path, Request, State};
+use axum::http::uri::Authority;
+use axum::http::{HeaderMap, StatusCode, Uri, header};
+use axum::middleware::{self, Next};
 use axum::response::sse::{Event, Sse};
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use futures_util::stream::{Stream, unfold};
@@ -27,15 +30,61 @@ pub fn router(core: Core, auth: Auth, ipc_auth: ipc::IpcAuth) -> Router {
         core: core.clone(),
         auth,
     });
-    Router::new()
+    let web = Router::new()
         .route("/", get(index))
         .route("/api/config", get(config))
         .route("/api/invoke", post(invoke))
         .route("/api/events", get(events))
         .route("/login.html", get(login))
-        .with_state(state)
-        .merge(ipc::router(core, ipc_auth))
         .route("/{*path}", get(asset))
+        .layer(middleware::from_fn_with_state(state.clone(), origin_guard))
+        .with_state(state);
+    // The native-host IPC routes are merged separately and keep their token auth only.
+    web.merge(ipc::router(core, ipc_auth))
+}
+
+/// With no bearer token, a browser must not be able to reach the server through a
+/// rebinding hostname. Token-authenticated deployments (Docker) stay untouched.
+async fn origin_guard(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    request: Request,
+    next: Next,
+) -> Response {
+    if state.auth.enabled() || web_origin_allowed(&headers) {
+        next.run(request).await
+    } else {
+        (StatusCode::FORBIDDEN, "forbidden origin").into_response()
+    }
+}
+
+fn web_origin_allowed(headers: &HeaderMap) -> bool {
+    let Some(host) = headers
+        .get(header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<Authority>().ok())
+    else {
+        return false;
+    };
+    if !crate::auth::is_loopback_host(host.host()) {
+        return false;
+    }
+    if let Some(site) = headers.get("sec-fetch-site").and_then(|v| v.to_str().ok())
+        && !matches!(site, "same-origin" | "none")
+    {
+        return false;
+    }
+    if let Some(origin) = headers.get(header::ORIGIN).and_then(|v| v.to_str().ok()) {
+        let Ok(uri) = origin.parse::<Uri>() else {
+            return false;
+        };
+        if !matches!(uri.scheme_str(), Some("http" | "https"))
+            || uri.authority().is_none_or(|a| !a.as_str().eq_ignore_ascii_case(host.as_str()))
+        {
+            return false;
+        }
+    }
+    true
 }
 
 async fn index(State(state): State<Arc<AppState>>) -> ([(header::HeaderName, &'static str); 2], Vec<u8>) {
@@ -105,7 +154,8 @@ async fn events(
     Ok(Sse::new(stream))
 }
 
-async fn login() -> ([(header::HeaderName, &'static str); 1], Vec<u8>) {
+async fn login(uri: Uri) -> ([(header::HeaderName, &'static str); 1], Vec<u8>) {
+    let next = serde_json::to_string(&next_path(&uri)).unwrap_or_else(|_| "\"/\"".into());
     let body = br#"<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prism Web</title>
@@ -117,7 +167,7 @@ button{background:#5b8cff;border-color:#5b8cff;cursor:pointer}.err{color:#ff9090
 <input id="token" type="password" autocomplete="off" autofocus placeholder="Access token">
 <button type="submit">Connect</button><span class="err" id="err"></span></form>
 <script>
-const next = new URLSearchParams(location.search).get('next') || '/';
+const next = __NEXT__;
 document.getElementById('f').addEventListener('submit', async e => {
   e.preventDefault();
   const token = document.getElementById('token').value.trim();
@@ -125,8 +175,50 @@ document.getElementById('f').addEventListener('submit', async e => {
   if (r && r.ok) { sessionStorage.setItem('prism-web-token', token); location.href = next; }
   else document.getElementById('err').textContent = 'Wrong token. Try again.';
 });
-</script>"#.to_vec();
+</script>"#;
+    let body = String::from_utf8_lossy(body)
+        .replace("__NEXT__", &next)
+        .into_bytes();
     ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], body)
+}
+
+/// Resolve the post-login target server-side so a crafted query cannot turn it into
+/// a script URL or a protocol-relative off-origin redirect.
+fn next_path(uri: &Uri) -> String {
+    uri.query()
+        .and_then(|query| {
+            query.split('&').find_map(|part| {
+                let (key, value) = part.split_once('=')?;
+                (key == "next").then_some(value)
+            })
+        })
+        .and_then(decode_component)
+        .filter(|path| {
+            path.starts_with('/')
+                && !path.starts_with("//")
+                && !path.contains(['\\', '<', '>', '"', '\''])
+                && !path.chars().any(char::is_control)
+        })
+        .unwrap_or_else(|| "/".into())
+}
+
+fn decode_component(raw: &str) -> Option<String> {
+    let bytes = raw.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let hex = bytes.get(i + 1..i + 3)?;
+            let hi = (hex[0] as char).to_digit(16)?;
+            let lo = (hex[1] as char).to_digit(16)?;
+            out.push((hi * 16 + lo) as u8);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
 }
 
 async fn asset(Path(path): Path<String>) -> ([(header::HeaderName, &'static str); 1], Vec<u8>) {
@@ -194,5 +286,81 @@ mod tests {
         let html = String::from_utf8(body).unwrap();
         assert!(html.contains("window.__PRISM_WEB__={auth:true}"));
         assert!(html.find("window.__PRISM_WEB__").unwrap() < html.find("</head>").unwrap());
+    }
+
+    #[tokio::test]
+    async fn router_merges_ipc_routes_without_overlap() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::start(prism_core::manager::CoreOptions {
+            data_dir: dir.path().to_path_buf(),
+            ipc: false,
+            clipboard: false,
+        })
+        .await
+        .unwrap();
+        let auth = crate::auth::Auth::new(dir.path(), 8080, true).unwrap();
+        let ipc_auth = crate::ipc::IpcAuth::new(dir.path().join("ipc.json"));
+        let _ = router(core.clone(), auth, ipc_auth);
+        core.shutdown().await;
+    }
+
+    #[test]
+    fn no_auth_requires_loopback_origin() {
+        let headers = |host: &str, origin: Option<&str>, site: Option<&str>| {
+            let mut headers = HeaderMap::new();
+            headers.insert(header::HOST, host.parse().unwrap());
+            if let Some(origin) = origin {
+                headers.insert(header::ORIGIN, origin.parse().unwrap());
+            }
+            if let Some(site) = site {
+                headers.insert("sec-fetch-site", site.parse().unwrap());
+            }
+            headers
+        };
+        assert!(web_origin_allowed(&headers("127.0.0.1:8080", None, None)));
+        assert!(web_origin_allowed(&headers(
+            "localhost:8080",
+            Some("http://localhost:8080"),
+            Some("same-origin")
+        )));
+        assert!(!web_origin_allowed(&headers("evil.example:8080", None, None)));
+        assert!(!web_origin_allowed(&headers(
+            "127.0.0.1:8080",
+            Some("http://evil.example"),
+            None
+        )));
+        assert!(!web_origin_allowed(&headers(
+            "127.0.0.1:8080",
+            None,
+            Some("cross-site")
+        )));
+        assert!(!web_origin_allowed(&headers(
+            "127.0.0.1:8080",
+            Some("null"),
+            None
+        )));
+        assert!(!web_origin_allowed(&HeaderMap::new()));
+    }
+
+    #[tokio::test]
+    async fn login_accepts_only_same_origin_next_paths() {
+        for (query, expected) in [
+            ("next=%2Fsettings", "/settings"),
+            ("next=%2F%23%2Ftools%2Fshrink", "/#/tools/shrink"),
+            ("next=%2F%2Fevil.example", "/"),
+            ("next=%5C%5Cevil.example", "/"),
+            ("next=javascript%3Aalert(1)", "/"),
+            ("next=https%3A%2F%2Fevil.example", "/"),
+            ("next=%2F%3Cscript%3E", "/"),
+            ("next=%2Fx%0Aevil", "/"),
+        ] {
+            let uri: Uri = format!("/login.html?{query}").parse().unwrap();
+            assert_eq!(next_path(&uri), expected, "{query}");
+        }
+        let uri: Uri = "/login.html?next=javascript%3Aalert(1)".parse().unwrap();
+        let (_, body) = login(uri).await;
+        let html = String::from_utf8(body).unwrap();
+        assert!(html.contains("const next = \"/\";"));
+        assert!(!html.contains("URLSearchParams"));
     }
 }

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Icon } from "../design/icons";
 import { inTauri, webMode } from "../lib/api";
 import { t } from "../lib/i18n";
@@ -38,6 +38,11 @@ interface Props {
  * Outside Tauri and web mode the window is staged at its real size on a wallpaper for previews.
  */
 export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, children, className, bare }: Props) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Hash routes swap the whole view; move focus to the new dialog for keyboard and screen-reader users.
+    if (webMode) frameRef.current?.focus();
+  }, []);
   useEffect(() => {
     // After the first paint; the timer covers webviews that pause animation frames while hidden.
     let shown = false;
@@ -62,7 +67,13 @@ export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, 
   }, [close]);
 
   const frame = (
-    <div className={`wframe glass-strong ${className ?? ""}`}>
+    <div
+      ref={frameRef}
+      className={`wframe glass-strong ${className ?? ""}`}
+      tabIndex={-1}
+      role={webMode ? "dialog" : undefined}
+      aria-label={webMode ? (typeof title === "string" ? title : kind) : undefined}
+    >
       {!bare && (
         <header className="wtitle" data-tauri-drag-region>
           {icon}

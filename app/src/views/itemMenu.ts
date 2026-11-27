@@ -73,7 +73,7 @@ export function itemMenu(ids: string[]): MenuEntry[] {
       : ([
           { label: t("Open"), icon: "open-file", kbd: "Enter", disabled: !done, onSelect: () => one && actions.open(one.id) },
           { label: t("Show in folder"), icon: "folder-open", disabled: !one, onSelect: () => one && actions.reveal(one.id) },
-        ] as MenuEntry[])),
+        ] satisfies MenuEntry[])),
     ...tools,
     { separator: true },
     { label: t("Resume"), icon: "resume", disabled: !list.some((i) => canResume(i.status) || i.status === "queued"), onSelect: () => actions.resume(ids) },

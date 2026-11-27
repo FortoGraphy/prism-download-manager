@@ -247,13 +247,13 @@ export default function ToolsWindow({ request }: { request: ToolsRequest }) {
       <div
         className={`wbody tools${over ? " is-over" : ""}`}
         onDragOver={(e) => {
-          if (inTauri) return;
+          if (inTauri || webMode) return;
           e.preventDefault();
           setOver(true);
         }}
-        onDragLeave={() => !inTauri && setOver(false)}
+        onDragLeave={() => !inTauri && !webMode && setOver(false)}
         onDrop={(e) => {
-          if (inTauri) return;
+          if (inTauri || webMode) return;
           e.preventDefault();
           setOver(false);
           void add(Array.from(e.dataTransfer.files).map((f) => demoPath(f.name)));
@@ -357,12 +357,14 @@ export default function ToolsWindow({ request }: { request: ToolsRequest }) {
                 </div>
               </div>
             ))}
-            <div className="tfiles__more">
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => void pick()}>
-                <Icon name="plus" size={14} /> {t("Add files…")}
-              </button>
-              <span className="t-small text-tertiary">{t("or drop more here")}</span>
-            </div>
+            {!webMode && (
+              <div className="tfiles__more">
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => void pick()}>
+                  <Icon name="plus" size={14} /> {t("Add files…")}
+                </button>
+                <span className="t-small text-tertiary">{t("or drop more here")}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -485,17 +487,19 @@ export default function ToolsWindow({ request }: { request: ToolsRequest }) {
             </div>
           </section>
         )}
-        <input
-          ref={picker}
-          type="file"
-          multiple
-          hidden
-          onChange={(e) => {
-            const names = Array.from(e.target.files ?? []).map((f) => demoPath(f.name));
-            e.target.value = "";
-            if (names.length) void add(names);
-          }}
-        />
+        {!webMode && (
+          <input
+            ref={picker}
+            type="file"
+            multiple
+            hidden
+            onChange={(e) => {
+              const names = Array.from(e.target.files ?? []).map((f) => demoPath(f.name));
+              e.target.value = "";
+              if (names.length) void add(names);
+            }}
+          />
+        )}
       </div>
 
       <footer className="dialog__footer">

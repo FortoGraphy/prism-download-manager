@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { api, onCoreEvent, webMode } from "./api";
 import { hexEncode } from "./route";
 import { NATIVE_SOUNDS, soundFile } from "./sounds";
+import { useUi } from "./ui";
 import type {
   Bootstrap,
   Category,
@@ -129,6 +130,17 @@ export function handleEvent(e: CoreEvent) {
         break;
       case "showMain":
         location.hash = "";
+        break;
+      case "completed":
+        // No shell to open the dialog; don't hijack a dialog the user already has open.
+        if (
+          st.settings?.general.showCompletionDialog &&
+          !location.hash &&
+          !useUi.getState().dialog &&
+          !useUi.getState().sheet
+        ) {
+          location.hash = `#/complete/${e.payload.id}`;
+        }
         break;
     }
   }
