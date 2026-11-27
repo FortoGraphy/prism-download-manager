@@ -396,7 +396,8 @@ async fn a_part_of_a_video_keeps_its_range_across_a_restart() {
     .await
     .expect("yt-dlp was not asked for the part");
     assert!(args.contains("--download-sections *83-165"), "{args}");
-    assert!(args.contains("--force-keyframes-at-cuts"), "{args}");
+    // Copied, not encoded again on every core (#135).
+    assert!(!args.contains("--force-keyframes-at-cuts"), "{args}");
     assert!(args.contains("(1m23s"), "{args}");
     core.shutdown().await;
 }
@@ -427,5 +428,139 @@ async fn a_video_named_in_the_window_is_saved_under_that_name() {
     assert!(args.contains("Bunny intro."), "{args}");
     assert!(!args.contains("Big Buck Bunny"), "{args}");
     assert!(!args.contains("(1m23s"), "{args}");
+    core.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_name_template_has_the_playlist_and_the_place_in_it() {
+    let tmp = tempfile::tempdir().unwrap();
+    let core = core_in(tmp.path()).await;
+    let template = |t: &str| {
+        core.update_settings(&json!({"video": {"fileTemplate": t}}))
+            .unwrap();
+    };
+    // `s` is as wide as the last place picked, like in yt-dlp; an entry without a place loses
+    // the separator in front of it.
+    template("%(playlist_title)s - %(playlist_index)s - %(title)s.%(ext)s");
+    let items = core
+        .confirm_video(decision(
+            json!([
+                {"url": A, "title": "First clip", "index": 1},
+                {"url": B, "title": "Second clip", "index": 12},
+                C,
+            ]),
+            json!({}),
+        ))
+        .unwrap();
+    assert_eq!(
+        names(&items),
+        [
+            "My playlist - 01 - First clip.mkv",
+            "My playlist - 12 - Second clip.mkv",
+            "My playlist - Video.mkv"
+        ]
+    );
+    template("%(playlist_index)03d. %(title)s [%(id)s].%(ext)s");
+    let items = core
+        .confirm_video(decision(
+            json!([{"url": A, "title": "First clip", "index": 1}, C]),
+            json!({}),
+        ))
+        .unwrap();
+    assert_eq!(
+        names(&items),
+        [
+            "001. First clip [aaaaaaaaaaa].mkv",
+            "Video [ccccccccccc].mkv"
+        ]
+    );
+}
+
+/// #145: fields only the video's page has (here the uploader: Big Buck Bunny names no artist)
+/// are filled in when the download starts, and yt-dlp is told that name. A name typed in the
+/// window stays as typed.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_name_template_gets_the_pages_fields_when_the_download_starts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let core = core_with_fake_tools(tmp.path(), "youtube_bbb.json").await;
+    core.update_settings(&json!({"video": {
+        "accelerate": false,
+        "fileTemplate": "%(artist,uploader)s - %(title)s.%(ext)s",
+    }}))
+    .unwrap();
+    let single = |typed: Option<&str>| -> VideoDecision {
+        serde_json::from_value(json!({
+            "pageUrl": BBB,
+            "title": "Big Buck Bunny",
+            "choice": {"id": "v1080p60", "kind": "video", "label": "1080p60 · H.264", "subLabel": "", "container": "mp4", "height": 1080},
+            "options": {"container": "mp4"},
+            "fileName": typed,
+            "mode": {"type": "later"},
+        }))
+        .unwrap()
+    };
+    let items = core.confirm_video(single(None)).unwrap();
+    // Before the page is read there is no uploader, and no " - " left in front of the title.
+    assert_eq!(names(&items), ["Big Buck Bunny.mp4"]);
+    let typed = core.confirm_video(single(Some("Bunny, my way"))).unwrap();
+    assert_eq!(names(&typed), ["Bunny, my way.mp4"]);
+    let ids = [items[0].id.clone(), typed[0].id.clone()];
+
+    // One at a time: two stand-in yt-dlp scripts appending to args.txt at the same moment can
+    // lose a line on Windows (the file is locked by the other one).
+    let args_file = tmp.path().join("bin").join("args.txt");
+    let downloaded = |needle: &'static str| {
+        let args_file = args_file.clone();
+        async move {
+            tokio::time::timeout(Duration::from_secs(30), async {
+                loop {
+                    let text = std::fs::read_to_string(&args_file).unwrap_or_default();
+                    if let Some(l) = text
+                        .lines()
+                        .find(|l| l.contains("PRISMFILE") && l.contains(needle))
+                    {
+                        return l.to_string();
+                    }
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+            })
+            .await
+        }
+    };
+    let mut rx = core.subscribe();
+    core.start_items(&ids[..1]);
+    let renamed = tokio::time::timeout(Duration::from_secs(30), async {
+        loop {
+            match rx.recv().await {
+                Ok(CoreEvent::ItemUpdated(i))
+                    if i.id == ids[0] && i.file_name.starts_with("Blender") =>
+                {
+                    return i;
+                }
+                Ok(_) => {}
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
+                Err(e) => panic!("{e}"),
+            }
+        }
+    })
+    .await
+    .expect("the name was not completed");
+    assert_eq!(renamed.file_name, "Blender - Big Buck Bunny.mp4");
+    // The title it was added with stays.
+    assert_eq!(
+        renamed.media.unwrap().title.as_deref(),
+        Some("Big Buck Bunny")
+    );
+
+    downloaded("Blender - Big Buck Bunny.")
+        .await
+        .expect("yt-dlp was not asked to download it under the completed name");
+    core.start_items(&ids[1..]);
+    downloaded("Bunny, my way.")
+        .await
+        .expect("yt-dlp was not asked to download the typed name");
+    let all = std::fs::read_to_string(&args_file).unwrap_or_default();
+    assert!(!all.contains("Blender - Bunny"), "{all}");
+    assert_eq!(core.item(&ids[1]).unwrap().file_name, "Bunny, my way.mp4");
     core.shutdown().await;
 }

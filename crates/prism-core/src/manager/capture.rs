@@ -8,7 +8,7 @@ use crate::ipc::{BoxFuture, IpcHandler};
 use crate::model::*;
 use crate::settings::{ConflictAction, Settings};
 use anyhow::{Result, anyhow};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// How a newly added download should begin.
@@ -847,6 +847,8 @@ impl Core {
     /// Builds the `NewItem` for one video URL/format choice — shared by `confirm_video`'s
     /// immediate-start path and the "video" IPC handler's dialog-confirmed path, so a chosen
     /// quality is always named/categorized the same way regardless of which one starts it.
+    /// The name comes from the name template with what is known now (see [`known_fields`]);
+    /// the job completes it once the video's page is read.
     #[allow(clippy::too_many_arguments)]
     fn video_item(
         &self,
@@ -858,6 +860,7 @@ impl Core {
         title: Option<String>,
         thumbnail: Option<String>,
         duration: Option<f64>,
+        playlist: Option<&PlaylistPlace>,
     ) -> NewItem {
         let media = MediaInfo {
             title: title.clone(),
@@ -871,17 +874,24 @@ impl Core {
                 .ok()
                 .and_then(|u| u.host_str().map(String::from)),
             page_url: Some(url.clone()),
-            playlist_index: None,
+            playlist_index: playlist.and_then(|p| p.index),
             section: None,
         };
         let title = media.title.clone().unwrap_or_else(|| "Video".into());
         let ext = jobs::video_ext(choice, options, settings);
-        let stem = render_name_template(
+        let stem = prism_video::template::render_name(
             &settings.video.file_template,
-            &title,
-            video_id(&url).as_deref(),
+            &known_fields(&title, &url, playlist),
+            &ext,
         );
         let file_name = format!("{}.{ext}", super::sanitize_name(&stem));
+        let mut request = serde_json::json!({
+            "pageUrl": url, "choice": choice, "options": options, "context": context,
+        });
+        // For the job, which names the video again once its page is read.
+        if let (Some(p), Some(obj)) = (playlist, request.as_object_mut()) {
+            obj.insert("playlist".into(), serde_json::json!(p));
+        }
         NewItem {
             url: url.clone(),
             kind: Some(ItemKind::Video),
@@ -892,9 +902,7 @@ impl Core {
                 "video".into()
             }),
             media: Some(media),
-            request: Some(serde_json::json!({
-                "pageUrl": url, "choice": choice, "options": options, "context": context,
-            })),
+            request: Some(request),
             ..Default::default()
         }
     }
@@ -923,18 +931,20 @@ impl Core {
         }
         let settings = self.settings();
         let playlist = !d.entries.is_empty();
+        let last_index = d.entries.iter().filter_map(|e| e.index).max();
         // Numbers as wide as the last position: 01..99, 001..120.
-        let width = d
-            .entries
-            .iter()
-            .filter_map(|e| e.index)
-            .max()
-            .map_or(2, |m| m.to_string().len().max(2));
+        let width = last_index.map_or(2, |m| m.to_string().len().max(2));
         let entries: Vec<NewItem> = if playlist {
             d.entries
                 .iter()
                 .map(|e| {
-                    // Each entry by its own title (the playlist's title is not the video's).
+                    // Each entry by its own title (the playlist's title is not the video's; the
+                    // name template has it as `%(playlist_title)s`).
+                    let place = PlaylistPlace {
+                        title: d.title.clone(),
+                        index: e.index,
+                        last_index,
+                    };
                     let mut n = self.video_item(
                         &settings,
                         e.url.clone(),
@@ -944,10 +954,8 @@ impl Core {
                         e.title.clone(),
                         None,
                         None,
+                        Some(&place),
                     );
-                    if let Some(m) = n.media.as_mut() {
-                        m.playlist_index = e.index;
-                    }
                     if settings.video.number_playlist_videos
                         && let (Some(i), Some(name)) = (e.index, n.file_name.as_mut())
                     {
@@ -967,6 +975,7 @@ impl Core {
                 d.title.clone(),
                 d.thumbnail.clone(),
                 d.duration,
+                None,
             );
             if let Some(part) = d.section.and_then(|s| s.part_of(d.duration)) {
                 only_part(&mut n, part);
@@ -1385,6 +1394,16 @@ impl Core {
                     self.emit(CoreEvent::LeftToBrowser { host });
                     return serde_json::json!({"ok": true, "accepted": false, "reason": "browserOnly"});
                 }
+                // The extension stops waiting at its deadline and lets the browser download the
+                // file: past it, a dialog would start the same download a second time (#130, #98).
+                if msg
+                    .get("deadline")
+                    .and_then(|v| v.as_i64())
+                    .is_some_and(|d| crate::model::now_ms() > d)
+                {
+                    tracing::info!("the browser stopped waiting; the download is left to it");
+                    return serde_json::json!({"ok": true, "accepted": false, "reason": "late"});
+                }
                 // A link to a .torrent file: "Add torrent" opens (with the dialog off, the torrent
                 // goes straight into the list) instead of downloading the .torrent file (#20).
                 if is_get(&n) && is_torrent_link(&n.url) {
@@ -1584,6 +1603,7 @@ impl Core {
                         title,
                         thumbnail,
                         duration,
+                        None,
                     );
                     // The confirmation is off: it starts right away.
                     let mode = if settings.downloads.auto_start {
@@ -1978,8 +1998,6 @@ mod tests {
     }
 }
 
-/// Applies the user's yt-dlp style name template (`%(title)s [%(id)s].%(ext)s`) to the fields
-/// Prism knows; unknown fields and the brackets left empty by them are dropped.
 /// `01 - Name.mkv`: a playlist video's file name with its position, `width` digits at least.
 pub(crate) fn numbered_name(name: &str, index: u32, width: usize) -> String {
     format!("{index:0width$} - {name}")
@@ -2008,32 +2026,46 @@ pub(crate) fn only_part(n: &mut NewItem, part: prism_video::Section) {
     }
 }
 
+/// Where a playlist's video is: the playlist's title, the video's 1-based place and the last
+/// place picked (how wide `%(playlist_index)s` is). Kept with the job as `playlist`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub(crate) struct PlaylistPlace {
+    pub title: Option<String>,
+    pub index: Option<u32>,
+    pub last_index: Option<u32>,
+}
+
+/// What the name template (Settings › Video) has of a video before its page is read: the
+/// title, the id in its address and, for a playlist's video, the playlist and its place there.
+/// Fields only the page has (uploader, artist, date, …) are left out of the name until the job
+/// reads the page (#145).
+pub(crate) fn known_fields(
+    title: &str,
+    page_url: &str,
+    playlist: Option<&PlaylistPlace>,
+) -> prism_video::VideoInfo {
+    let place = playlist.cloned().unwrap_or_default();
+    prism_video::VideoInfo {
+        title: title.to_string(),
+        id: video_id(page_url).unwrap_or_default(),
+        playlist_title: place.title,
+        playlist_index: place.index,
+        last_playlist_index: place.last_index,
+        ..Default::default()
+    }
+}
+
+/// The user's yt-dlp style name template (`%(title)s [%(id)s].%(ext)s`) with only a title and
+/// an id: fields without a value are left out with the brackets and separators around them.
+#[cfg(test)]
 pub(crate) fn render_name_template(template: &str, title: &str, id: Option<&str>) -> String {
-    let tpl = template.trim();
-    let tpl = tpl.strip_suffix(".%(ext)s").unwrap_or(tpl);
-    if tpl.is_empty() {
-        return title.to_string();
-    }
-    let mut out = tpl
-        .replace("%(title)s", title)
-        .replace("%(id)s", id.unwrap_or(""));
-    // Fields Prism doesn't know (uploader, upload_date, ...).
-    while let Some(start) = out.find("%(") {
-        let Some(len) = out[start..].find(")s") else {
-            break;
-        };
-        out.replace_range(start..start + len + 2, "");
-    }
-    for empty in ["[]", "()", "{}"] {
-        out = out.replace(empty, "");
-    }
-    let out = out.split_whitespace().collect::<Vec<_>>().join(" ");
-    let out = out.trim_matches(|c: char| c == '-' || c == '_' || c.is_whitespace());
-    if out.is_empty() {
-        title.to_string()
-    } else {
-        out.to_string()
-    }
+    let known = prism_video::VideoInfo {
+        title: title.to_string(),
+        id: id.unwrap_or_default().to_string(),
+        ..Default::default()
+    };
+    prism_video::template::render_name(template, &known, "")
 }
 
 /// The site's video id where it is in the URL (YouTube watch/shorts/youtu.be links).
@@ -2355,6 +2387,38 @@ mod file_name_tests {
             "entries": [{"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa", "title": "First", "index": 1}],
         }));
         assert_eq!(list[0].file_name, "First [aaaaaaaaaaa].mp4");
+        core.shutdown().await;
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_download_the_browser_stopped_waiting_for_opens_no_dialog() {
+        // #130, #98: the extension let the browser download the file when the app took too
+        // long, and the app then showed its dialog anyway: the file was downloaded twice.
+        let server = prism_testserver::TestServer::start(Default::default())
+            .await
+            .unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        let core = core_in(tmp.path()).await;
+        core.update_settings(&json!({"general": {"showCaptureDialog": true}}))
+            .unwrap();
+        let url = server.url("/file/late.zip?size=1000");
+        let late = core
+            .handle_message(
+                json!({"type": "download", "url": url, "deadline": crate::model::now_ms() - 1}),
+            )
+            .await;
+        assert_eq!(late["accepted"], false, "{late}");
+        assert_eq!(late["reason"], "late");
+        assert!(core.0.state.lock().captures.is_empty(), "no dialog");
+        let in_time = core
+            .handle_message(json!({"type": "download", "url": url, "deadline": crate::model::now_ms() + 60_000}))
+            .await;
+        assert_eq!(in_time["accepted"], true, "{in_time}");
+        // An older extension sends no deadline: as before.
+        let old = core
+            .handle_message(json!({"type": "download", "url": url}))
+            .await;
+        assert_eq!(old["accepted"], true, "{old}");
         core.shutdown().await;
     }
 

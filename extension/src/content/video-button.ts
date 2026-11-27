@@ -8,6 +8,7 @@ import { icons, prismMark } from '../shared/icons';
 import { type ElementSource, elementSources, linkedinCommentaryPath, linkedinPostPath, postUrl } from '../shared/media';
 import { siteMatches } from '../shared/rules';
 import type { ActionResult, VideoOption, VideoOptionsResult } from '../shared/messages';
+import { FullscreenState } from './fullscreen';
 import { VIDEO_BUTTON_CSS } from './styles';
 
 const MIN_W = 200;
@@ -32,6 +33,10 @@ function eligible(v: HTMLVideoElement, r: DOMRect): boolean {
   if (r.width < MIN_W || r.height < MIN_H) return false;
   // Small muted autoplay loops without controls are decorative/ads.
   if (v.muted && v.autoplay && v.loop && !v.controls && (r.width < 400 || r.height < 225)) return false;
+  // A video the page hides (display, visibility or opacity) but keeps in its layout, like the
+  // players Telegram Web keeps behind its chat (#66). Browsers without checkVisibility skip this.
+  const visible = (v as { checkVisibility?: (o: object) => boolean }).checkVisibility;
+  if (visible && !visible.call(v, { opacityProperty: true, visibilityProperty: true })) return false;
   return true;
 }
 
@@ -119,9 +124,18 @@ function inside(r: DOMRect, x: number, y: number, pad = 0): boolean {
   return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
 }
 
+function videoIdentity(v: HTMLVideoElement): string | undefined {
+  const page = location.href;
+  const post = postUrlOf(v, page) ?? postUrl(page, page);
+  if (post) return `post:${post}`;
+  const source = v.getAttribute('src') ? v.src : v.currentSrc;
+  return source ? `source:${source}` : undefined;
+}
+
 export class VideoButton {
   private host: HTMLDivElement | null = null;
   private wrap!: HTMLDivElement;
+  private controls!: HTMLDivElement;
   private pill!: HTMLButtonElement;
   private menu!: HTMLDivElement;
   private videos = new Set<HTMLVideoElement>();
@@ -129,12 +143,20 @@ export class VideoButton {
   private visible = new Set<HTMLVideoElement>();
   private io: IntersectionObserver | null = null;
   private current: HTMLVideoElement | null = null;
+  private currentIdentity: string | undefined;
+  private readonly dismissedVideos = new Set<string>();
+  private readonly dismissedPlayers = new WeakSet<HTMLVideoElement>();
+  private readonly fullscreen = new FullscreenState(() => {
+    if (this.fullscreen.active) this.hide(true);
+  });
   private hideTimer: ReturnType<typeof setTimeout> | undefined;
   private rafPending = false;
   private lastX = -1;
   private lastY = -1;
   private overUi = false;
   private menuOpen = false;
+  private menuSession = 0;
+  private contextOnly = false;
   private enabled = false;
   private videoSites: string[] = [];
   private prefetchTimer: ReturnType<typeof setTimeout> | undefined;
@@ -179,7 +201,7 @@ export class VideoButton {
     window.addEventListener('pointermove', this.onMove, { capture: true, passive: true });
     window.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
     window.addEventListener('resize', this.onScroll, { passive: true });
-    document.addEventListener('fullscreenchange', this.onFullscreen);
+    this.fullscreen.start();
     document.addEventListener('pointerdown', this.onDocDown, true);
     document.addEventListener('keydown', this.onKey, true);
     document.addEventListener('contextmenu', this.onContextMenu, true);
@@ -199,12 +221,14 @@ export class VideoButton {
     window.removeEventListener('pointermove', this.onMove, true);
     window.removeEventListener('scroll', this.onScroll, true);
     window.removeEventListener('resize', this.onScroll);
-    document.removeEventListener('fullscreenchange', this.onFullscreen);
+    this.fullscreen.stop();
     document.removeEventListener('pointerdown', this.onDocDown, true);
     document.removeEventListener('keydown', this.onKey, true);
     document.removeEventListener('contextmenu', this.onContextMenu, true);
     document.removeEventListener('yt-navigate-finish', this.onNavigate);
     window.removeEventListener('popstate', this.onNavigate);
+    const nav = (window as unknown as { navigation?: EventTarget }).navigation;
+    nav?.removeEventListener('navigatesuccess', this.onNavigate);
     this.hide(true);
     this.host?.remove();
     this.host = null;
@@ -216,7 +240,7 @@ export class VideoButton {
     this.scanQueued = true;
     requestAnimationFrame(() => {
       this.scanQueued = false;
-      this.scan(document);
+      if (this.enabled) this.scan(document);
     });
   }
 
@@ -261,12 +285,19 @@ export class VideoButton {
     }
     this.wrap = document.createElement('div');
     this.wrap.className = 'wrap';
+    this.wrap.inert = true;
     this.wrap.innerHTML = `
-      <button class="pill glass" type="button" aria-haspopup="menu" aria-expanded="false" title="Download this video with Prism">
-        ${prismMark(18)}<span class="label">Download</span><span class="chev">${icons.chevronDown(14)}</span>
-      </button>
+      <div class="controls">
+        <button class="pill glass" type="button" aria-haspopup="menu" aria-expanded="false" title="Download this video with Prism">
+          ${prismMark(18)}<span class="label">Download</span><span class="chev">${icons.chevronDown(14)}</span>
+        </button>
+        <button class="dismiss glass" type="button" aria-label="Hide Prism for this video" title="Hide Prism for this video until the page is reloaded">
+          ${icons.close(16)}
+        </button>
+      </div>
       <div class="menu glass" role="menu"></div>`;
     root.append(this.wrap);
+    this.controls = this.wrap.querySelector('.controls')!;
     this.pill = this.wrap.querySelector('.pill')!;
     this.menu = this.wrap.querySelector('.menu')!;
     // Only the user's own clicks (isTrusted): the shadow root is open, and a page script must not
@@ -280,10 +311,19 @@ export class VideoButton {
     this.pill.addEventListener('pointerenter', (e) => {
       if (e.isTrusted) this.prefetch();
     });
-    for (const el of [this.pill, this.menu]) {
+    this.wrap.querySelector('.dismiss')!.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!e.isTrusted || !this.current) return;
+      if (this.currentIdentity) this.dismissedVideos.add(this.currentIdentity);
+      else this.dismissedPlayers.add(this.current);
+      this.hide(true);
+    });
+    for (const el of [this.controls, this.menu]) {
       el.addEventListener('pointerenter', () => {
         this.overUi = true;
         clearTimeout(this.hideTimer);
+        this.hideTimer = undefined;
       });
       el.addEventListener('pointerleave', () => {
         this.overUi = false;
@@ -291,14 +331,7 @@ export class VideoButton {
       });
     }
     this.host = host;
-    this.attachHost();
-  }
-
-  private attachHost(): void {
-    if (!this.host) return;
-    const fs = document.fullscreenElement;
-    const parent = fs && fs.tagName !== 'VIDEO' ? fs : document.documentElement;
-    if (this.host.parentNode !== parent) parent.appendChild(this.host);
+    document.documentElement.append(host);
   }
 
   // ---- show / hide / position -------------------------------------------------
@@ -320,10 +353,11 @@ export class VideoButton {
   };
 
   private hitTest(): void {
-    if (this.menuOpen || this.overUi) return;
+    if (!this.enabled || this.fullscreen.active || this.menuOpen || this.overUi) return;
     const x = this.lastX;
     const y = this.lastY;
     let found: HTMLVideoElement | null = null;
+    let identity: string | undefined;
     // Prefer the current video while the pointer is still on it.
     const ordered = this.current ? [this.current, ...this.visible] : this.visible;
     for (const v of ordered) {
@@ -333,30 +367,35 @@ export class VideoButton {
       const r = t.getBoundingClientRect();
       if (!inside(r, x, y)) continue;
       if (!eligible(v, v.getBoundingClientRect())) continue;
+      const key = videoIdentity(v);
+      if (this.isDismissed(v, key)) continue;
       found = v;
+      identity = key;
       break;
     }
     if (found) {
       clearTimeout(this.hideTimer);
       this.hideTimer = undefined;
-      if (found !== this.current) this.show(found);
+      if (found !== this.current || identity !== this.currentIdentity) this.show(found, identity);
     } else if (this.current) {
       this.scheduleHide();
     }
   }
 
-  private show(v: HTMLVideoElement): void {
-    const fs = document.fullscreenElement;
-    if (fs && fs.tagName === 'VIDEO') return; // can't overlay a fullscreen <video>
+  private isDismissed(v: HTMLVideoElement, key: string | undefined): boolean {
+    return key ? this.dismissedVideos.has(key) : this.dismissedPlayers.has(v);
+  }
+
+  private show(v: HTMLVideoElement, identity: string | undefined): void {
     this.ensureHost();
-    this.attachHost();
     this.current = v;
+    this.currentIdentity = identity;
     // Start reading the qualities while the pointer rests on the video, so the menu is ready
     // (or nearly) when it opens. A short wait skips videos merely crossed on the way; one at a
     // time, as scrolling a feed under a resting pointer would start one per video.
     clearTimeout(this.prefetchTimer);
     this.prefetchTimer = setTimeout(() => {
-      if (this.current !== v || this.restPrefetch) return;
+      if (this.current !== v || this.currentIdentity !== identity || this.contextOnly || this.restPrefetch) return;
       const done = () => {
         this.restPrefetch = undefined;
       };
@@ -364,11 +403,10 @@ export class VideoButton {
     }, 400);
     this.resetPill();
     this.position();
-    this.wrap.classList.add('show');
   }
 
   private scheduleHide(): void {
-    if (this.hideTimer || this.menuOpen) return;
+    if (!this.current || this.hideTimer || this.menuOpen) return;
     this.hideTimer = setTimeout(() => {
       this.hideTimer = undefined;
       if (!this.overUi && !this.menuOpen) this.hide();
@@ -377,44 +415,49 @@ export class VideoButton {
 
   private hide(force = false): void {
     if (!this.host) return;
-    clearTimeout(this.prefetchTimer);
     if (!force && (this.menuOpen || this.overUi)) return;
-    this.closeMenu();
+    clearTimeout(this.prefetchTimer);
+    clearTimeout(this.hideTimer);
+    this.hideTimer = undefined;
+    this.resetMenu();
     this.wrap.classList.remove('show');
+    this.wrap.inert = true;
     this.current = null;
+    this.currentIdentity = undefined;
+    this.contextOnly = false;
+    this.overUi = false;
   }
 
   private position(): void {
     const v = this.current;
     if (!v || !this.host) return;
     const t = targetOf(v);
-    if (!v.isConnected || !t) return this.hide(true);
+    if (this.fullscreen.active || !v.isConnected || !t || videoIdentity(v) !== this.currentIdentity) return this.hide(true);
     const r = t.getBoundingClientRect();
     const vw = document.documentElement.clientWidth || innerWidth;
     const vh = document.documentElement.clientHeight || innerHeight;
     if (r.bottom < 40 || r.top > vh - 40 || r.right < 60 || r.left > vw - 60) {
-      if (!this.menuOpen) this.wrap.classList.remove('show');
-      return;
+      return this.hide(true);
     }
-    const pw = this.pill.offsetWidth || 118;
-    const ph = this.pill.offsetHeight || 32;
-    const inFs = !!document.fullscreenElement;
+    const pw = this.controls.offsetWidth;
+    const ph = this.controls.offsetHeight;
     const x = Math.max(8, Math.min(r.right, vw) - pw - 10);
     // Above the player's top-right edge when there is room, else just inside it.
-    const y = !inFs && r.top >= ph + 14 ? r.top - ph - 6 : Math.max(r.top, 0) + 10;
+    const y = r.top >= ph + 14 ? r.top - ph - 6 : Math.max(r.top, 0) + 10;
     this.wrap.style.setProperty('--x', `${x}px`);
     this.wrap.style.setProperty('--y', `${y}px`);
-    // Open the menu upwards when there's no room below.
-    this.menu.classList.toggle('up', y + ph + 360 > vh && y > 360);
-    if (this.menuOpen || this.wrap.classList.contains('show') || this.current) this.wrap.classList.add('show');
+    const width = Math.max(0, Math.min(300, vw - 16));
+    const left = Math.max(8, Math.min(x + pw - width, vw - width - 8));
+    const above = y - 14;
+    const below = vh - y - ph - 14;
+    const openUp = below < 340 && above > below;
+    this.menu.style.setProperty('--menu-x', `${left - x}px`);
+    this.menu.style.setProperty('--menu-width', `${width}px`);
+    this.menu.style.setProperty('--menu-height', `${Math.max(0, Math.min(340, openUp ? above : below))}px`);
+    this.menu.classList.toggle('up', openUp);
+    this.wrap.classList.add('show');
+    this.wrap.inert = false;
   }
-
-  private onFullscreen = (): void => {
-    this.attachHost();
-    const fs = document.fullscreenElement;
-    if (fs && fs.tagName === 'VIDEO') this.hide(true);
-    else if (this.current) this.position();
-  };
 
   private onNavigate = (): void => {
     this.cache.clear();
@@ -436,10 +479,12 @@ export class VideoButton {
     const c = this.contextVideo;
     this.contextVideo = null;
     if (!this.enabled || !c || Date.now() - c.at > 60_000 || !c.v.isConnected || !targetOf(c.v)) return false;
-    const fs = document.fullscreenElement;
-    if (fs && fs.tagName === 'VIDEO') return false;
+    if (this.fullscreen.active) return false;
     this.hide(true);
-    this.show(c.v);
+    const identity = videoIdentity(c.v);
+    this.contextOnly = this.isDismissed(c.v, identity);
+    this.show(c.v, identity);
+    if (!this.current) return false;
     void this.toggleMenu();
     return true;
   }
@@ -454,7 +499,7 @@ export class VideoButton {
   private onKey = (e: KeyboardEvent): void => {
     if (e.key === 'Escape' && this.menuOpen) {
       this.closeMenu();
-      this.pill.focus();
+      if (this.current) this.pill.focus();
     }
   };
 
@@ -489,18 +534,24 @@ export class VideoButton {
     this.cache.set(c.key, { at: Date.now(), res });
     // Don't cache failures/empties for long.
     void res.then((r) => {
-      if (!r || !r.options.length) this.cache.delete(c.key);
+      if ((!r || !r.options.length) && this.cache.get(c.key)?.res === res) this.cache.delete(c.key);
     });
     return res;
   }
 
   private prefetch(): void {
-    void this.options();
+    if (this.current && !this.contextOnly && !this.fullscreen.active) void this.options();
   }
 
   private closeMenu(): void {
+    if (this.contextOnly) this.hide(true);
+    else this.resetMenu();
+  }
+
+  private resetMenu(): void {
     if (!this.host) return;
     this.menuOpen = false;
+    this.menuSession++;
     this.menu.classList.remove('open');
     this.pill.setAttribute('aria-expanded', 'false');
   }
@@ -510,10 +561,13 @@ export class VideoButton {
       this.closeMenu();
       return;
     }
+    if (!this.current || this.fullscreen.active) return;
     this.menuOpen = true;
     this.pill.setAttribute('aria-expanded', 'true');
     this.menu.classList.add('open');
     this.position();
+    if (!this.menuOpen) return;
+    const session = ++this.menuSession;
     const ctx = this.context();
     this.menu.innerHTML = `<div class="loading"><span class="spin"></span>Finding qualities…</div>`;
     // On a video site's single post / video page "Best quality" works right away: the app picks
@@ -527,15 +581,16 @@ export class VideoButton {
       this.menu.querySelector<HTMLButtonElement>('.item[data-id="best"]')!.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!e.isTrusted) return;
-        void this.choose({ id: 'fmt:best', label: 'Best quality', group: 'video', formatId: 'best' }, ctx.title, best);
+        void this.choose({ id: 'fmt:best', label: 'Best quality', group: 'video', formatId: 'best' }, ctx.title, ctx.key, best);
       });
     }
     const res = await this.options();
-    if (!this.menuOpen) return;
-    this.renderMenu(ctx.title, res);
+    if (session !== this.menuSession) return;
+    if (ctx.key !== this.context().key) return this.closeMenu();
+    this.renderMenu(ctx.title, ctx.key, res);
   }
 
-  private renderMenu(title: string, res: VideoOptionsResult | undefined): void {
+  private renderMenu(title: string, key: string, res: VideoOptionsResult | undefined): void {
     const head = `<div class="head">${prismMark(16)}<span class="t">${esc(res?.title || title)}</span><span class="src">${res?.source === 'probe' ? 'Prism' : 'Detected'}</span></div>`;
     if (!res) {
       this.menu.innerHTML = `${head}<div class="note">Prism extension is restarting — try again in a moment.</div>`;
@@ -568,7 +623,7 @@ export class VideoButton {
         e.stopPropagation();
         if (!e.isTrusted) return;
         const opt = res.options.find((o) => o.id === btn.dataset.id);
-        if (opt) void this.choose(opt, res.title || title, opt.formatId ? res.pageUrl : undefined);
+        if (opt) void this.choose(opt, res.title || title, key, opt.formatId ? res.pageUrl : undefined);
       });
     });
   }
@@ -580,12 +635,16 @@ export class VideoButton {
   }
 
   /** `pageUrl`: the page the app read this format from (the post on a feed), else this page. */
-  private async choose(option: VideoOption, title: string, pageUrl?: string): Promise<void> {
+  private async choose(option: VideoOption, title: string, key: string, pageUrl?: string): Promise<void> {
+    if (!this.menuOpen || this.fullscreen.active) return;
     const ctx = this.context();
     this.closeMenu();
+    if (key !== ctx.key) return;
+    const session = this.menuSession;
     const label = this.pill.querySelector('.label')!;
-    label.textContent = 'Sending…';
+    if (this.current) label.textContent = 'Sending…';
     const r = await sendInternal<ActionResult>({ kind: 'videoDownload', pageUrl: pageUrl ?? ctx.pageUrl, title, option });
+    if (!this.current || session !== this.menuSession || ctx.key !== this.context().key) return;
     if (r?.ok) {
       this.pill.classList.add('done');
       label.textContent = 'Sent to Prism';
@@ -595,7 +654,9 @@ export class VideoButton {
       label.textContent = r?.error ? 'Prism unavailable' : 'Failed';
       this.pill.title = r?.error ?? 'Could not reach Prism';
     }
-    setTimeout(() => this.resetPill(), 2200);
+    setTimeout(() => {
+      if (session === this.menuSession && ctx.key === this.context().key) this.resetPill();
+    }, 2200);
   }
 
   private resetPill(): void {

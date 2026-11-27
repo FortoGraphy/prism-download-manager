@@ -652,11 +652,10 @@ pub fn plan_ytdlp(
     let section = part(info, opts);
     if let Some(s) = section {
         push(&mut a, &["--download-sections", &s.ytdlp_arg()]);
-        // A video is cut on the exact frame (ffmpeg encodes the part again). Audio frames last a
-        // few milliseconds, so copying them is exact already and the MP3 is encoded only once.
-        if !audio_only {
-            a.push("--force-keyframes-at-cuts".into());
-        }
+        // The part is copied, not encoded again (#135): re-encoding it to cut on the exact frame
+        // kept every core busy for the whole download. A video part now starts on the keyframe
+        // at or before its start (Twitch: up to 2 s early); the end and the audio stay exact.
+        // (The accelerated path still cuts on the exact frame: see ffmpeg.rs.)
         // ffmpeg fetches the part and yt-dlp reports nothing until it's done: ffmpeg's own
         // progress (stdout) is what the list shows.
         push(&mut a, &["--downloader-args", PART_PROGRESS_ARGS]);

@@ -65,6 +65,11 @@ fn spec(kind: &str) -> Spec {
     }
 }
 
+/// Dialogs that open on top of every window (so one opened from the browser isn't hidden
+/// behind it), and stop staying there once they have been active: then they can go behind the
+/// window the links are copied from (#143).
+const TOP_UNTIL_FOCUSED: &[&str] = &["addurl", "batch"];
+
 /// Windows (#92): dialogs that open where they were last closed instead of in the middle of the
 /// screen. Only their position comes back (and the size of those in `REMEMBER_SIZE`): their size
 /// is the app's. Elsewhere they open centered as before (shown at once, they would jump).
@@ -219,6 +224,14 @@ fn create(app: &AppHandle, kind: &str, label: &str, route: &str) -> tauri::Resul
         builder.center()
     };
     let window = builder.build()?;
+    if TOP_UNTIL_FOCUSED.contains(&kind) {
+        let w = window.clone();
+        window.on_window_event(move |e| {
+            if let tauri::WindowEvent::Focused(true) = e {
+                let _ = w.set_always_on_top(false);
+            }
+        });
+    }
     if REMEMBER_POSITION.contains(&kind) {
         // Where this kind of dialog was last closed, if that monitor is still there. On the main
         // thread: the plugin holds its state's lock while it moves the window, and its own event

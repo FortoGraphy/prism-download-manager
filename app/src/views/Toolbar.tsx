@@ -42,18 +42,19 @@ export function Toolbar() {
       <IconButton icon="start-queue" label={queue ? t("Start {name}", { name: displayName(queue.name) }) : t("Start queue")} disabled={!queue || queue.running} onClick={() => queue && void attempt(api.startQueue(queue.id))} />
       <IconButton icon="stop-queue" label={queue ? t("Stop {name}", { name: displayName(queue.name) }) : t("Stop queue")} disabled={!queue || !queue.running} onClick={() => queue && void attempt(api.stopQueue(queue.id))} />
       <IconButton icon="scheduler" label={t("Scheduler")} onClick={() => ui().openSheet({ kind: "scheduler", queueId: queue?.id })} />
-      <span className="tb-sep" />
+      <span className="tb-sep toolbar-wide-only" />
       <IconButton icon="grabber" label={t("Site grabber")} onClick={() => ui().openSheet({ kind: "grabber" })} />
-      <IconButton icon="batch" label={t("Batch download")} onClick={() => ui().openDialog({ kind: "batch" })} />
+      <IconButton icon="batch" className="toolbar-wide-only" label={t("Batch download")} onClick={() => ui().openDialog({ kind: "batch" })} />
       <IconButton icon="model" label={t("Download a model from Hugging Face")} onClick={() => void attempt(api.openWindow("model"))} />
       <IconButton
         icon="speed-limiter"
+        className="toolbar-wide-only"
         label={limiter ? t("Speed limiter on · {limit}", { limit: `${formatBytes(limit)}/s` }) : t("Speed limiter off")}
         kbd="Ctrl L"
         pressed={limiter}
         onClick={() => void actions.toggleLimiter()}
       />
-      <IconButton icon="mini-mode" label={t("Mini window")} kbd="Ctrl Shift M" onClick={actions.toggleMini} />
+      <IconButton icon="mini-mode" className="toolbar-wide-only" label={t("Mini window")} kbd="Ctrl Shift M" onClick={actions.toggleMini} />
       <span className="spacer" data-tauri-drag-region />
       <SearchBox />
       {/* Without a tray icon its Quit is gone, so the window has one (#60). */}

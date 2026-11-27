@@ -8,7 +8,7 @@
 //! * Host → extension: the app's object with `"id"` set to the request id.
 //!   Errors produced by the host itself use the same error shape with the
 //!   codes below.
-//! * Host-local message: `{"id", "type": "hostPing"}` → `{"id", "ok": true, "host": {"version", "dataDir"}}`
+//! * Host-local message: `{"id", "type": "hostPing"}` → `{"id", "ok": true, "host": {"version"}}`
 //!   (never touches the app).
 
 use serde_json::{Map, Value, json};

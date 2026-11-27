@@ -152,6 +152,33 @@ pub struct VideoInfo {
     pub choices: Vec<Choice>,
     /// Every playable format is DRM protected.
     pub has_drm: bool,
+    // For the file name template (`%(artist)s`, …; see [`crate::template`]).
+    /// The uploader's handle or id (`@BlenderOfficial`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uploader_id: Option<String>,
+    /// Music: yt-dlp's `artist` (or its `artists`, joined with `, `).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artist: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub album: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub track: Option<String>,
+    /// yt-dlp's `creator` (or its `creators`, joined with `, `).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub creator: Option<String>,
+    /// `Youtube`, `Vimeo`, … (`extractor` is the lower-case name).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extractor_key: Option<String>,
+    /// The playlist the video was picked from. yt-dlp gives none for a single video's page, so
+    /// whoever knows the playlist fills these in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub playlist_title: Option<String>,
+    /// 1-based place in that playlist.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub playlist_index: Option<u32>,
+    /// The last place picked from it: `%(playlist_index)s` is as wide (`01` … `12`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_playlist_index: Option<u32>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -578,7 +605,25 @@ pub(crate) struct RawInfo {
     #[serde(deserialize_with = "lenient_string")]
     pub uploader: Option<String>,
     #[serde(deserialize_with = "lenient_string")]
+    pub uploader_id: Option<String>,
+    #[serde(deserialize_with = "lenient_string")]
     pub channel: Option<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    pub artist: Option<String>,
+    #[serde(deserialize_with = "lenient_vec")]
+    pub artists: Vec<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    pub album: Option<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    pub track: Option<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    pub creator: Option<String>,
+    #[serde(deserialize_with = "lenient_vec")]
+    pub creators: Vec<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    pub playlist_title: Option<String>,
+    #[serde(deserialize_with = "lenient_f64")]
+    pub playlist_index: Option<f64>,
     #[serde(deserialize_with = "lenient_f64")]
     pub duration: Option<f64>,
     #[serde(deserialize_with = "lenient_string")]
@@ -981,6 +1026,9 @@ impl RawInfo {
         let is_live = self.is_live.unwrap_or(false)
             || matches!(live_status.as_deref(), Some("is_live" | "is_upcoming"));
         let id = self.id.clone().unwrap_or_default();
+        let extractor_key = self.extractor_key.clone();
+        let artist = self.artist.clone().or_else(|| joined(&self.artists));
+        let creator = self.creator.clone().or_else(|| joined(&self.creators));
         let mut info = VideoInfo {
             title: self.title.or(self.fulltitle).unwrap_or_else(|| id.clone()),
             id,
@@ -999,10 +1047,29 @@ impl RawInfo {
             formats,
             choices: Vec::new(),
             has_drm,
+            uploader_id: self.uploader_id,
+            artist,
+            album: self.album,
+            track: self.track,
+            creator,
+            extractor_key,
+            playlist_title: self.playlist_title,
+            playlist_index: to_u32(self.playlist_index).filter(|i| *i > 0),
+            last_playlist_index: None,
         };
         info.choices = crate::choices::compute_choices(&info, Container::Mp4);
         info
     }
+}
+
+/// yt-dlp's list fields (`artists`, `creators`) as its old single ones give them.
+fn joined(list: &[String]) -> Option<String> {
+    let names: Vec<&str> = list
+        .iter()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+    (!names.is_empty()).then(|| names.join(", "))
 }
 
 /// Parse `yt-dlp -J` output into a [`Probe`].

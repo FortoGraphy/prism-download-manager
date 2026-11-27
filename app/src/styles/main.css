@@ -89,7 +89,7 @@
 .toolbar .caption { height: 52px; margin-inline-start: 6px; }
 .toolbar .caption__btn { width: 44px; }
 @media (max-width: 1180px) {
-  .toolbar .tb-sep:nth-of-type(3), .toolbar [aria-label="Batch download"], .toolbar [aria-label^="Speed limiter"], .toolbar [aria-label="Mini window"] { display: none; }
+  .toolbar .toolbar-wide-only { display: none; }
 }
 
 .titlerow { display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; min-width: 0; }

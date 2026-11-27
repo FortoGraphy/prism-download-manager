@@ -13,7 +13,8 @@ export const VIDEO_BUTTON_CSS = `
   -webkit-font-smoothing: antialiased;
 }
 .wrap.show { opacity: 1; transform: translate3d(var(--x, 0px), var(--y, 0px), 0) scale(1); }
-.wrap.show .pill, .wrap.show .menu { pointer-events: auto; }
+.wrap.show .pill, .wrap.show .dismiss, .wrap.show .menu { pointer-events: auto; }
+.controls { display: flex; align-items: center; gap: 4px; }
 .glass {
   background: linear-gradient(180deg, rgba(40,44,58,.62), rgba(18,20,28,.70));
   -webkit-backdrop-filter: blur(18px) saturate(170%);
@@ -28,12 +29,19 @@ export const VIDEO_BUTTON_CSS = `
   outline: none; user-select: none; white-space: nowrap;
   transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
-.pill:hover, .pill[aria-expanded="true"] {
+.dismiss {
+  display: inline-grid; place-items: center;
+  width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  color: inherit; cursor: pointer;
+}
+.pill:hover, .pill[aria-expanded="true"], .dismiss:hover {
   border-color: rgba(255,255,255,.26);
   background: linear-gradient(180deg, rgba(58,64,86,.70), rgba(24,27,38,.78));
   box-shadow: 0 12px 34px rgba(0,0,0,.42), 0 0 0 3px rgba(120,140,255,.18), 0 1px 0 rgba(255,255,255,.28) inset;
 }
-.pill:focus-visible { box-shadow: 0 0 0 3px rgba(140,160,255,.55); }
+.pill:focus-visible, .dismiss:focus-visible {
+  outline: 2px solid #b8c3ff; outline-offset: 2px;
+}
 .pill .label { font-weight: 600; }
 .pill .chev { opacity: .7; display: inline-flex; transition: transform .15s ease; }
 .pill[aria-expanded="true"] .chev { transform: rotate(180deg); }
@@ -41,14 +49,14 @@ export const VIDEO_BUTTON_CSS = `
 .pill.err { border-color: rgba(255,107,139,.6); }
 .prism-mark { display: block; filter: drop-shadow(0 0 6px rgba(150,170,255,.35)); }
 .menu {
-  position: absolute; right: 0; top: 38px;
-  width: 300px; max-height: 340px; overflow: auto;
+  position: absolute; left: var(--menu-x); top: calc(100% + 6px);
+  width: var(--menu-width); max-height: var(--menu-height); overflow: auto;
   border-radius: 14px; padding: 6px;
   display: none;
   scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent;
 }
 .menu.open { display: block; animation: pop .14s ease-out; }
-.menu.up { top: auto; bottom: 38px; }
+.menu.up { top: auto; bottom: calc(100% + 6px); }
 @keyframes pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 8px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 4px; }
 .head .t { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

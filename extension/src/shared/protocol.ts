@@ -110,6 +110,8 @@ export interface DownloadRequest extends DownloadPayload {
   userAgent: string;
   incognito: boolean;
   source: DownloadSource;
+  /** Epoch ms after which the app must not open a dialog (it answers accepted: false). */
+  deadline?: number;
 }
 
 export interface DownloadReply extends OkReply {

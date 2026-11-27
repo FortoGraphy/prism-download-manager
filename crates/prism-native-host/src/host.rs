@@ -63,13 +63,11 @@ pub fn handle_message(client: &AppClient, body: &[u8]) -> Value {
         Err((id, why)) => return protocol::error_reply(&id, codes::BAD_REQUEST, why),
     };
     if ty == "hostPing" {
+        // No data folder: its path holds the account name, and the extension doesn't need it.
         return json!({
             "id": id,
             "ok": true,
-            "host": {
-                "version": crate::VERSION,
-                "dataDir": paths::data_dir().map(|d| d.to_string_lossy().into_owned()),
-            }
+            "host": { "version": crate::VERSION }
         });
     }
     let allow_launch = !msg
@@ -95,6 +93,16 @@ pub fn run(caller: Option<String>) -> i32 {
         crate::VERSION,
         caller.as_deref().unwrap_or("-")
     );
+    let extra: Vec<String> = std::env::var(crate::EXTRA_CALLERS_ENV)
+        .map(|v| v.split(',').map(str::to_string).collect())
+        .unwrap_or_default();
+    if !crate::caller_allowed(caller.as_deref(), &extra) {
+        log_info!(
+            "caller {} is not Prism's extension; exiting",
+            caller.as_deref().unwrap_or("-")
+        );
+        return 1;
+    }
     let host_exe =
         std::env::current_exe().unwrap_or_else(|_| PathBuf::from(crate::HOST_BINARY_NAME));
     let client = Arc::new(AppClient::new(
