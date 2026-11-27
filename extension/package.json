@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "e2e": "node e2e/run.mjs",
-    "e2e:video-overlay": "node e2e/video-overlay.mjs"
+    "e2e:video-overlay": "node e2e/video-overlay.mjs",
+    "e2e:language": "node e2e/language.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.5",
