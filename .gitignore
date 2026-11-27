@@ -11,6 +11,10 @@ Thumbs.db
 /.vite
 *.log
 !docs/research/**/*.log
+
+# prism-web tokens when the server is run from the repo root
+/web-ui.json
+/ipc.json
 /dist-release
 /app/src-tauri/binaries
 
