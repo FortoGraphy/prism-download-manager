@@ -9,6 +9,7 @@ import { openUrl, REPO_URL } from "../lib/links";
 import { useApp } from "../lib/store";
 import { pickFolder } from "../lib/win";
 import { BrowserConnect, useExtensionStatus } from "./BrowserConnect";
+import { keyLabel } from "../lib/platform";
 
 const STEPS = ["Welcome", "Browser", "Preferences", "Done"];
 
@@ -151,7 +152,7 @@ function Ready() {
         {tr("Press {keys} to add a link, drop links anywhere on the window, or just download from your browser.", {
           keys: (
             <>
-              <span className="kbd">Ctrl</span> <span className="kbd">N</span>
+              <span className="kbd">{keyLabel("Ctrl")}</span> <span className="kbd">N</span>
             </>
           ),
         })}

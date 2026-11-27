@@ -17,6 +17,7 @@ import type { Settings } from "../../lib/types";
 import { attempt, toast, useUi } from "../../lib/ui";
 import { pickFile, pickFolder, pickSavePath } from "../../lib/win";
 import { scheduleSummary } from "./SchedulerSheet";
+import { IS_MAC, keyLabel } from "../../lib/platform";
 
 export const SECTIONS: { id: string; label: string; icon: IconName; group?: boolean }[] = [
   { id: "general", label: tk("General"), icon: "settings" },
@@ -203,7 +204,7 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
           <Group title={t("Startup")}>
             <Toggle
               title={t("Launch at startup")}
-              hint={t("Start with Windows, minimized to the tray")}
+              hint={mac ? t("Opens at login and waits in the menu bar") : t("Start with Windows, minimized to the tray")}
               value={s.general.launchAtStartup}
               onChange={async (v) => {
                 await attempt(api.setAutostart(v), t("Could not change autostart"));
@@ -212,8 +213,8 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
             />
             <Toggle title={t("Start minimized")} value={s.general.startMinimized} onChange={(v) => save({ general: { startMinimized: v } })} />
             <Toggle
-              title={t("Close button hides to the tray")}
-              hint={noTray ? t("Downloads keep running; quit with the power button in the toolbar") : t("Downloads keep running; quit from the tray menu")}
+              title={mac ? t("Close button keeps Prism in the menu bar") : t("Close button hides to the tray")}
+              hint={noTray ? t("Downloads keep running; quit with the power button in the toolbar") : mac ? t("Downloads keep running; quit from the menu bar icon") : t("Downloads keep running; quit from the tray menu")}
               value={s.general.closeToTray}
               onChange={(v) => save({ general: { closeToTray: v } })}
             />
@@ -556,7 +557,7 @@ function Appearance({ s }: { s: Settings }) {
       <div className="twocol">
         <Group title={t("Materials & motion")}>
           <Toggle title={t("Liquid glass")} hint={t("Frosted, translucent sidebar & toolbars")} value={!s.appearance.reduceTransparency} onChange={(v) => save({ appearance: { reduceTransparency: !v } })} />
-          <Toggle title={t("Window material")} hint={t("Mica / vibrancy behind the window (restart window)")} value={s.appearance.windowMaterial} onChange={(v) => save({ appearance: { windowMaterial: v } })} />
+          <Toggle title={t("Window material")} hint={IS_MAC ? t("Vibrancy behind the window (restart window)") : t("Mica / vibrancy behind the window (restart window)")} value={s.appearance.windowMaterial} onChange={(v) => save({ appearance: { windowMaterial: v } })} />
           <Row title={t("Motion")}>
             <Segmented
               size="sm"
@@ -599,7 +600,7 @@ function SpeedQueues({ s }: { s: Settings }) {
   return (
     <>
       <Group title={t("Global speed limiter")}>
-        <Toggle title={t("Limit total download speed")} hint={t("Quick toggle: Ctrl+L or the toolbar")} value={s.downloads.speedLimiterEnabled} onChange={(v) => save({ downloads: { speedLimiterEnabled: v } })} />
+        <Toggle title={t("Limit total download speed")} hint={IS_MAC ? t("Quick toggle: ⌘L or the toolbar") : t("Quick toggle: Ctrl+L or the toolbar")} value={s.downloads.speedLimiterEnabled} onChange={(v) => save({ downloads: { speedLimiterEnabled: v } })} />
         <Row title={t("Limit")}>
           <RateField value={s.downloads.speedLimit} onCommit={(v) => save({ downloads: { speedLimit: v } })} label={t("Speed limit")} width={150} />
         </Row>
@@ -1016,7 +1017,7 @@ export const SHORTCUTS: [string, string][] = [
   ["Space", tk("Pause / resume selected")],
   ["Enter", tk("Open finished file / details")],
   ["Delete", tk("Delete selected (Shift: with files)")],
-  ["F2", tk("Properties")],
+  ["F2", IS_MAC ? tk("Get Info") : tk("Properties")],
   ["Ctrl C", tk("Copy links of selected")],
   ["Ctrl L", tk("Toggle speed limiter")],
   ["Ctrl ,", tk("Settings")],
@@ -1031,7 +1032,7 @@ function Shortcuts() {
       {SHORTCUTS.map(([k, label]) => (
         <Row key={k} title={t(label)}>
           <span className="kbds">
-            {k.split(" / ").map((combo) => (
+            {keyLabel(k).split(" / ").map((combo) => (
               <span key={combo} className="kbd-combo">
                 {combo.split(" ").map((p) => (
                   <span key={p} className="kbd">

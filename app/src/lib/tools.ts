@@ -8,6 +8,7 @@ import { fullPath } from "./paths";
 import { useApp } from "./store";
 import type { DownloadItem } from "./types";
 import { attempt, toast } from "./ui";
+import { showInFolderLabel } from "./platform";
 
 export const openTools = (request: ToolsRequest) => void attempt(api.openTools(request), t("Could not open Tools"));
 
@@ -41,7 +42,7 @@ function listen() {
       toast(t("Converted to {format}", { format: TARGET_NAMES[target] }), {
         kind: "success",
         body: baseName(out),
-        action: { label: t("Show in folder"), run: () => void attempt(api.revealPath(out), t("Could not open the folder")) },
+        action: { label: showInFolderLabel(), run: () => void attempt(api.revealPath(out), t("Could not open the folder")) },
         ms: 6000,
       });
     } else if (j.state === "failed") {

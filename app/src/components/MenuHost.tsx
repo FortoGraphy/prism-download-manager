@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../design/icons";
 import { type MenuEntry, useUi } from "../lib/ui";
+import { keyLabel } from "../lib/platform";
 
 type Item = Extract<MenuEntry, { label: string }>;
 const isItem = (e: MenuEntry): e is Item => "label" in e;
@@ -164,7 +165,7 @@ function MenuPanel({
               <span className="menu__check" />
             )}
             <span className="menu__text">{e.label}</span>
-            {e.kbd && <span className="kbd-hint">{e.kbd}</span>}
+            {e.kbd && <span className="kbd-hint">{keyLabel(e.kbd)}</span>}
             {e.submenu && <Icon name="chevron-right" size={13} className="menu__chev" />}
           </div>
         );

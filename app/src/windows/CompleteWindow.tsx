@@ -12,6 +12,7 @@ import { useApp } from "../lib/store";
 import { mediaPath } from "../lib/tools";
 import { attempt, toast } from "../lib/ui";
 import { copyText, win } from "../lib/win";
+import { showInFolderLabel } from "../lib/platform";
 
 export default function CompleteWindow({ id }: { id: string }) {
   const item = useApp((s) => s.items[id]);
@@ -97,7 +98,7 @@ export default function CompleteWindow({ id }: { id: string }) {
           <Icon name="copy" size={15} />
         </button>
         <button type="button" className="btn" disabled={!item} onClick={() => void run(api.revealItem(id), t("Could not open the folder"))}>
-          <Icon name="folder-open" size={15} /> {t("Open folder")}
+          <Icon name="folder-open" size={15} /> {showInFolderLabel()}
         </button>
         <button type="button" className="btn btn--primary" autoFocus disabled={!item} onClick={() => void run(api.openItem(id), t("Could not open the file"))}>
           <Icon name="open-file" size={15} /> {t("Open")}

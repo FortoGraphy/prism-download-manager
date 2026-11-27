@@ -12,6 +12,7 @@ import { useApp } from "../../lib/store";
 import type { Category } from "../../lib/types";
 import { attempt, toast, useUi } from "../../lib/ui";
 import { pickFolder } from "../../lib/win";
+import { propertiesTitle, showInFolderLabel } from "../../lib/platform";
 
 /** Renders whichever small in-window dialog is open. */
 export function Dialogs() {
@@ -163,12 +164,12 @@ function PropertiesDialog({ id, onClose }: { id: string | null; onClose: () => v
       open={!!id}
       onClose={onClose}
       width={560}
-      title={t("Properties")}
+      title={propertiesTitle()}
       icon={<FileTile item={item} size={24} thumbWidth={36} />}
       footer={
         <>
           <button type="button" className="btn btn--ghost" onClick={() => actions.reveal(item.id)}>
-            <Icon name="folder-open" size={15} /> {t("Show in folder")}
+            <Icon name="folder-open" size={15} /> {showInFolderLabel()}
           </button>
           <span className="spacer" />
           <button type="button" className="btn btn--ghost" onClick={onClose}>

@@ -7,6 +7,7 @@ import { canPause, canResume, displayName } from "../lib/present";
 import { useApp } from "../lib/store";
 import { mediaPath, openTools, quickConvert } from "../lib/tools";
 import { type MenuEntry, useUi } from "../lib/ui";
+import { propertiesLabel, showInFolderLabel } from "../lib/platform";
 
 export function itemMenu(ids: string[]): MenuEntry[] {
   const st = useApp.getState();
@@ -68,7 +69,7 @@ export function itemMenu(ids: string[]): MenuEntry[] {
 
   return [
     { label: t("Open"), icon: "open-file", kbd: "Enter", disabled: !done, onSelect: () => one && actions.open(one.id) },
-    { label: t("Show in folder"), icon: "folder-open", disabled: !one, onSelect: () => one && actions.reveal(one.id) },
+    { label: showInFolderLabel(), icon: "folder-open", disabled: !one, onSelect: () => one && actions.reveal(one.id) },
     ...tools,
     { separator: true },
     { label: t("Resume"), icon: "resume", disabled: !list.some((i) => canResume(i.status) || i.status === "queued"), onSelect: () => actions.resume(ids) },
@@ -83,7 +84,7 @@ export function itemMenu(ids: string[]): MenuEntry[] {
     { separator: true },
     { label: ids.length > 1 ? t("Copy links") : t("Copy link"), icon: "copy", kbd: "Ctrl C", onSelect: () => void actions.copyLinks(ids) },
     { label: t("Details"), icon: "activity", disabled: !one, onSelect: () => one && actions.details(one.id) },
-    { label: t("Properties…"), icon: "properties", kbd: "F2", disabled: !one, onSelect: () => one && ui.openDialog({ kind: "properties", id: one.id }) },
+    { label: propertiesLabel(), icon: "properties", kbd: "F2", disabled: !one, onSelect: () => one && ui.openDialog({ kind: "properties", id: one.id }) },
     { separator: true },
     { label: t("Delete"), icon: "delete", kbd: "Del", danger: true, onSelect: () => actions.requestDelete(ids) },
     { label: t("Delete with files…"), icon: "delete-completed", danger: true, onSelect: () => actions.requestDelete(ids, true) },

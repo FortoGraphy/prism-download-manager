@@ -36,6 +36,7 @@ import {
 } from "../lib/media";
 import { attempt } from "../lib/ui";
 import { win } from "../lib/win";
+import { showInFolderLabel } from "../lib/platform";
 
 type Choice = MediaTarget | "zip";
 
@@ -557,7 +558,7 @@ function JobRow({ job: j, fetching }: { job: MediaJob; fetching: { downloaded: n
             <button type="button" className="btn btn--sm" onClick={() => void attempt(api.openFile(j.output!), t("Could not open the file"))}>
               {t("Open")}
             </button>
-            <button type="button" className="btn btn--icon btn--sm" aria-label={t("Show in folder")} data-tip={t("Show in folder")} onClick={() => void attempt(api.revealPath(j.output!), t("Could not open the folder"))}>
+            <button type="button" className="btn btn--icon btn--sm" aria-label={showInFolderLabel()} data-tip={showInFolderLabel()} onClick={() => void attempt(api.revealPath(j.output!), t("Could not open the folder"))}>
               <Icon name="folder-open" size={14} />
             </button>
           </>
