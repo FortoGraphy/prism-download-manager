@@ -7,7 +7,7 @@ import type { NativeError } from '../shared/correlator';
 import type { ActionResult, InternalMessage, PopupState } from '../shared/messages';
 import { visibleMedia } from '../shared/media';
 import { PROTOCOL_VERSION } from '../shared/protocol';
-import { normalizeSettings } from '../shared/settings';
+import { normalizeRemoteToken, normalizeRemoteUrl, normalizeSettings } from '../shared/settings';
 import { reflectConnection, setTabCount } from './badge';
 import { bypass, initChromiumCapture, initFirefoxCapture, lastCapture } from './capture';
 import { collectAndSend } from './collect';
@@ -121,7 +121,12 @@ async function handle(msg: InternalMessage, sender: chrome.runtime.MessageSender
       await hello(false, true);
       return { ok: true, state: await getState() };
     case 'saveSettings':
-      await updateState({ settings: normalizeSettings(msg.settings), settingsSource: 'local' });
+      await updateState({
+        settings: normalizeSettings(msg.settings),
+        settingsSource: 'local',
+        ...(msg.remoteUrl !== undefined ? { remoteUrl: normalizeRemoteUrl(msg.remoteUrl) } : {}),
+        ...(msg.remoteToken !== undefined ? { remoteToken: normalizeRemoteToken(msg.remoteToken) } : {}),
+      });
       return { ok: true, state: await getState() };
     default:
       return { ok: false, error: 'unknown message' };

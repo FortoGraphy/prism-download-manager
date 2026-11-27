@@ -19,11 +19,15 @@ pub struct Auth {
 }
 
 impl Auth {
-    /// Loads the saved token, or generates and stores a new one. `--no-auth-token` stores nothing.
-    pub fn new(data_dir: &Path, port: u16, no_token: bool) -> io::Result<Self> {
+    /// Loads the saved token, generates a new one, or uses `env_token` without touching
+    /// `web-ui.json`. `--no-auth-token` stores nothing.
+    pub fn new(data_dir: &Path, port: u16, no_token: bool, env_token: Option<&str>) -> io::Result<Self> {
         let file = data_dir.join("web-ui.json");
         if no_token {
             return Ok(Self { token: None, file });
+        }
+        if let Some(token) = env_token {
+            return Ok(Self { token: Some(Arc::new(token.to_owned())), file });
         }
         let token = std::fs::read_to_string(&file)
             .ok()
@@ -108,18 +112,41 @@ mod tests {
     #[test]
     fn generates_and_reuses_token() {
         let dir = tempfile::tempdir().unwrap();
-        let a = Auth::new(dir.path(), 8080, false).unwrap();
+        let a = Auth::new(dir.path(), 8080, false, None).unwrap();
         let token = a.token().unwrap().to_string();
         assert_eq!(token.len(), 64);
         assert!(token.bytes().all(|b| b.is_ascii_hexdigit()));
-        let b = Auth::new(dir.path(), 8080, false).unwrap();
+        let b = Auth::new(dir.path(), 8080, false, None).unwrap();
         assert_eq!(b.token().unwrap(), token);
     }
 
     #[test]
     fn no_token_mode() {
         let dir = tempfile::tempdir().unwrap();
-        let a = Auth::new(dir.path(), 8080, true).unwrap();
+        let a = Auth::new(dir.path(), 8080, true, None).unwrap();
+        assert!(a.token().is_none());
+        assert!(a.authorized(&HeaderMap::new()));
+        assert!(!dir.path().join("web-ui.json").exists());
+    }
+
+    #[test]
+    fn env_token_is_used_without_writing_web_ui_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = Auth::new(dir.path(), 8080, false, Some("from-env")).unwrap();
+        assert_eq!(a.token(), Some("from-env"));
+        assert!(!dir.path().join("web-ui.json").exists());
+        let mut headers = HeaderMap::new();
+        assert!(!a.authorized(&headers));
+        headers.insert(header::AUTHORIZATION, "Bearer wrong".parse().unwrap());
+        assert!(!a.authorized(&headers));
+        headers.insert(header::AUTHORIZATION, "Bearer from-env".parse().unwrap());
+        assert!(a.authorized(&headers));
+    }
+
+    #[test]
+    fn no_token_flag_ignores_env_token() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = Auth::new(dir.path(), 8080, true, Some("from-env")).unwrap();
         assert!(a.token().is_none());
         assert!(a.authorized(&HeaderMap::new()));
         assert!(!dir.path().join("web-ui.json").exists());
@@ -138,7 +165,7 @@ mod tests {
     #[test]
     fn checks_bearer_header() {
         let dir = tempfile::tempdir().unwrap();
-        let a = Auth::new(dir.path(), 8080, false).unwrap();
+        let a = Auth::new(dir.path(), 8080, false, None).unwrap();
         let mut headers = HeaderMap::new();
         assert!(!a.authorized(&headers));
         headers.insert(

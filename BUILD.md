@@ -78,16 +78,26 @@ cargo build --release -p prism-web --target x86_64-unknown-linux-gnu
 Flags: `--host <addr>` (default `127.0.0.1`), `--port <u16>` (default `8080`),
 `--no-auth-token`, `--download-dir <path>`, `--data-dir <path>`, and `--warmup`
 (downloads yt-dlp/ffmpeg/deno, then exits). `PRISM_WEB_DATA_DIR` and
-`PRISM_WEB_DOWNLOAD_DIR` override the default directories.
+`PRISM_WEB_DOWNLOAD_DIR` override the default directories. `PRISM_WEB_TOKEN` sets a
+fixed bearer token shared by the web UI and the browser extension: it is trimmed,
+must be non-empty, and is never printed (`Access token: from PRISM_WEB_TOKEN`).
+With it set, no `web-ui.json` or `ipc.json` is written, so the desktop app's native
+host keeps working unchanged. Without it, prism-web generates a token (or accepts
+`--no-auth-token` on loopback only) and publishes `ipc.json` as before.
 
 Docker (the build context needs the prebuilt binary at the target path above):
 
 ```bash
+export PRISM_WEB_TOKEN='a-long-random-secret'
 docker build -t prism-web .
 docker compose up -d
 ```
 
-Compose publishes port 8080 and keeps state and downloads in named volumes.
+Compose requires `PRISM_WEB_TOKEN`, publishes port 8080 and keeps state and
+downloads in named volumes. To connect the extension, open its Options page and
+enter the server URL (e.g. `http://127.0.0.1:8080`) and the same token; leaving the
+URL blank keeps native messaging. Use HTTPS behind a reverse proxy beyond loopback:
+over plain HTTP the token and all traffic are visible on the network.
 
 Release artifacts for `prism-web` are **Linux x64 only** (`prism-web-linux-x64.tar.gz`).
 Desktop bundles remain Windows/Linux/macOS; tag pushes also publish the container to

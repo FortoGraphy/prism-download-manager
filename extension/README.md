@@ -17,7 +17,7 @@ npm install
 npm run build        # build/chromium, build/firefox, build/prism-chromium.zip, build/prism-firefox.zip
 npm run build:dev    # unminified + inline source maps
 npm run typecheck    # tsc --noEmit (strict)
-npm test             # vitest: rules, media classification, cookies, correlation, NativeClient
+npm test             # vitest: rules, media classification, cookies, correlation, NativeClient, remote transport
 npm run e2e          # Playwright + real Chromium + real native host + mock app (see below)
 ```
 
@@ -74,7 +74,10 @@ of them can win, so disable them while using Prism.
   stream opens the Prism menu over it, or the app's video window without the in-page button), Download selection links,
   all links, all images, all videos (collected in every frame with `scripting.executeScript`).
 * **Options** — capture on/off, video button, bypass key, extension list, MIME list, min size,
-  excluded sites, video sites, *Sync from Prism*.
+  excluded sites, video sites, *Sync from Prism*, plus optional prism-web URL and bearer token.
+* **Direct HTTP transport** — when Options has a server URL, requests go to
+  `POST {baseUrl}/v1/message` with `Authorization: Bearer <token>` instead of the native host.
+  Leave the URL blank (the default) to use native messaging. Use HTTPS beyond loopback.
 * **Native port** — one lazy `connectNative('dev.prism.host')` port kept open (keeps the MV3
   worker alive), id-correlated requests with timeouts, reconnect on demand (5 s back-off when the
   host is missing), one-shot `sendNativeMessage` fallback if the port dies mid-request, 1-min
@@ -82,9 +85,9 @@ of them can win, so disable them while using Prism.
 
 ## Protocol (v1) — what the app must implement
 
-Transport: extension ⇄ `prism-native-host` (native messaging) ⇄ app
-`POST http://127.0.0.1:<port>/v1/message` (`Authorization: Bearer <token>`, JSON body = the
-extension's message verbatim). `GET /v1/health` (same auth) → `200 {"ok":true,"version":"x.y.z"}`.
+Transport: extension ⇄ `prism-native-host` (native messaging) ⇄ app, or extension → prism-web
+`POST {baseUrl}/v1/message` (`Authorization: Bearer <token>`, JSON body = the extension's message
+verbatim). `GET {baseUrl}/v1/health` (same auth) → `200 {"ok":true,...}`.
 Host details (ipc.json, launch, error codes): `crates/prism-native-host/README.md`.
 
 **Envelope** (every request): `id` (string, e.g. `"k4fqpc-13"`), `type`, optional

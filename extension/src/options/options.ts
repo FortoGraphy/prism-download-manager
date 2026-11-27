@@ -24,6 +24,8 @@ function fill(s: CaptureSettings, st?: StoredState): void {
   $<HTMLTextAreaElement>('excludedSites').value = s.excludedSites.join('\n');
   $<HTMLTextAreaElement>('videoSites').value = s.videoSites.join('\n');
   if (st) {
+    $<HTMLInputElement>('remoteUrl').value = st.remoteUrl;
+    $<HTMLInputElement>('remoteToken').value = st.remoteToken;
     $('source-line').textContent =
       st.settingsSource === 'app'
         ? `Settings follow the Prism app${st.appVersion ? ` (v${st.appVersion})` : ''}. Saving here overrides them locally.`
@@ -53,7 +55,12 @@ async function load(): Promise<void> {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const r = await sendInternal<{ ok: boolean; state?: StoredState; error?: string }>({ kind: 'saveSettings', settings: read() });
+  const r = await sendInternal<{ ok: boolean; state?: StoredState; error?: string }>({
+    kind: 'saveSettings',
+    settings: read(),
+    remoteUrl: $<HTMLInputElement>('remoteUrl').value,
+    remoteToken: $<HTMLInputElement>('remoteToken').value,
+  });
   if (r?.ok && r.state) {
     fill(r.state.settings, r.state);
     setStatus('Saved.', 'ok');

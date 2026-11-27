@@ -62,6 +62,9 @@ impl Args {
         if out.no_auth_token && !crate::auth::is_loopback_host(&out.host) {
             return Err("--no-auth-token requires a loopback bind address".into());
         }
+        if std::env::var_os("PRISM_WEB_TOKEN").is_some() && out.token().is_none() {
+            return Err("PRISM_WEB_TOKEN must not be empty".into());
+        }
         Ok(out)
     }
 
@@ -98,6 +101,11 @@ impl Args {
             .unwrap_or(self.port)
     }
 
+    /// Bearer token shared by the UI and the extension, supplied out of band.
+    pub fn token(&self) -> Option<String> {
+        token_from(std::env::var("PRISM_WEB_TOKEN").ok().as_deref())
+    }
+
     pub fn usage() -> &'static str {
         "prism-web — headless Prism download manager\n\
          \n\
@@ -106,13 +114,19 @@ impl Args {
          Options:\n\
            --host <addr>          Bind address (default: 127.0.0.1)\n\
            --port <port>          Bind port (default: 8080)\n\
-           --no-auth-token        Serve without a bearer token (trusted networks only)\n\
+           --no-auth-token        Serve without a UI bearer token (trusted networks only)\n\
            --data-dir <path>      Data directory (or PRISM_WEB_DATA_DIR)\n\
            --download-dir <path>  Default save folder on a fresh install\n\
            --ipc-file <path>      Native-host discovery file (or PRISM_WEB_IPC_FILE)\n\
            --warmup               Download yt-dlp/ffmpeg/deno, then exit\n\
            -h, --help             Show this help"
     }
+}
+
+fn token_from(raw: Option<&str>) -> Option<String> {
+    raw.map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned)
 }
 
 #[cfg(test)]
@@ -162,6 +176,14 @@ mod tests {
         assert!(parse(&["prism-web", "--host", "0.0.0.0", "--no-auth-token"]).is_err());
         assert!(parse(&["prism-web", "--host", "example.com", "--no-auth-token"]).is_err());
         assert!(parse(&["prism-web", "--no-auth-token"]).is_ok());
+    }
+
+    #[test]
+    fn token_from_env_is_trimmed_and_never_empty() {
+        assert_eq!(token_from(Some("  s3cr3t \n")), Some("s3cr3t".into()));
+        assert_eq!(token_from(Some("   ")), None);
+        assert_eq!(token_from(Some("")), None);
+        assert_eq!(token_from(None), None);
     }
 
     #[test]

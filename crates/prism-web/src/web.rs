@@ -3,7 +3,7 @@ use crate::commands;
 use crate::ipc;
 use axum::extract::{Path, Request, State};
 use axum::http::uri::Authority;
-use axum::http::{HeaderMap, StatusCode, Uri, header};
+use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, Uri, header};
 use axum::middleware::{self, Next};
 use axum::response::sse::{Event, Sse};
 use axum::response::{IntoResponse, Response};
@@ -40,7 +40,7 @@ pub fn router(core: Core, auth: Auth, ipc_auth: ipc::IpcAuth) -> Router {
         .layer(middleware::from_fn_with_state(state.clone(), origin_guard))
         .with_state(state);
     // The native-host IPC routes are merged separately and keep their token auth only.
-    web.merge(ipc::router(core, ipc_auth))
+    web.merge(ipc::router(core, ipc_auth).layer(middleware::from_fn(extension_cors)))
 }
 
 /// With no bearer token, a browser must not be able to reach the server through a
@@ -85,6 +85,63 @@ fn web_origin_allowed(headers: &HeaderMap) -> bool {
         }
     }
     true
+}
+
+const CHROME_EXTENSION_ORIGIN: &str = "chrome-extension://mmcdeiglkbfbicdjboocmhehodogilfl";
+
+/// Only the extension's own origins may call `/v1/*` from a browser. Native hosts
+/// send no Origin at all; Firefox uses a per-install UUID in its origin.
+fn extension_origin_allowed(origin: Option<&str>) -> bool {
+    let Some(origin) = origin else {
+        return true;
+    };
+    if origin == CHROME_EXTENSION_ORIGIN {
+        return true;
+    }
+    let Ok(uri) = origin.parse::<Uri>() else {
+        return false;
+    };
+    uri.scheme_str() == Some("moz-extension")
+        && uri.authority().is_some()
+        && matches!(uri.path(), "" | "/")
+        && uri.query().is_none()
+}
+
+fn preflight(origin: Option<&str>) -> Response {
+    with_cors(StatusCode::NO_CONTENT.into_response(), origin)
+}
+
+fn with_cors(mut response: Response, origin: Option<&str>) -> Response {
+    let headers = response.headers_mut();
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_HEADERS,
+        HeaderValue::from_static("Authorization, Content-Type"),
+    );
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_METHODS,
+        HeaderValue::from_static("GET, POST, OPTIONS"),
+    );
+    headers.insert(header::VARY, HeaderValue::from_static("Origin"));
+    if let Some(origin) = origin
+        && let Ok(value) = HeaderValue::from_str(origin)
+    {
+        headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, value);
+    }
+    response
+}
+
+async fn extension_cors(headers: HeaderMap, request: Request, next: Next) -> Response {
+    let origin = match headers.get(header::ORIGIN) {
+        None => None,
+        Some(value) => match value.to_str().ok().filter(|o| extension_origin_allowed(Some(o))) {
+            Some(origin) => Some(origin),
+            None => return (StatusCode::FORBIDDEN, "forbidden origin").into_response(),
+        },
+    };
+    if request.method() == Method::OPTIONS {
+        return preflight(origin);
+    }
+    with_cors(next.run(request).await, origin)
 }
 
 async fn index(State(state): State<Arc<AppState>>) -> ([(header::HeaderName, &'static str); 2], Vec<u8>) {
@@ -298,10 +355,43 @@ mod tests {
         })
         .await
         .unwrap();
-        let auth = crate::auth::Auth::new(dir.path(), 8080, true).unwrap();
-        let ipc_auth = crate::ipc::IpcAuth::new(dir.path().join("ipc.json"));
+        let auth = crate::auth::Auth::new(dir.path(), 8080, true, None).unwrap();
+        let ipc_auth = crate::ipc::IpcAuth::new(dir.path().join("ipc.json"), None);
         let _ = router(core.clone(), auth, ipc_auth);
         core.shutdown().await;
+    }
+
+    #[test]
+    fn extension_cors_allows_only_extension_origins() {
+        assert!(extension_origin_allowed(None));
+        assert!(extension_origin_allowed(Some(CHROME_EXTENSION_ORIGIN)));
+        assert!(extension_origin_allowed(Some("moz-extension://12345678-1234")));
+        assert!(!extension_origin_allowed(Some("chrome-extension://other")));
+        assert!(!extension_origin_allowed(Some("http://evil.example")));
+        assert!(!extension_origin_allowed(Some("moz-extension://uuid/path")));
+        assert!(!extension_origin_allowed(Some("null")));
+    }
+
+    #[test]
+    fn extension_cors_preflight_and_response_headers() {
+        let res = preflight(Some(CHROME_EXTENSION_ORIGIN));
+        assert_eq!(res.status(), StatusCode::NO_CONTENT);
+        assert_eq!(
+            res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(),
+            CHROME_EXTENSION_ORIGIN
+        );
+        assert_eq!(
+            res.headers().get(header::ACCESS_CONTROL_ALLOW_HEADERS).unwrap(),
+            "Authorization, Content-Type"
+        );
+        assert_eq!(
+            res.headers().get(header::ACCESS_CONTROL_ALLOW_METHODS).unwrap(),
+            "GET, POST, OPTIONS"
+        );
+
+        let native = with_cors((StatusCode::OK, "ok").into_response(), None);
+        assert!(!native.headers().contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN));
+        assert!(native.headers().contains_key(header::ACCESS_CONTROL_ALLOW_METHODS));
     }
 
     #[test]

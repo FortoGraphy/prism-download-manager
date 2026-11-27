@@ -76,7 +76,8 @@ async fn main() {
         eprintln!("prism-web: cannot set download folder: {e:#}");
     }
 
-    let auth = match Auth::new(&data_dir, args.port, args.no_auth_token) {
+    let token = args.token();
+    let auth = match Auth::new(&data_dir, args.port, args.no_auth_token, token.as_deref()) {
         Ok(a) => a,
         Err(e) => {
             eprintln!("prism-web: cannot store access token: {e}");
@@ -92,7 +93,7 @@ async fn main() {
             std::process::exit(1);
         }
     };
-    let ipc_auth = ipc::IpcAuth::new(args.ipc_file());
+    let mut ipc_auth = ipc::IpcAuth::new(args.ipc_file(), token.as_deref());
     if let Err(e) = ipc_auth.publish(args.public_port()) {
         eprintln!("prism-web: cannot write {}: {e}", ipc_auth.file().display());
         core.shutdown().await;
@@ -100,8 +101,12 @@ async fn main() {
     }
     let url = format!("http://{}:{}", args.host, args.port);
     println!("Prism Web listening on {url}");
-    println!("IPC info: {}", ipc_auth.file().display());
-    if let Some(token) = auth.token() {
+    if token.is_none() {
+        println!("IPC info: {}", ipc_auth.file().display());
+    }
+    if token.is_some() && !args.no_auth_token {
+        println!("Access token: from PRISM_WEB_TOKEN");
+    } else if let Some(token) = auth.token() {
         println!("Access token: {token}");
         println!("Saved in: {}", auth.file().display());
     } else {

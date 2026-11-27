@@ -2,6 +2,7 @@ import { api } from '../shared/api';
 import { Correlator, NativeError, classifyDisconnect } from '../shared/correlator';
 import type { AppRequest, ReplyMap } from '../shared/protocol';
 import { NATIVE_HOST_NAME } from '../shared/protocol';
+import { RemoteClient, getRemoteConfig } from './remote';
 
 type AnyReply = { id?: string | number; ok?: boolean; error?: { code?: string; message?: string } } & Record<string, unknown>;
 
@@ -90,6 +91,12 @@ export class NativeClient {
     const id = this.corr.nextId();
     const envelope = { ...msg, id, ...(opts.noLaunch ? { noLaunch: true } : {}) };
     try {
+      const remote = await getRemoteConfig();
+      if (remote.url) {
+        const reply = await new RemoteClient(remote.url, remote.token).request(msg, opts);
+        this.emit(true, undefined, reply as unknown as AnyReply);
+        return reply as unknown as ReplyMap[K];
+      }
       if (Date.now() < this.hostMissingUntil && this.lastMissingError) throw this.lastMissingError;
       let reply: AnyReply;
       try {
