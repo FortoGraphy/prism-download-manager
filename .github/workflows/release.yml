@@ -169,7 +169,11 @@ jobs:
             --warmup            download yt-dlp/ffmpeg/deno, then exit
 
           Env: PRISM_WEB_DATA_DIR and PRISM_WEB_DOWNLOAD_DIR override the default dirs.
-          Docker: use ghcr.io/<owner>/<repo>/prism-web (see BUILD.md).
+          PRISM_WEB_TOKEN is the shared bearer token for the UI and the browser
+          extension. To use direct transport, open the extension Options page and
+          set the server URL (e.g. http://127.0.0.1:8080) and the same token.
+          Beyond loopback, put HTTPS (TLS reverse proxy) in front: plain HTTP
+          exposes the token. Docker: ghcr.io/<owner>/<repo>/prism-web (see BUILD.md).
           EOF
           tar -czf prism-web-linux-x64.tar.gz -C "$STAGE" .
       - uses: actions/upload-artifact@v5
