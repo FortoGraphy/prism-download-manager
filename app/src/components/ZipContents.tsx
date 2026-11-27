@@ -1,7 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../design/icons";
-import { api, inTauri, onCoreEvent } from "../lib/api";
+import { api, inTauri, onCoreEvent, webMode } from "../lib/api";
 import { formatBytes } from "../lib/format";
 import { t } from "../lib/i18n";
 import { fileVisual, formatPct } from "../lib/present";
@@ -250,11 +250,12 @@ export function ZipContents({ captureId, dir }: { captureId: string; dir: string
     let meta: React.ReactNode = formatBytes(f.size);
     let action: React.ReactNode = null;
     if (s?.state === "saved") {
-      meta = (
-        <button type="button" className="zrow__link" onClick={() => void attempt(api.revealPath(s.path), t("Could not open the folder"))}>
-          {t("Show in folder")}
-        </button>
-      );
+      if (!webMode)
+        meta = (
+          <button type="button" className="zrow__link" onClick={() => void attempt(api.revealPath(s.path), t("Could not open the folder"))}>
+            {t("Show in folder")}
+          </button>
+        );
       action = <Icon name="check" size={15} strokeWidth={2.4} className="text-success" />;
     } else if (s?.state === "saving") {
       const fraction = f.size ? Math.min(1, s.done / f.size) : null;

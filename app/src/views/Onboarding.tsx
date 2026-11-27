@@ -4,6 +4,7 @@ import { BrandTile } from "../components/LogoMark";
 import { Modal } from "../components/Modal";
 import { Icon } from "../design/icons";
 import { patchSettings } from "../lib/actions";
+import { webMode } from "../lib/api";
 import { t, tr } from "../lib/i18n";
 import { openUrl, REPO_URL } from "../lib/links";
 import { useApp } from "../lib/store";
@@ -100,12 +101,14 @@ function Preferences() {
             <div className="srow__t1">{t("Download folder")}</div>
             <div className="srow__t2 t-mono">{s.downloads.defaultDir}</div>
           </div>
-          <button type="button" className="btn btn--sm" onClick={async () => {
-              const p = await pickFolder(s.downloads.defaultDir);
-              if (p) await patchSettings({ downloads: { defaultDir: p } });
-            }}>
-            {t("Change…")}
-          </button>
+          {!webMode && (
+            <button type="button" className="btn btn--sm" onClick={async () => {
+                const p = await pickFolder(s.downloads.defaultDir);
+                if (p) await patchSettings({ downloads: { defaultDir: p } });
+              }}>
+              {t("Change…")}
+            </button>
+          )}
         </div>
       </div>
       <div className="themes themes--onboard">

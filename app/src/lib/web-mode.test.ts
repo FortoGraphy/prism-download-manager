@@ -47,8 +47,12 @@ describe("prism-web UI", () => {
     expect(location.hash.startsWith("#/tools/shrink/")).toBe(true);
     await api.toggleMini();
     expect(location.hash).toBe("#/mini");
+    await api.toggleMini();
+    expect(location.hash).toBe("");
     await api.toggleDropzone();
     expect(location.hash).toBe("#/dropzone");
+    await api.toggleDropzone();
+    expect(location.hash).toBe("");
     await api.showMain();
     expect(location.hash).toBe("");
     expect(fetchMock).not.toHaveBeenCalled();

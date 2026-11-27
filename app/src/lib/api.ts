@@ -340,14 +340,14 @@ export const api = {
   },
   toggleMini: () => {
     if (webMode) {
-      location.hash = "#/mini";
+      location.hash = location.hash === "#/mini" ? "" : "#/mini";
       return Promise.resolve(true);
     }
     return invoke<boolean>("toggle_mini");
   },
   toggleDropzone: () => {
     if (webMode) {
-      location.hash = "#/dropzone";
+      location.hash = location.hash === "#/dropzone" ? "" : "#/dropzone";
       return Promise.resolve(true);
     }
     return invoke<boolean>("toggle_dropzone");

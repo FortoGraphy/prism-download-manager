@@ -5,7 +5,7 @@ import { ListField, NumberField, RateField, Row, Segmented, Select, Slider, Swit
 import { BrandTile } from "../../components/LogoMark";
 import { Icon, type IconName } from "../../design/icons";
 import { type DeepPartial, patchSettings } from "../../lib/actions";
-import { api, type HfContext, type IntegrationStatus, type ToolStatus } from "../../lib/api";
+import { api, webMode, type HfContext, type IntegrationStatus, type ToolStatus } from "../../lib/api";
 import { formatDate } from "../../lib/format";
 import { LANGUAGES, t, tk } from "../../lib/i18n";
 import { needsRepair } from "../../lib/integration";
@@ -261,9 +261,11 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
         <>
           <Group title={t("Where files go")}>
             <Row title={t("Default folder")} hint={s.downloads.defaultDir}>
-              <button type="button" className="btn" onClick={() => void pickFolder(s.downloads.defaultDir).then((p) => p && save({ downloads: { defaultDir: p } }))}>
-                <Icon name="folder-open" size={15} /> {t("Change…")}
-              </button>
+              {!webMode && (
+                <button type="button" className="btn" onClick={() => void pickFolder(s.downloads.defaultDir).then((p) => p && save({ downloads: { defaultDir: p } }))}>
+                  <Icon name="folder-open" size={15} /> {t("Change…")}
+                </button>
+              )}
             </Row>
             <Toggle title={t("Sort into category folders")} hint={t("Video → Downloads\\Video, Programs → Downloads\\Programs …")} value={s.downloads.useCategoryFolders} onChange={(v) => save({ downloads: { useCategoryFolders: v } })} />
             <Row title={t("When the file already exists")}>
@@ -470,9 +472,11 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
               <Row title={t("Program")}>
                 <div className="withbtn">
                   <TextField value={s.antivirus.command} onCommit={(v) => save({ antivirus: { command: v } })} label={t("Scanner program")} mono />
-                  <button type="button" className="btn" onClick={() => void pickFile([{ name: t("Programs"), extensions: ["exe", "cmd", "bat", "sh"] }]).then((p) => p && save({ antivirus: { command: p } }))}>
-                    {t("Browse…")}
-                  </button>
+                  {!webMode && (
+                    <button type="button" className="btn" onClick={() => void pickFile([{ name: t("Programs"), extensions: ["exe", "cmd", "bat", "sh"] }]).then((p) => p && save({ antivirus: { command: p } }))}>
+                      {t("Browse…")}
+                    </button>
+                  )}
                 </div>
               </Row>
               <Row title={t("Arguments")} hint={t("[FILE] is replaced by the downloaded file path")}>
@@ -791,9 +795,11 @@ function Models({ s }: { s: Settings }) {
               {t("Reset")}
             </button>
           )}
-          <button type="button" className="btn" onClick={() => void pickFolder(ctx?.folder ?? hf.folder).then((p) => p && save({ huggingFace: { folder: p } }))}>
-            <Icon name="folder-open" size={15} /> {t("Change…")}
-          </button>
+          {!webMode && (
+            <button type="button" className="btn" onClick={() => void pickFolder(ctx?.folder ?? hf.folder).then((p) => p && save({ huggingFace: { folder: p } }))}>
+              <Icon name="folder-open" size={15} /> {t("Change…")}
+            </button>
+          )}
         </Row>
       </Group>
     </>
@@ -954,28 +960,30 @@ function Advanced({ s }: { s: Settings }) {
   };
   return (
     <>
-      <Group title={t("Backup")}>
-        <Row title={t("Download list")} hint={t("All downloads with their state, as JSON")}>
-          <div className="inline">
-            <button type="button" className="btn btn--sm" onClick={() => exp("list")}>
-              <Icon name="export" size={14} /> {t("Export…")}
-            </button>
-            <button type="button" className="btn btn--sm" onClick={() => imp("list")}>
-              <Icon name="import" size={14} /> {t("Import…")}
-            </button>
-          </div>
-        </Row>
-        <Row title={t("Settings")}>
-          <div className="inline">
-            <button type="button" className="btn btn--sm" onClick={() => exp("settings")}>
-              <Icon name="export" size={14} /> {t("Export…")}
-            </button>
-            <button type="button" className="btn btn--sm" onClick={() => imp("settings")}>
-              <Icon name="import" size={14} /> {t("Import…")}
-            </button>
-          </div>
-        </Row>
-      </Group>
+      {!webMode && (
+        <Group title={t("Backup")}>
+          <Row title={t("Download list")} hint={t("All downloads with their state, as JSON")}>
+            <div className="inline">
+              <button type="button" className="btn btn--sm" onClick={() => exp("list")}>
+                <Icon name="export" size={14} /> {t("Export…")}
+              </button>
+              <button type="button" className="btn btn--sm" onClick={() => imp("list")}>
+                <Icon name="import" size={14} /> {t("Import…")}
+              </button>
+            </div>
+          </Row>
+          <Row title={t("Settings")}>
+            <div className="inline">
+              <button type="button" className="btn btn--sm" onClick={() => exp("settings")}>
+                <Icon name="export" size={14} /> {t("Export…")}
+              </button>
+              <button type="button" className="btn btn--sm" onClick={() => imp("settings")}>
+                <Icon name="import" size={14} /> {t("Import…")}
+              </button>
+            </div>
+          </Row>
+        </Group>
+      )}
       <Group title={t("Site grabber defaults")}>
         <Row title={t("Link depth")}>
           <NumberField value={s.grabber.defaultDepth} min={0} max={10} label={t("Default depth")} onCommit={(v) => save({ grabber: { defaultDepth: v } })} width={90} />
@@ -990,15 +998,19 @@ function Advanced({ s }: { s: Settings }) {
       </Group>
       <Group title={t("Troubleshooting")}>
         <Row title={t("Data folder")} hint={dataDir}>
-          <button type="button" className="btn btn--sm" onClick={() => void attempt(api.openPath(dataDir))}>
-            <Icon name="folder-open" size={14} /> {t("Open")}
-          </button>
+          {!webMode && (
+            <button type="button" className="btn btn--sm" onClick={() => void attempt(api.openPath(dataDir))}>
+              <Icon name="folder-open" size={14} /> {t("Open")}
+            </button>
+          )}
         </Row>
-        <Row title={t("Diagnostics")} hint={t("Logs, settings (passwords removed) and integration status in one zip")}>
-          <button type="button" className="btn btn--sm" onClick={() => exp("diagnostics")}>
-            <Icon name="export" size={14} /> {t("Export…")}
-          </button>
-        </Row>
+        {!webMode && (
+          <Row title={t("Diagnostics")} hint={t("Logs, settings (passwords removed) and integration status in one zip")}>
+            <button type="button" className="btn btn--sm" onClick={() => exp("diagnostics")}>
+              <Icon name="export" size={14} /> {t("Export…")}
+            </button>
+          </Row>
+        )}
         <Row title={t("Run the welcome guide again")}>
           <button type="button" className="btn btn--sm" onClick={() => save({ onboardingDone: false })}>
             {t("Start")}

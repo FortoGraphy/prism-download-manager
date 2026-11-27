@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { Icon, type IconName } from "../design/icons";
-import { api, type BrowserIntegration, type IntegrationStatus } from "../lib/api";
+import { api, webMode, type BrowserIntegration, type IntegrationStatus } from "../lib/api";
 import { t, tr } from "../lib/i18n";
 import { useApp } from "../lib/store";
 import { toast } from "../lib/ui";
@@ -308,9 +308,11 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
                   <button type="button" className="btn btn--sm" disabled={!folder} onClick={copyFolder}>
                     <Icon name="copy" size={14} /> {t("Copy path")}
                   </button>
-                  <button type="button" className="btn btn--sm btn--ghost" disabled={!folder} onClick={() => folder && void api.openPath(folder)}>
-                    <Icon name="folder-open" size={14} /> {t("Show")}
-                  </button>
+                  {!webMode && (
+                    <button type="button" className="btn btn--sm btn--ghost" disabled={!folder} onClick={() => folder && void api.openPath(folder)}>
+                      <Icon name="folder-open" size={14} /> {t("Show")}
+                    </button>
+                  )}
                 </div>
               </li>
             </ol>
@@ -356,9 +358,11 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
                   <button type="button" className="btn btn--sm" disabled={!folder} onClick={copyFolder}>
                     <Icon name="copy" size={14} /> {t("Copy path")}
                   </button>
-                  <button type="button" className="btn btn--sm btn--ghost" disabled={!folder} onClick={() => folder && void api.openPath(folder)}>
-                    <Icon name="folder-open" size={14} /> {t("Show")}
-                  </button>
+                  {!webMode && (
+                    <button type="button" className="btn btn--sm btn--ghost" disabled={!folder} onClick={() => folder && void api.openPath(folder)}>
+                      <Icon name="folder-open" size={14} /> {t("Show")}
+                    </button>
+                  )}
                 </div>
               </li>
             </ol>

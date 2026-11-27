@@ -4,6 +4,7 @@
   "Increase {label}": "Zvýšit {label}",
   "Unlimited": "Neomezeno",
   "Close": "Zavřít",
+  "Pick a finished download in the list to convert it.": "Vyberte hotový soubor v seznamu a převeďte ho.",
   "Dismiss": "Zavřít",
   "{count} segments": {
     "one": "{count} segment",

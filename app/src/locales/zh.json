@@ -4,6 +4,7 @@
   "Increase {label}": "增加{label}",
   "Unlimited": "不限",
   "Close": "关闭",
+  "Pick a finished download in the list to convert it.": "在列表中选择一个已完成的下载以进行转换。",
   "Dismiss": "关闭",
   "{count} segments": {
     "other": "{count} 个分段"

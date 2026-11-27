@@ -4,7 +4,7 @@ import { openMenuAt } from "../components/MenuHost";
 import { PartPicker } from "../components/PartPicker";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
-import { api, type PlaylistEntry, type VideoChoice, type VideoProbe } from "../lib/api";
+import { api, webMode, type PlaylistEntry, type VideoChoice, type VideoProbe } from "../lib/api";
 import { formatBytes, formatClock, hostOf } from "../lib/format";
 import { t, tk } from "../lib/i18n";
 import { useApp } from "../lib/store";
@@ -328,9 +328,11 @@ export default function VideoWindow({ id }: { id: string }) {
               </span>
               <div className="withbtn">
                 <TextField value={dir} onChange={setDir} label={t("Save folder")} placeholder={format === "mp3" ? t("Music folder (default)") : t("Video folder (default)")} />
-                <button type="button" className="btn" onClick={async () => setDir((await pickFolder(dir)) ?? dir)}>
-                  {t("Browse…")}
-                </button>
+                {!webMode && (
+                  <button type="button" className="btn" onClick={async () => setDir((await pickFolder(dir)) ?? dir)}>
+                    {t("Browse…")}
+                  </button>
+                )}
               </div>
             </div>
             <button type="button" className="vmore" aria-expanded={more} onClick={() => setMore(!more)}>

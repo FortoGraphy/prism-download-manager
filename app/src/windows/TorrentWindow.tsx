@@ -3,7 +3,7 @@ import { Checkbox, Select, TextField } from "../components/Controls";
 import { openMenuAt } from "../components/MenuHost";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
-import { api, type TorrentMeta, type TorrentSource } from "../lib/api";
+import { api, webMode, type TorrentMeta, type TorrentSource } from "../lib/api";
 import { formatBytes } from "../lib/format";
 import { t } from "../lib/i18n";
 import { folderFor } from "../lib/paths";
@@ -174,19 +174,21 @@ export default function TorrentWindow({ source }: { source: string }) {
                 icon="folder"
                 label={t("Save folder")}
               />
-              <button
-                type="button"
-                className="btn"
-                onClick={async () => {
-                  const p = await pickFolder(dir);
-                  if (p) {
-                    dirTouched.current = true;
-                    setDir(p);
-                  }
-                }}
-              >
-                {t("Browse…")}
-              </button>
+              {!webMode && (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={async () => {
+                    const p = await pickFolder(dir);
+                    if (p) {
+                      dirTouched.current = true;
+                      setDir(p);
+                    }
+                  }}
+                >
+                  {t("Browse…")}
+                </button>
+              )}
             </div>
           </div>
           <div className="field">

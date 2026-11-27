@@ -4,6 +4,7 @@
   "Increase {label}": "Artır: {label}",
   "Unlimited": "Sınırsız",
   "Close": "Kapat",
+  "Pick a finished download in the list to convert it.": "Dönüştürmek için listeden tamamlanmış bir indirme seçin.",
   "Dismiss": "Kapat",
   "{count} segments": {
     "one": "{count} parça",

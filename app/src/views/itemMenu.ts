@@ -1,6 +1,7 @@
 // Context menu for one or more downloads (right-click, "…" button).
 
 import { actions } from "../lib/actions";
+import { webMode } from "../lib/api";
 import { t } from "../lib/i18n";
 import { GIF_MAX_SECONDS, PRESETS, presetLabel, quickTargets, TARGET_NAMES } from "../lib/media";
 import { canPause, canResume, displayName } from "../lib/present";
@@ -67,8 +68,12 @@ export function itemMenu(ids: string[]): MenuEntry[] {
       : [];
 
   return [
-    { label: t("Open"), icon: "open-file", kbd: "Enter", disabled: !done, onSelect: () => one && actions.open(one.id) },
-    { label: t("Show in folder"), icon: "folder-open", disabled: !one, onSelect: () => one && actions.reveal(one.id) },
+    ...(webMode
+      ? []
+      : ([
+          { label: t("Open"), icon: "open-file", kbd: "Enter", disabled: !done, onSelect: () => one && actions.open(one.id) },
+          { label: t("Show in folder"), icon: "folder-open", disabled: !one, onSelect: () => one && actions.reveal(one.id) },
+        ] as MenuEntry[])),
     ...tools,
     { separator: true },
     { label: t("Resume"), icon: "resume", disabled: !list.some((i) => canResume(i.status) || i.status === "queued"), onSelect: () => actions.resume(ids) },

@@ -6,7 +6,7 @@ import { FileTile } from "../components/Visuals";
 import { WindowFrame } from "../components/WindowFrame";
 import { ZipContents } from "../components/ZipContents";
 import { Icon } from "../design/icons";
-import { api, onCoreEvent } from "../lib/api";
+import { api, onCoreEvent, webMode } from "../lib/api";
 import { formatBytes, hostOf } from "../lib/format";
 import { t } from "../lib/i18n";
 import { folderFor } from "../lib/paths";
@@ -206,19 +206,21 @@ export default function CaptureWindow({ id }: { id: string }) {
                 icon="folder"
                 label={t("Save folder")}
               />
-              <button
-                type="button"
-                className="btn"
-                onClick={async () => {
-                  const p = await pickFolder(dir);
-                  if (p) {
-                    touched.current.dir = true;
-                    setDir(p);
-                  }
-                }}
-              >
-                {t("Browse…")}
-              </button>
+              {!webMode && (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={async () => {
+                    const p = await pickFolder(dir);
+                    if (p) {
+                      touched.current.dir = true;
+                      setDir(p);
+                    }
+                  }}
+                >
+                  {t("Browse…")}
+                </button>
+              )}
             </div>
           </div>
           <div className="field">
