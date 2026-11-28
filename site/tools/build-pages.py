@@ -16,12 +16,19 @@ Page source format: a comment block with "key: value" lines, then the content of
   title, description, crumb   required (crumb: the page's name in the breadcrumb)
   og_title                    optional, for link previews
   noindex                     optional, "yes": not in the sitemap, no canonical (the 404 page)
+  published, updated          articles (guides, comparisons): YYYY-MM-DD, written into the
+                              Article JSON-LD; "updated" also goes into the visible byline
+  headline                    optional, the Article headline (defaults to the title)
 Placeholders in the content:
   {{version}}                              the release the download links point to (x.y.z)
   {{dl:windows}} {{dl:mac}} {{dl:linux}}   one download card copied from site/index.html
   {{dl:all}}                               all three cards
-  {{related}}                              links to the other pages
+  {{related}}                              links to the other pages and the guides
+  {{guides}}                               links to the guides (without the page itself)
+  {{byline}}                               author and "updated" date (articles)
   {{cta}}                                  the closing download call to action
+Articles can live under a parent path (guides/<slug>): their source is
+site/tools/pages/guides/<slug>.html and their breadcrumb gets the parent as a middle step.
 Python 3.8+, standard library only.
 """
 import datetime
@@ -46,6 +53,19 @@ PAGES = [
     ("idm-alternative", "An alternative to IDM", "What carries over from Internet Download Manager."),
     ("hugging-face", "Hugging Face models", "GGUF and safetensors, only the files you need."),
 ]
+# Guides and comparisons: (path, title, description). "guides/x" -> site/guides/x/index.html,
+# written from site/tools/pages/guides/x.html. HUB is the page that lists them all.
+ARTICLES = [
+    ("best-download-manager", "Best free download managers", "An honest comparison for Windows, Mac and Linux."),
+    ("guides/download-faster", "How to download faster on a PC", "Find the bottleneck first, then fix the right thing."),
+    ("guides/chrome-downloads-slow", "Chrome downloads slow?", "Why it happens and what actually helps."),
+    ("guides/resume-failed-download", "Resume a failed download", "Chrome, Edge and Firefox, and how to stop starting over."),
+    ("guides/download-large-files", "Download large files", "Fast, complete and verified, even at 50 GB."),
+    ("guides/magnet-links", "Open magnet links", "What a magnet link is and how to download one."),
+    ("guides/torrents-faster", "Make torrents download faster", "Seeds, ports and VPNs, and the tips that are myths."),
+]
+HUB = ("guides", "Guides", "Every guide in one place.")
+PARENTS = {"guides": "Guides"}
 # Built too, but not linked from the "related" section: (source name, output path under site/)
 OTHER = [("404", "404.html")]
 
@@ -148,11 +168,26 @@ def parse_source(text):
     return meta, text[m.end():]
 
 
-def related(slug):
-    links = "\n".join(
+def link_cards(entries, skip):
+    return "\n".join(
         f'      <a class="lp-link" href="/{s}/"><b>{html.escape(t)}</b><span>{html.escape(d)}</span></a>'
-        for s, t, d in PAGES if s != slug
+        for s, t, d in entries if s != skip
     )
+
+
+def guides(slug):
+    return f"""<div class="lp-links">
+{link_cards(ARTICLES, slug)}
+    </div>"""
+
+
+def related(slug):
+    links = link_cards(PAGES, slug)
+    guide_block = "" if slug == HUB[0] else f"""
+    <h3 class="h3 lp-links-head reveal">Guides</h3>
+    <div class="lp-links reveal">
+{link_cards(ARTICLES, slug)}
+    </div>"""
     return f"""<section class="section" aria-labelledby="related-title" style="padding-top:0">
   <div class="container">
     <div class="section-head reveal">
@@ -163,7 +198,7 @@ def related(slug):
     <div class="lp-links reveal">
       <a class="lp-link" href="/"><b>Prism home</b><span>Features, benchmarks, film and guide.</span></a>
 {links}
-    </div>
+    </div>{guide_block}
   </div>
 </section>"""
 
@@ -194,37 +229,67 @@ def build_page(path, meta, body):
     for key in ("windows", "mac", "linux"):
         body = body.replace("{{dl:%s}}" % key, CARDS[key])
     body = body.replace("{{dl:all}}", '<div class="dl-grid">\n' + "\n".join(CARDS[k] for k in ("windows", "mac", "linux")) + "\n</div>")
-    body = body.replace("{{related}}", related(path.strip("/"))).replace("{{cta}}", CTA)
+    slug = path.strip("/")
+    article = bool(meta.get("published"))
+    byline = ""
+    if article:
+        day = datetime.date.fromisoformat(meta.get("updated") or meta["published"])
+        byline = (f'<p class="byline">By <a href="{GRAPH["Person"]["url"]}">{html.escape(GRAPH["Person"]["name"])}</a>, '
+                  f'the developer of Prism · Updated <time datetime="{day.isoformat()}">{day.day} {day:%B %Y}</time></p>')
+    body = body.replace("{{related}}", related(slug)).replace("{{cta}}", CTA)
+    body = body.replace("{{guides}}", guides(slug)).replace("{{byline}}", byline)
     left = re.findall(r"\{\{[^}]*\}\}", body)
     if left:
         sys.exit(f"build-pages: {path}: unknown placeholder(s) {left}")
 
     title, desc = meta["title"], meta["description"]
     og_title = meta.get("og_title", title)
+    crumbs = [("Prism", BASE + "/")]
+    if "/" in slug:
+        parent = slug.split("/")[0]
+        crumbs.append((PARENTS[parent], f"{BASE}/{parent}/"))
+    crumbs.append((meta["crumb"], url))
+    webpage = {
+        "@type": "WebPage",
+        "@id": url + "#webpage",
+        "url": url,
+        "name": title,
+        "description": desc,
+        "inLanguage": "en",
+        "isPartOf": {"@id": GRAPH["WebSite"]["@id"]},
+        "breadcrumb": {"@id": url + "#breadcrumb"},
+    }
+    # A product page is about Prism; a guide is about its topic and only mentions Prism.
+    webpage["mentions" if article or slug == HUB[0] else "about"] = {"@id": GRAPH["SoftwareApplication"]["@id"]}
     graph = [
-        {
-            "@type": "WebPage",
-            "@id": url + "#webpage",
-            "url": url,
-            "name": title,
-            "description": desc,
-            "inLanguage": "en",
-            "isPartOf": {"@id": GRAPH["WebSite"]["@id"]},
-            "about": {"@id": GRAPH["SoftwareApplication"]["@id"]},
-            "breadcrumb": {"@id": url + "#breadcrumb"},
-        },
+        webpage,
         {
             "@type": "BreadcrumbList",
             "@id": url + "#breadcrumb",
             "itemListElement": [
-                {"@type": "ListItem", "position": 1, "name": "Prism", "item": BASE + "/"},
-                {"@type": "ListItem", "position": 2, "name": meta["crumb"], "item": url},
+                {"@type": "ListItem", "position": i, "name": n, "item": u}
+                for i, (n, u) in enumerate(crumbs, 1)
             ],
         },
         GRAPH["WebSite"],
         GRAPH["Person"],
         GRAPH["SoftwareApplication"],
     ]
+    if article:
+        graph.insert(1, {
+            "@type": "Article",
+            "@id": url + "#article",
+            "headline": meta.get("headline", title),
+            "description": desc,
+            "inLanguage": "en",
+            "datePublished": meta["published"],
+            "dateModified": meta.get("updated") or meta["published"],
+            "author": {"@id": GRAPH["Person"]["@id"]},
+            "publisher": {"@id": GRAPH["Person"]["@id"]},
+            "image": f"{BASE}/og.png",
+            "mainEntityOfPage": {"@id": url + "#webpage"},
+            "isPartOf": {"@id": GRAPH["WebSite"]["@id"]},
+        })
     items = faq_items(body)
     if items:
         graph.append(faq_node(url, items))
@@ -243,7 +308,7 @@ def build_page(path, meta, body):
 <meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)">
 <meta name="color-scheme" content="dark light">
 
-<meta property="og:type" content="website">
+<meta property="og:type" content="{"article" if article else "website"}">
 <meta property="og:site_name" content="Prism Download Manager">
 <meta property="og:locale" content="en_US">
 <meta property="og:title" content="{e(og_title)}">
@@ -315,9 +380,9 @@ def main():
         print("updated site/index.html (FAQ JSON-LD)")
     urls = [(BASE + "/", stamp(BASE + "/", new_index))]
 
-    builds = [(slug, f"{slug}/index.html") for slug, _, _ in PAGES] + OTHER
+    builds = [(slug, f"{slug}/index.html") for slug, _, _ in PAGES + [HUB] + ARTICLES] + OTHER
     for name, out_rel in builds:
-        meta, body = parse_source(read(os.path.join(SRC, name + ".html")))
+        meta, body = parse_source(read(os.path.join(SRC, *name.split("/")) + ".html"))
         meta["_src"] = name + ".html"
         path = out_rel[: -len("index.html")] if out_rel.endswith("/index.html") else out_rel
         page, noindex = build_page(path, meta, body)

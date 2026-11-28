@@ -293,6 +293,8 @@ pub(crate) fn video_options(s: &Settings) -> VideoOptions {
         cookies_from_browser: (!s.video.cookies_from_browser.is_empty())
             .then(|| s.video.cookies_from_browser.clone()),
         proxy: proxy_url(s),
+        preferred_codec: (!s.video.preferred_codec.is_empty())
+            .then(|| s.video.preferred_codec.clone()),
         ..VideoOptions::default()
     }
 }
@@ -1623,8 +1625,34 @@ fn recent_probe(core: &Core, page_url: &str) -> Option<serde_json::Value> {
 }
 
 /// Probe a video page for the quality picker: a recent result is reused and a probe of the
-/// same page that is already running is waited for.
+/// same page that is already running is waited for. The qualities follow the settings as they
+/// are now, also for a reused result (a container or codec picked meanwhile, #152).
 pub(crate) async fn probe_video(
+    core: &Core,
+    page_url: &str,
+    ctx: RequestContext,
+) -> Result<serde_json::Value> {
+    let probe = probe_video_cached(core, page_url, ctx).await?;
+    Ok(current_choices(core, probe))
+}
+
+/// A video's quality list for Settings › Video's container and preferred codec; a playlist (or
+/// anything that isn't a probe) is returned as it is.
+pub(crate) fn current_choices(core: &Core, probe: serde_json::Value) -> serde_json::Value {
+    match serde_json::from_value::<Probe>(probe.clone()) {
+        Ok(Probe::Video(mut info)) => {
+            // yt-dlp's result names its choices for MP4: list them for the container in Settings.
+            info.choices = core
+                .0
+                .video
+                .choices(&info, wanted_container(None, &core.settings()));
+            serde_json::to_value(Probe::Video(info)).unwrap_or(probe)
+        }
+        _ => probe,
+    }
+}
+
+async fn probe_video_cached(
     core: &Core,
     page_url: &str,
     ctx: RequestContext,
@@ -1675,18 +1703,11 @@ async fn run_probe_video(
 ) -> Result<serde_json::Value> {
     let video = &core.0.video;
     prepare_video_tools(core).await?;
-    let probe = match video
+    // The qualities are listed by `current_choices`, for the settings at the time of asking.
+    let probe = video
         .probe(page_url, &ctx)
         .await
-        .map_err(|e| anyhow!("{e}"))?
-    {
-        // yt-dlp's result names its choices for MP4: list them for the container in Settings.
-        Probe::Video(mut info) => {
-            info.choices = video.choices(&info, wanted_container(None, &core.settings()));
-            Probe::Video(info)
-        }
-        playlist => playlist,
-    };
+        .map_err(|e| anyhow!("{e}"))?;
     Ok(serde_json::to_value(probe)?)
 }
 

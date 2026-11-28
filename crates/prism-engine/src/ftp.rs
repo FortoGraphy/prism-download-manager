@@ -81,6 +81,14 @@ impl FtpTarget {
         } else {
             ("anonymous".to_string(), "anonymous@".to_string())
         };
+        if [&path, &user, &pass]
+            .iter()
+            .any(|s| s.bytes().any(|b| matches!(b, b'\r' | b'\n' | b'\0')))
+        {
+            return Err(EngineError::InvalidUrl {
+                message: "control characters are not allowed in FTP URLs or credentials".into(),
+            });
+        }
         Ok(FtpTarget {
             host: host
                 .trim_start_matches('[')
@@ -614,6 +622,15 @@ mod tests {
         assert_eq!((t.user.as_str(), t.pass.as_str()), ("c", "d"));
         assert!(FtpTarget::parse(&Url::parse("ftp://h/dir/").unwrap(), None).is_err());
         assert!(FtpTarget::parse(&Url::parse("http://h/f").unwrap(), None).is_err());
+        assert!(FtpTarget::parse(&Url::parse("ftp://h/a%0d%0aNOOP").unwrap(), None).is_err());
+        assert!(FtpTarget::parse(&Url::parse("ftp://u%0d%0a:p@h/f").unwrap(), None).is_err());
+        assert!(FtpTarget::parse(&Url::parse("ftp://u:p%0a@h/f").unwrap(), None).is_err());
+        let bad_creds = Credentials {
+            username: "u\r\n".into(),
+            password: "p".into(),
+            scheme: Default::default(),
+        };
+        assert!(FtpTarget::parse(&Url::parse("ftp://h/f").unwrap(), Some(&bad_creds)).is_err());
     }
 
     #[test]

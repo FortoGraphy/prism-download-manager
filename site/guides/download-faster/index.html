@@ -1,0 +1,563 @@
+<!doctype html>
+<!-- Written by site/tools/build-pages.py from site/tools/pages/guides/download-faster.html. Edit that file, then run the script. -->
+<html lang="en" data-theme="dark" data-accent="prism">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How to Download Faster on a PC: 9 Fixes That Actually Work (2026)</title>
+<meta name="description" content="Slow downloads on Windows, Mac or Linux? Find the real bottleneck in two minutes, then fix it: Mbps vs MB/s, Wi-Fi, background updates, VPNs, mirrors and multi-connection downloads.">
+<link rel="canonical" href="https://prismdl.site/guides/download-faster/">
+<meta name="theme-color" content="#07080b" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Prism Download Manager">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="How to download faster on a PC — 9 fixes that actually work">
+<meta property="og:description" content="Slow downloads on Windows, Mac or Linux? Find the real bottleneck in two minutes, then fix it: Mbps vs MB/s, Wi-Fi, background updates, VPNs, mirrors and multi-connection downloads.">
+<meta property="og:url" content="https://prismdl.site/guides/download-faster/">
+<meta property="og:image" content="https://prismdl.site/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Prism download manager — One beam. Many rays.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How to download faster on a PC — 9 fixes that actually work">
+<meta name="twitter:description" content="Slow downloads on Windows, Mac or Linux? Find the real bottleneck in two minutes, then fix it: Mbps vs MB/s, Wi-Fi, background updates, VPNs, mirrors and multi-connection downloads.">
+<meta name="twitter:image" content="https://prismdl.site/og.png">
+
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+
+<link rel="preload" href="/assets/fonts/InterVariable-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://api.github.com" crossorigin>
+<script>
+  /* Theme before first paint: saved choice → system preference. */
+  (function () {
+    var d = document.documentElement, t;
+    d.classList.add("js");
+    try { t = localStorage.getItem("prism-theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    d.setAttribute("data-theme", t);
+  })();
+</script>
+<link rel="stylesheet" href="/assets/css/tokens.css?v=1.2.8">
+<link rel="stylesheet" href="/assets/css/site.css?v=1.2.8">
+<script src="/assets/js/site.js?v=1.2.8" defer></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://prismdl.site/guides/download-faster/#webpage",
+      "url": "https://prismdl.site/guides/download-faster/",
+      "name": "How to Download Faster on a PC: 9 Fixes That Actually Work (2026)",
+      "description": "Slow downloads on Windows, Mac or Linux? Find the real bottleneck in two minutes, then fix it: Mbps vs MB/s, Wi-Fi, background updates, VPNs, mirrors and multi-connection downloads.",
+      "inLanguage": "en",
+      "isPartOf": {
+        "@id": "https://prismdl.site/#website"
+      },
+      "breadcrumb": {
+        "@id": "https://prismdl.site/guides/download-faster/#breadcrumb"
+      },
+      "mentions": {
+        "@id": "https://prismdl.site/#app"
+      }
+    },
+    {
+      "@type": "Article",
+      "@id": "https://prismdl.site/guides/download-faster/#article",
+      "headline": "How to download faster on a PC: 9 fixes that actually work",
+      "description": "Slow downloads on Windows, Mac or Linux? Find the real bottleneck in two minutes, then fix it: Mbps vs MB/s, Wi-Fi, background updates, VPNs, mirrors and multi-connection downloads.",
+      "inLanguage": "en",
+      "datePublished": "2026-11-27",
+      "dateModified": "2026-11-27",
+      "author": {
+        "@id": "https://prismdl.site/#author"
+      },
+      "publisher": {
+        "@id": "https://prismdl.site/#author"
+      },
+      "image": "https://prismdl.site/og.png",
+      "mainEntityOfPage": {
+        "@id": "https://prismdl.site/guides/download-faster/#webpage"
+      },
+      "isPartOf": {
+        "@id": "https://prismdl.site/#website"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://prismdl.site/guides/download-faster/#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Prism",
+          "item": "https://prismdl.site/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Guides",
+          "item": "https://prismdl.site/guides/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Download faster",
+          "item": "https://prismdl.site/guides/download-faster/"
+        }
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://prismdl.site/#website",
+      "url": "https://prismdl.site/",
+      "name": "Prism Download Manager",
+      "alternateName": "Prism",
+      "inLanguage": "en",
+      "publisher": {
+        "@id": "https://prismdl.site/#author"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://prismdl.site/#author",
+      "name": "Jan Sechovec",
+      "url": "https://github.com/FortoGraphy"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://prismdl.site/#app",
+      "name": "Prism Download Manager",
+      "alternateName": "Prism",
+      "description": "Free, open-source download manager and download accelerator for Windows, macOS and Linux. Splits each file across up to 32 connections, resumes after crashes, catches downloads from Chrome, Edge, Firefox and other browsers, and downloads videos, torrents and Hugging Face AI models.",
+      "url": "https://prismdl.site/",
+      "applicationCategory": "UtilitiesApplication",
+      "applicationSubCategory": "Download manager",
+      "operatingSystem": "Windows 10, Windows 11, macOS 11 or later, Linux",
+      "softwareVersion": "1.2.8",
+      "dateModified": "2026-11-27",
+      "releaseNotes": "https://github.com/FortoGraphy/prism-download-manager/releases/tag/v1.2.8",
+      "downloadUrl": "https://github.com/FortoGraphy/prism-download-manager/releases/latest",
+      "license": "https://opensource.org/licenses/MIT",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "image": "https://prismdl.site/og.png",
+      "screenshot": [
+        "https://prismdl.site/assets/img/main-dark-1600.webp",
+        "https://prismdl.site/assets/img/video-dark.webp",
+        "https://prismdl.site/assets/img/hf-model-dark.webp"
+      ],
+      "featureList": [
+        "Up to 32 connections per file with dynamic segmentation",
+        "Crash-safe resume of interrupted downloads",
+        "Browser extension for Chrome, Edge, Brave, Opera, Vivaldi and Firefox",
+        "Video and audio downloads from YouTube and other sites supported by yt-dlp (MP4 or MP3)",
+        "BitTorrent and magnet links",
+        "Hugging Face AI model downloads (GGUF, safetensors) checked by SHA-256",
+        "HTTP, HTTPS, FTP, FTPS, HLS and DASH",
+        "Queues, scheduler, speed limits, site grabber and batch downloads",
+        "No ads, no account, no telemetry"
+      ],
+      "author": {
+        "@id": "https://prismdl.site/#author"
+      },
+      "sameAs": [
+        "https://github.com/FortoGraphy/prism-download-manager",
+        "https://chromewebstore.google.com/detail/prism-download-manager/mmcdeiglkbfbicdjboocmhehodogilfl",
+        "https://www.youtube.com/@PrismDownloader"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://prismdl.site/guides/download-faster/#faq",
+      "url": "https://prismdl.site/guides/download-faster/",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why is my download speed slower than my internet speed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Often it isn’t: plans are sold in megabits per second and downloads are shown in megabytes per second, so 100 Mbps means about 12 MB/s. If it really is slower, the usual causes are Wi-Fi, other apps using the line, a VPN, or a server that limits the speed of each connection."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does a download manager really make downloads faster?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Only when the server is the bottleneck. On servers that cap each connection, downloading over several connections at once can be many times faster — 15× in our test. When the server doesn’t limit you, your line is the limit for every tool. A download manager still helps by resuming failed downloads instead of starting over."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How many connections should I use for one download?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Around 8 is a good default. Go up to 16 or 32 for servers that are clearly slow per connection. Some servers allow only a few connections; a good download manager notices that and uses what the server allows instead of failing."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Ethernet really faster than Wi-Fi?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Usually, yes, and it is far more stable. Wi-Fi speed drops with distance, walls and interference from nearby networks. On fast plans (500 Mbps and up), a cable is often the only way to get the full speed."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does a download start fast and then slow down?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Some servers allow a fast burst and then throttle. It can also be another app starting its own download, Wi-Fi conditions changing, or the drive filling its fast cache. Pausing and resuming will not help with a throttling server; more connections or another mirror will."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5"/><path d="M4.5 15.5V18A2.5 2.5 0 0 0 7 20.5h10a2.5 2.5 0 0 0 2.5-2.5v-2.5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M11.28 4.76A0.8 0.8 0 0 1 12.72 4.76L14.41 8.3A0.8 0.8 0 0 0 15.04 8.75L18.81 9.2A0.8 0.8 0 0 1 19.27 10.57L16.51 13.2A0.8 0.8 0 0 0 16.28 13.930L16.99 17.74A0.8 0.8 0 0 1 15.82 18.59L12.38 16.71A0.8 0.8 0 0 0 11.62 16.71L8.18 18.59A0.8 0.8 0 0 1 7.01 17.74L7.72 13.93A0.8 0.8 0 0 0 7.49 13.2L4.73 10.57A0.8 0.8 0 0 1 5.19 9.2L8.96 8.75A0.8 0.8 0 0 0 9.59 8.3Z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.25l7.25 2.9v5.6c0 4.3-3 7.9-7.25 9.25-4.25-1.35-7.25-4.95-7.25-9.25v-5.6z"/><path d="M9 12.25l2.1 2.1 4-4.1"/></symbol>
+  <symbol id="i-magnet" viewBox="0 0 24 24"><path d="M5 4.5h4.5V12a2.5 2.5 0 0 0 5 0V4.5H19V12a7 7 0 0 1-14 0z"/><path d="M5 8.5h4.5M14.5 8.5H19"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="3.75" ry="9"/><path d="M3 12h18"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.21 5.79A0.9 0.9 0 0 0 11.6 5.15L6.15 12.04A0.9 0.9 0 0 0 6.86 13.5L10.26 13.5A0.9 0.9 0 0 1 11.15 14.49L10.79 18.210A0.9 0.9 0 0 0 12.4 18.85L17.85 11.96A0.9 0.9 0 0 0 17.14 10.5L13.74 10.5A0.9 0.9 0 0 1 12.85 9.51Z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.75"/><path d="M12 5.4L12 3.25M16.67 7.33L18.19 5.81M18.6 12L20.75 12M16.67 16.67L18.19 18.19M12 18.6L12 20.75M7.33 16.67L5.81 18.19M5.4 12L3.25 12M7.33 7.33L5.81 5.81"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.73 13.03A8.25 8.25 0 1 1 10.97 4.27A6.75 6.75 0 0 0 19.73 13.03Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6A2.5 2.5 0 0 0 13 3.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4.5h5.5V10M19.5 4.5L11 13"/><path d="M18 14v3.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 4 17.5v-9A2.5 2.5 0 0 1 6.5 6H10"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6.5 9.25l5.5 5.5 5.5-5.5"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M4.5 12h15M13.5 6l6 6-6 6"/></symbol>
+  <symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M6 6h3.75a2.25 2.25 0 0 1 4.5 0h2.25A1.5 1.5 0 0 1 18 7.5v2.250a2.25 2.25 0 0 1 0 4.5V18a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18V7.5A1.5 1.5 0 0 1 6 6z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+  <symbol id="i-scheduler" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.25"/><path d="M12 9.5V13l2.5 1.75"/><path d="M4.5 5.75L7 3.75M19.5 5.75L17 3.75"/><path d="M7.25 19.25L6 20.75M16.75 19.25L18 20.75"/></symbol>
+  <symbol id="i-grabber" viewBox="0 0 24 24"><circle cx="9.5" cy="9.5" r="6"/><ellipse cx="9.5" cy="9.5" rx="2.5" ry="6"/><path d="M3.5 9.5h12"/><path d="M17.75 12v8.25M15 17.5l2.75 2.75 2.75-2.75"/></symbol>
+  <symbol id="i-torrent" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="2.25"/><circle cx="5.5" cy="17.5" r="2.25"/><circle cx="18.5" cy="17.5" r="2.25"/><path d="M10.45 8.36L7.05 14.64M13.55 8.36l3.4 6.28M8.75 17.5h6.5"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.25 10.46A0.7 0.7 0 0 1 11.3 9.86L13.95 11.39A0.7 0.7 0 0 1 13.95 12.61L11.3 14.14A0.7 0.7 0 0 1 10.25 13.54Z"/></symbol>
+  <symbol id="i-mini" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="11.5" y="11" width="6.5" height="5" rx="1"/></symbol>
+  <symbol id="i-retry" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20.25 3.75V8H16"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.9" r="1.15" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.26 6.6A2 2 0 0 1 13.74 6.6L19.32 16.52A2 2 0 0 1 17.58 19.5L6.42 19.5A2 2 0 0 1 4.68 16.52Z"/><path d="M12 9.5v4.25"/><circle cx="12" cy="16.6" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><path d="M14 3.5H7.5A2.5 2.5 0 0 0 5 6v12a2.5 2.5 0 0 0 2.5 2.5h9A2.5 2.5 0 0 0 19 18V8.5z"/><path d="M14 3.5V7a1.5 1.5 0 0 0 1.5 1.5H19"/><path d="M11 6h1.5M11 8.5h1.5M11 11h1.5"/><rect x="10.25" y="13.5" width="3" height="3.5" rx="1"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 18.5V7A2.5 2.5 0 0 1 6 4.5h3.17a1.5 1.5 0 0 1 1.06.44L12 6.75h5.5A2.5 2.5 0 0 1 20 9.25V11"/><path d="M5.74 20A1.6 1.6 0 0 1 4.23 17.88L6.23 12.08A1.6 1.6 0 0 1 7.74 11L19.01 11A1.6 1.6 0 0 1 20.52 13.12L18.52 18.92A1.6 1.6 0 0 1 17.01 20Z"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.1 0 1.75-.8 1.75-1.7 0-1.1-.9-1.4-.9-2.4 0-.95.75-1.65 1.7-1.65h1.9a4 4 0 0 0 4-4C20.45 6.9 16.6 3.5 12 3.5z"/><circle cx="7.75" cy="11" r="1.1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="7.75" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-gh" viewBox="0 0 16 16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.650-.88 3.65-3.950 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol>
+  <symbol id="i-beam" viewBox="0 0 24 24"><path d="M5 11h11.5v3.75a5.25 5.25 0 0 1-5.25 5.25h-1A5.25 5.25 0 0 1 5 14.75z"/><path d="M16.5 12.25h1.25a2.38 2.38 0 0 1 0 4.75H16"/><path style="stroke:var(--beam-ray,currentColor)" d="M9.1 8.1L7.4 4.9M10.75 7.6V3.9M12.4 8.1l1.7-3.2"/></symbol>
+  <symbol id="i-prism" viewBox="0 0 64 64">
+    <path d="M1.5 39.5L10.6 34.7" stroke="#8a8fa0" stroke-width="3.2" stroke-linecap="round" opacity=".7"/>
+    <path d="M41 31.5L61 16" stroke="#ff7f8f" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="9 3.5 6 3.5 60"/>
+    <path d="M41.6 32.6L62 25" stroke="#f2c14e" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="6 3.5 10 3.5 60"/>
+    <path d="M42 34L62.2 34" stroke="#2ed3a9" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="11 3.5 5 3.5 60"/>
+    <path d="M42.2 35.4L62 43" stroke="#46a8ff" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="7 3.5 9 3.5 60"/>
+    <path d="M42 36.6L61 51.5" stroke="#8b7bff" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="10 3.5 7 3.5 60"/>
+    <path d="M24.4 9.6a3 3 0 0 1 5.2 0l20.3 37.3a3 3 0 0 1-2.6 4.4H6.7a3 3 0 0 1-2.6-4.4z" fill="url(#lmg)" stroke="url(#lmr)" stroke-width="2"/>
+    <path d="M11.5 34.6L41.2 33.8" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/>
+    <path d="M22.6 14.2L9.4 38.6" stroke="#fff" stroke-opacity=".85" stroke-width="1.4" stroke-linecap="round"/>
+  </symbol>
+  <defs>
+    <linearGradient id="lmg" x1="10" y1="8" x2="46" y2="54" gradientUnits="userSpaceOnUse"><stop stop-color="#a9a7ff" stop-opacity=".75"/><stop offset=".55" stop-color="#6461f2" stop-opacity=".35"/><stop offset="1" stop-color="#4f4be0" stop-opacity=".55"/></linearGradient>
+    <linearGradient id="lmr" x1="8" y1="8" x2="48" y2="54" gradientUnits="userSpaceOnUse"><stop stop-color="#c9c8ff"/><stop offset=".5" stop-color="#6461f2"/><stop offset="1" stop-color="#8e8cff"/></linearGradient>
+  </defs>
+</svg>
+
+<div class="nav-wrap">
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="/" aria-label="Prism — home">
+      <svg viewBox="0 0 64 64" aria-hidden="true" fill="none"><use href="#i-prism"/></svg>
+      Prism
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="/#features">Features</a></li>
+      <li><a href="/#benchmarks">Benchmarks</a></li>
+      <li><a href="/#download">Download</a></li>
+      <li><a href="/#guide">Guide</a></li>
+      <li><a href="/#faq">FAQ</a></li>
+    </ul>
+    <span class="nav-spacer"></span>
+    <div class="nav-actions">
+      <button class="icon-btn theme-toggle" type="button" aria-label="Switch to light theme" title="Toggle light / dark">
+        <svg class="i i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+        <svg class="i i-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+      </button>
+      <a class="btn btn-glass btn-sm gh-btn" href="https://github.com/FortoGraphy/prism-download-manager" data-gh-star>
+        <svg class="gh" aria-hidden="true"><use href="#i-gh"/></svg>
+        <span class="gh-label">Star</span>
+        <span class="count" data-stars hidden></span>
+      </a>
+      <a class="btn btn-glass btn-sm beam-btn" href="https://ko-fi.com/prismdownloadmanager" target="_blank" rel="noopener" title="Support Prism on Ko-fi">
+        <svg class="i" aria-hidden="true"><use href="#i-beam"/></svg>
+        <span class="beam-label">Buy me a beam</span>
+      </a>
+      <a class="btn btn-primary btn-sm nav-dl" href="/#download">Download</a>
+      <button class="icon-btn nav-menu-btn" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
+        <svg class="i" aria-hidden="true"><use href="#i-menu"/></svg>
+      </button>
+    </div>
+  </nav>
+</div>
+
+<main id="main">
+<section class="lp-hero" aria-labelledby="lp-title">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Prism</a></li><li><a href="/guides/">Guides</a></li><li aria-current="page">Download faster</li></ol></nav>
+      <p class="eyebrow">Guide</p>
+      <h1 class="lp-title" id="lp-title">How to download faster on a PC</h1>
+      <p class="lede">Most “speed up your internet” tips don’t touch the real problem. A slow download has exactly one bottleneck — your line, your Wi-Fi, something else using the connection, or the server. Find which one it is, and the fix is usually two minutes away.</p>
+      <p class="byline">By <a href="https://github.com/FortoGraphy">Jan Sechovec</a>, the developer of Prism · Updated <time datetime="2026-11-27">27 November 2026</time></p>
+    </div>
+  </div>
+</section>
+
+<section class="section article-section" aria-label="Guide">
+  <div class="container">
+    <article class="article">
+      <div class="tldr">
+        <p>Short answer</p>
+        <ol>
+          <li>Run a speed test and divide the result by 8: a 100 Mbps plan downloads at about <strong>12 MB/s</strong>, not 100.</li>
+          <li>If the download is far below that, plug in a cable or move to 5 GHz Wi-Fi, and pause whatever else is downloading.</li>
+          <li>If only <em>some</em> sites are slow, the server is limiting you. Pick a closer mirror, or use a download manager that opens several connections at once.</li>
+        </ol>
+      </div>
+
+      <nav class="toc" aria-label="Contents">
+        <p>In this guide</p>
+        <ol>
+          <li><a href="#bottleneck">Find the bottleneck first</a></li>
+          <li><a href="#mbps">1. Mbps vs MB/s: check you’re not already at full speed</a></li>
+          <li><a href="#cable">2. Use a cable, or the right Wi-Fi band</a></li>
+          <li><a href="#background">3. Stop whatever else is downloading</a></li>
+          <li><a href="#updates">4. Limit Windows Update’s background downloads</a></li>
+          <li><a href="#vpn">5. Pause the VPN or pick a closer server</a></li>
+          <li><a href="#mirror">6. Download from a closer mirror</a></li>
+          <li><a href="#connections">7. Use more than one connection</a></li>
+          <li><a href="#disk">8. Save to a fast, local drive</a></li>
+          <li><a href="#router">9. Restart the router and update the network driver</a></li>
+          <li><a href="#myths">What doesn’t work</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="bottleneck">Find the bottleneck first</h2>
+      <p>Open a speed test (Speedtest by Ookla, fast.com or your provider’s own) on the same PC, then start your download and compare. Three outcomes, three different fixes:</p>
+      <ul>
+        <li><strong>The speed test is slow too.</strong> The problem is your connection at home: Wi-Fi, other devices, the router or the plan itself. Fixes 2–5 and 9.</li>
+        <li><strong>The speed test is fast, every download is slow.</strong> Something on this PC: a VPN, background apps, a slow target drive. Fixes 3–5 and 8.</li>
+        <li><strong>The speed test is fast, only one site is slow.</strong> That server is the bottleneck. It may be far away, busy, or limiting how fast each connection can go. Fixes 6 and 7.</li>
+      </ul>
+
+      <h2 id="mbps">1. Mbps vs MB/s: check you’re not already at full speed</h2>
+      <p>Internet plans and speed tests are measured in <strong>megabits</strong> per second (Mbps). Browsers and download managers show <strong>megabytes</strong> per second (MB/s). One byte is eight bits, so divide by 8:</p>
+      <div class="table-wrap lp-table">
+        <table>
+          <thead><tr><th>Your plan</th><th>Best realistic download speed</th></tr></thead>
+          <tbody>
+            <tr><td>50 Mbps</td><td>about 6 MB/s</td></tr>
+            <tr><td>100 Mbps</td><td>about 12 MB/s</td></tr>
+            <tr><td>300 Mbps</td><td>about 35 MB/s</td></tr>
+            <tr><td>1 Gbps</td><td>about 110–117 MB/s</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A few percent go to protocol overhead, so a 100 Mbps line showing 11.5 MB/s is already maxed out. Nothing on the PC can make it faster — only a faster plan can.</p>
+
+      <h2 id="cable">2. Use a cable, or the right Wi-Fi band</h2>
+      <p>Wi-Fi is the most common reason a fast plan gives slow downloads. Walls, distance and neighbours’ networks all cut its speed, and it gets worse the further you are from the router.</p>
+      <ul>
+        <li><strong>An Ethernet cable</strong> removes the problem completely. For a big download, it’s worth plugging in even a laptop.</li>
+        <li><strong>On Wi-Fi, use 5 GHz or 6 GHz</strong> instead of 2.4 GHz when you’re in the same room or the next one. Many routers show the bands as two network names; others pick automatically.</li>
+        <li><strong>Move closer</strong>, or move the router out of a cupboard. A mesh system or a cabled access point helps in large homes.</li>
+      </ul>
+
+      <h2 id="background">3. Stop whatever else is downloading</h2>
+      <p>Every device and app on your network shares the same line. Game launchers, cloud sync (OneDrive, Google Drive, Dropbox, iCloud), backups and 4K streams on the TV can each take most of it.</p>
+      <p>On Windows, open <strong>Task Manager</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Esc</kbd>) and sort the <strong>Processes</strong> tab by the <strong>Network</strong> column to see what is using the connection right now. On a Mac, open <strong>Activity Monitor → Network</strong>. Pause the culprits until your download is done.</p>
+
+      <h2 id="updates">4. Limit Windows Update’s background downloads</h2>
+      <p>Windows downloads updates in the background, and by default it can also share them with other PCs. If downloads are slow right after Patch Tuesday, this is often why. In Windows 11:</p>
+      <ol>
+        <li>Open <strong>Settings → Windows Update → Advanced options → Delivery Optimization</strong>.</li>
+        <li>Turn off <strong>Allow downloads from other devices</strong> if you don’t need it.</li>
+        <li>Under <strong>Advanced options</strong>, set a limit for how much bandwidth background updates may use.</li>
+      </ol>
+
+      <h2 id="vpn">5. Pause the VPN or pick a closer server</h2>
+      <p>A VPN sends everything through its own server, often in another country, and encrypts it on the way. That usually costs speed. For a large download from a site you trust, try a VPN server close to you, or pause the VPN and compare. The same goes for proxies and “data saver” features.</p>
+
+      <h2 id="mirror">6. Download from a closer mirror</h2>
+      <p>Linux distributions, open-source projects and many game and driver sites publish the same file on several servers (“mirrors”). A mirror in your country is often several times faster than the default one on another continent. Look for a <em>Mirrors</em> or <em>Other download locations</em> link next to the download button.</p>
+
+      <h2 id="connections">7. Use more than one connection</h2>
+      <p>A browser downloads a file over a single connection. Many servers — file hosts, mirrors, some cloud storage — cap the speed <em>per connection</em>, so one connection never reaches your line speed no matter how fast it is.</p>
+      <p>A download manager splits the file into parts and fetches them over several connections at once. In our tests on a server that caps each connection, a 1 GiB file came down at <strong>4 MiB/s over one connection and 61 MiB/s over many</strong> — about 15× faster (<a href="/#benchmarks">benchmarks</a>).</p>
+      <figure>
+        <div class="shot">
+          <picture class="tv-dark"><source type="image/avif" srcset="/assets/img/details-dark.avif"><img src="/assets/img/details-dark.webp" width="1140" height="900" alt="Prism downloading one file over 16 connections, each shown with its own speed, plus a map of the file’s parts." loading="lazy" decoding="async"></picture>
+          <picture class="tv-light"><source type="image/avif" srcset="/assets/img/details-light.avif"><img src="/assets/img/details-light.webp" width="1140" height="900" alt="The same download details in the light theme." loading="lazy" decoding="async"></picture>
+        </div>
+        <figcaption>One file, 16 connections: each part downloads at the same time.</figcaption>
+      </figure>
+      <p><a href="/">Prism</a> is a free, open-source download manager that does this on Windows, macOS and Linux: 8 connections by default, up to 32, and it notices when a server allows fewer and remembers that per site. Its browser extension sends downloads from Chrome, Edge or Firefox to it automatically.</p>
+      <p class="note"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span><strong>The honest part:</strong> if the server doesn’t limit connections, your line is the limit. On a normal 200 Mbps line, Prism, aria2 and curl all landed at the same ~25 MiB/s in our tests. More connections help with slow servers and unstable networks, not with a slow plan.</span></p>
+
+      <h2 id="disk">8. Save to a fast, local drive</h2>
+      <p>At gigabit speeds, the drive can become the bottleneck. Saving to an old USB stick, a network share or a folder that a cloud app syncs while you download slows things down. Download to an internal SSD first, then move the file. Antivirus scanning can also pause a download at the very end; that’s normal and takes seconds, not minutes.</p>
+
+      <h2 id="router">9. Restart the router and update the network driver</h2>
+      <p>Routers that have run for months sometimes slow down; a restart (unplug for 30 seconds) clears that. On Windows, check <strong>Device Manager → Network adapters</strong> or your PC maker’s support page for a newer Wi-Fi or Ethernet driver, especially on a new or freshly reinstalled PC. If speeds are still far below your plan on a cable, call your provider with the speed test results.</p>
+
+      <h2 id="myths">What doesn’t work</h2>
+      <ul>
+        <li><strong>“Internet booster” and RAM-cleaner apps.</strong> They can’t make your line or a server any faster.</li>
+        <li><strong>Registry and TCP tweaks.</strong> Modern Windows, macOS and Linux tune TCP automatically. Old tweaks from 2008 guides are more likely to hurt.</li>
+        <li><strong>Changing DNS to speed up a download.</strong> DNS only turns a name into an address before the download starts; it doesn’t change how fast the file arrives.</li>
+        <li><strong>Closing browser tabs.</strong> Idle tabs use almost no bandwidth. A tab that is streaming video does — pause that one.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="faq" aria-labelledby="faq-title" style="padding-top:0">
+  <div class="container faq-wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2 class="h2" id="faq-title">Download speed, answered.</h2>
+    </div>
+    <div class="accordion reveal d1" data-faq>
+      <details class="acc" open><summary>Why is my download speed slower than my internet speed?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Often it isn’t: plans are sold in megabits per second and downloads are shown in megabytes per second, so 100 Mbps means about 12 MB/s. If it really is slower, the usual causes are Wi-Fi, other apps using the line, a VPN, or a server that limits the speed of each connection.</p></div></details>
+      <details class="acc"><summary>Does a download manager really make downloads faster?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Only when the server is the bottleneck. On servers that cap each connection, downloading over several connections at once can be many times faster — 15× in our test. When the server doesn’t limit you, your line is the limit for every tool. A download manager still helps by resuming failed downloads instead of starting over.</p></div></details>
+      <details class="acc"><summary>How many connections should I use for one download?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Around 8 is a good default. Go up to 16 or 32 for servers that are clearly slow per connection. Some servers allow only a few connections; a good download manager notices that and uses what the server allows instead of failing.</p></div></details>
+      <details class="acc"><summary>Is Ethernet really faster than Wi-Fi?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Usually, yes, and it is far more stable. Wi-Fi speed drops with distance, walls and interference from nearby networks. On fast plans (500 Mbps and up), a cable is often the only way to get the full speed.</p></div></details>
+      <details class="acc"><summary>Why does a download start fast and then slow down?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Some servers allow a fast burst and then throttle. It can also be another app starting its own download, Wi-Fi conditions changing, or the drive filling its fast cache. Pausing and resuming will not help with a throttling server; more connections or another mirror will.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="more-guides-title" style="padding-top:0">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Guides</p>
+      <h2 class="h2" id="more-guides-title">More guides.</h2>
+    </div>
+    <div class="lp-links">
+      <a class="lp-link" href="/best-download-manager/"><b>Best free download managers</b><span>An honest comparison for Windows, Mac and Linux.</span></a>
+      <a class="lp-link" href="/guides/chrome-downloads-slow/"><b>Chrome downloads slow?</b><span>Why it happens and what actually helps.</span></a>
+      <a class="lp-link" href="/guides/resume-failed-download/"><b>Resume a failed download</b><span>Chrome, Edge and Firefox, and how to stop starting over.</span></a>
+      <a class="lp-link" href="/guides/download-large-files/"><b>Download large files</b><span>Fast, complete and verified, even at 50 GB.</span></a>
+      <a class="lp-link" href="/guides/magnet-links/"><b>Open magnet links</b><span>What a magnet link is and how to download one.</span></a>
+      <a class="lp-link" href="/guides/torrents-faster/"><b>Make torrents download faster</b><span>Seeds, ports and VPNs, and the tips that are myths.</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="section cta-final" aria-labelledby="cta-title" style="padding-top:0">
+  <div class="spectrum-line" aria-hidden="true"></div>
+  <div class="container">
+    <img class="cta-mark reveal" src="/assets/icons/icon-192.png" width="192" height="192" alt="" loading="lazy" decoding="async">
+    <h2 class="h2 reveal" id="cta-title">One beam. <span class="grad-text">Many rays.</span></h2>
+    <p class="lede reveal">Free, open source and ready for your next big download.</p>
+    <div class="cta-row reveal">
+      <a class="btn btn-primary btn-xl" href="/#download" data-dl-primary>
+        <svg class="i" aria-hidden="true"><use href="#i-download"/></svg>
+        <span data-dl-label>Download Prism</span>
+      </a>
+      <a class="btn btn-glass btn-xl" href="https://github.com/FortoGraphy/prism-download-manager" data-gh-star>
+        <svg class="i" aria-hidden="true"><use href="#i-star"/></svg> Star on GitHub <span class="count" data-stars hidden></span>
+      </a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="/" aria-label="Prism — back to top"><svg viewBox="0 0 64 64" aria-hidden="true" fill="none"><use href="#i-prism"/></svg>Prism</a>
+        <p class="about">A fast, beautiful, open-source download manager. Built with Rust and Tauri for Windows, macOS and Linux.</p>
+      </div>
+      <div>
+        <h3>Product</h3>
+        <ul>
+          <li><a href="/#features">Features</a></li>
+          <li><a href="/#benchmarks">Benchmarks</a></li>
+          <li><a href="/#download">Download</a></li>
+          <li><a href="/#guide">Guide</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Project</h3>
+        <ul>
+          <li><a href="https://github.com/FortoGraphy/prism-download-manager">GitHub</a></li>
+          <li><a href="https://github.com/FortoGraphy/prism-download-manager/releases">Releases</a></li>
+          <li><a href="https://github.com/FortoGraphy/prism-download-manager/blob/main/CONTRIBUTING.md">Contributing</a></li>
+          <li><a href="https://github.com/FortoGraphy/prism-download-manager/issues">Issues</a></li>
+          <li><a href="https://www.youtube.com/@PrismDownloader" target="_blank" rel="noopener">YouTube</a></li>
+          <li><a href="https://ko-fi.com/prismdownloadmanager" target="_blank" rel="noopener">Buy me a beam</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Prism for</h3>
+        <ul>
+          <li><a href="/windows/">Windows</a></li>
+          <li><a href="/mac/">macOS</a></li>
+          <li><a href="/linux/">Linux</a></li>
+          <li><a href="/browser-extension/">Browser extension</a></li>
+          <li><a href="/idm-alternative/">IDM alternative</a></li>
+          <li><a href="/hugging-face/">Hugging Face models</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Guides</h3>
+        <ul>
+          <li><a href="/best-download-manager/">Best download managers</a></li>
+          <li><a href="/guides/download-faster/">Download faster</a></li>
+          <li><a href="/guides/resume-failed-download/">Resume a download</a></li>
+          <li><a href="/guides/magnet-links/">Magnet links</a></li>
+          <li><a href="/guides/">All guides</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Legal</h3>
+        <ul>
+          <li><a href="https://github.com/FortoGraphy/prism-download-manager/blob/main/LICENSE">MIT License</a></li>
+          <li><a href="https://github.com/FortoGraphy/prism-download-manager/blob/main/THIRD_PARTY.md">Third-party licenses</a></li>
+          <li><a href="/#faq">Privacy: no tracking</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Jan Sechovec and Prism contributors · MIT License</span>
+      <span>Prism is not affiliated with Internet Download Manager or Tonec Inc. Browser names are trademarks of their owners.</span>    </div>
+  </div>
+</footer>
+</body>
+</html>

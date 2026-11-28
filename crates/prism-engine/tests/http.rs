@@ -1154,3 +1154,37 @@ async fn remote_file_reads_parts_and_continues_where_it_stopped() {
         EngineError::ValidatorMismatch
     );
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn cross_origin_redirect_strips_cookie_and_auth() {
+    init_tracing();
+    let origin = default_server().await;
+    let cdn = default_server().await;
+    let dir = tempfile::tempdir().unwrap();
+    let size = 2 * MIB;
+    let target = cdn.url(&format!("/file/cdn.bin?size={size}&seed=31"));
+    let enc: String = url::form_urlencoded::byte_serialize(target.as_bytes()).collect();
+    let mut req = request(
+        &origin.url(&format!("/redirect/1?code=302&to={enc}")),
+        dir.path(),
+        4,
+    );
+    req.cookies = Some("sid=secret".into());
+    req.auth = Some(Credentials {
+        username: "u".into(),
+        password: "p".into(),
+        scheme: AuthScheme::Basic,
+    });
+    let done = wait(&engine().start(req, None, vec![]), 60).await.unwrap();
+    assert_eq!(sha256_file(&done.path), expected_sha256(31, size));
+
+    let cdn_stats = cdn.stats();
+    assert!(!cdn_stats.requests.is_empty());
+    for r in &cdn_stats.requests {
+        assert_eq!(r.cookie, None, "cross-origin redirect leaked Cookie: {r:?}");
+        assert!(
+            !r.authorization,
+            "cross-origin redirect leaked Authorization: {r:?}"
+        );
+    }
+}

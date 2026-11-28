@@ -669,6 +669,8 @@
   "Update yt-dlp now": "立即更新 yt-dlp",
   "Defaults": "默认设置",
   "Preferred quality": "首选画质",
+  "Preferred codec": "首选编码",
+  "Used when a video comes in several codecs at the same quality": "同一画质有多种编码时使用",
   "Container": "容器格式",
   "Audio format": "音频格式",
   "Embed subtitles": "嵌入字幕",

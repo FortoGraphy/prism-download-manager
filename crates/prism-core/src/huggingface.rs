@@ -299,6 +299,8 @@ pub(crate) fn authorize(req: &mut prism_engine::DownloadRequest, settings: &Sett
     let server = endpoint(s);
     let on_server = url::Url::parse(&server).is_ok_and(|e| e.origin() == req.url.origin())
         || (server == DEFAULT_ENDPOINT
+            && req.url.scheme() == "https"
+            && req.url.port().is_none()
             && matches!(
                 req.url.host_str(),
                 Some("huggingface.co" | "www.huggingface.co" | "hf.co")
@@ -1216,6 +1218,17 @@ mod tests {
         assert_eq!(auth("https://cdn-lfs.hf.co/o/m/resolve/x", &settings), None);
         assert_eq!(
             auth("https://example.com/o/m/resolve/abc/model.gguf", &settings),
+            None
+        );
+        assert_eq!(
+            auth(
+                "http://huggingface.co/o/m/resolve/abc/model.gguf",
+                &settings
+            ),
+            None
+        );
+        assert_eq!(
+            auth("http://hf.co/o/m/resolve/abc/model.gguf", &settings),
             None
         );
         settings.hugging_face.endpoint = MIRROR_ENDPOINT.into();

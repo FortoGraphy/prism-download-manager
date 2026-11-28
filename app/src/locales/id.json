@@ -675,6 +675,8 @@
   "Update yt-dlp now": "Perbarui yt-dlp sekarang",
   "Defaults": "Default",
   "Preferred quality": "Kualitas pilihan",
+  "Preferred codec": "Codec pilihan",
+  "Used when a video comes in several codecs at the same quality": "Dipakai saat video tersedia dalam beberapa codec dengan kualitas yang sama",
   "Container": "Kontainer",
   "Audio format": "Format audio",
   "Embed subtitles": "Sematkan subtitel",

@@ -750,6 +750,8 @@
   "Update yt-dlp now": "تحديث yt-dlp الآن",
   "Defaults": "الإعدادات الافتراضية",
   "Preferred quality": "الجودة المفضلة",
+  "Preferred codec": "الترميز المفضل",
+  "Used when a video comes in several codecs at the same quality": "يُستخدم عندما يتوفر الفيديو بعدة ترميزات بنفس الجودة",
   "Container": "الحاوية",
   "Audio format": "صيغة الصوت",
   "Embed subtitles": "تضمين الترجمات",

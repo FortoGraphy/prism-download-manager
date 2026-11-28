@@ -1,0 +1,134 @@
+<!--
+title: How to Open and Download Magnet Links on Windows, Mac and Linux (2026)
+description: What a magnet link is, how to open one in a free BitTorrent client step by step, how to download magnet links without uTorrent, and what to do when nothing happens or it’s stuck on “fetching metadata”.
+og_title: How to open and download magnet links
+crumb: Magnet links
+headline: How to open and download magnet links on Windows, Mac and Linux
+published: 2026-11-27
+-->
+<section class="lp-hero" aria-labelledby="lp-title">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Prism</a></li><li><a href="/guides/">Guides</a></li><li aria-current="page">Magnet links</li></ol></nav>
+      <p class="eyebrow">Guide</p>
+      <h1 class="lp-title" id="lp-title">How to open and download magnet links</h1>
+      <p class="lede">A magnet link isn’t a file — it’s a fingerprint of one. To download it you need a BitTorrent client, a free app that finds the people sharing the file and fetches it from them. Here’s how it works on Windows, macOS and Linux, without uTorrent and without ads.</p>
+      {{byline}}
+    </div>
+  </div>
+</section>
+
+<section class="section article-section" aria-label="Guide">
+  <div class="container">
+    <article class="article">
+      <div class="tldr">
+        <p>Short answer</p>
+        <ol>
+          <li>Install a free BitTorrent client — for example <a href="/">Prism</a>, which also handles normal downloads, or qBittorrent.</li>
+          <li>Click the magnet link. When the browser asks to open the app, allow it.</li>
+          <li>Pick the files you want and a folder, then start the download. On a Mac, copy the link and paste it into the app instead.</li>
+        </ol>
+      </div>
+
+      <nav class="toc" aria-label="Contents">
+        <p>In this guide</p>
+        <ol>
+          <li><a href="#what">What is a magnet link?</a></li>
+          <li><a href="#windows">Open magnet links on Windows</a></li>
+          <li><a href="#mac">Open magnet links on a Mac</a></li>
+          <li><a href="#linux">Open magnet links on Linux</a></li>
+          <li><a href="#nothing">Nothing happens when I click a magnet link</a></li>
+          <li><a href="#metadata">Stuck on “fetching metadata” or 0 peers</a></li>
+          <li><a href="#legal">Is it legal and safe?</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="what">What is a magnet link?</h2>
+      <p>A magnet link is a short piece of text that starts with <code>magnet:?</code>. Instead of pointing at a server, it describes the file by its hash — a fingerprint calculated from its contents:</p>
+      <pre><code>magnet:?xt=urn:btih:<em>40-character hash</em>&amp;dn=ubuntu-24.04-desktop-amd64.iso&amp;tr=udp://tracker.example.org:6969</code></pre>
+      <ul>
+        <li><code>xt=urn:btih:…</code> is the fingerprint. It’s the only required part.</li>
+        <li><code>dn=…</code> is a display name, so the app can show what you’re about to download.</li>
+        <li><code>tr=…</code> are trackers: servers that help find other people sharing the file.</li>
+      </ul>
+      <p>A BitTorrent client uses the fingerprint to find peers through those trackers and the DHT (a shared address book of peers), downloads the list of files from them, and then the files themselves — piece by piece, with each piece checked against the fingerprint. That check means you get exactly the file the link describes, or nothing.</p>
+      <p>A <strong>.torrent file</strong> carries the same information plus the file list, so the client can show the files straight away. A magnet link has to fetch that list from peers first.</p>
+
+      <h2 id="windows">Open magnet links on Windows</h2>
+      <ol class="steps">
+        <li><div><h4>Install Prism</h4><p>Download the <a href="/windows/">Windows installer</a> and run it. The installer (and the MSI) registers Prism as the app for <code>magnet:</code> links and <code>.torrent</code> files.</p></div></li>
+        <li><div><h4>Click the magnet link</h4><p>Chrome, Edge and Firefox ask whether to open the link in Prism. Tick <strong>Always allow</strong> if you’ll do this often, then click <strong>Open</strong>.</p></div></li>
+        <li><div><h4>Choose the files</h4><p>Prism reads the torrent’s file list and lets you untick anything you don’t need — no point in downloading three languages of subtitles if you want one.</p></div></li>
+        <li><div><h4>Download</h4><p>Pick the folder and start. The torrent shows up in the same list as your other downloads and resumes after a restart.</p></div></li>
+      </ol>
+      <p>Already have another torrent app set as the default? See <a href="#nothing">how to change the default app</a> below.</p>
+
+      <h2 id="mac">Open magnet links on a Mac</h2>
+      <ol>
+        <li>Install <a href="/mac/">Prism for Mac</a>.</li>
+        <li>Right-click the magnet link in your browser and choose <strong>Copy Link</strong>.</li>
+        <li>In Prism, click <strong>Add URL</strong> and paste the link. Prism recognises it as a torrent and lets you choose the files next.</li>
+      </ol>
+      <p>Clicking magnet links directly on a Mac opens whichever torrent app is registered for them; Prism doesn’t register itself for that on macOS, so copy and paste is the way for now.</p>
+
+      <h2 id="linux">Open magnet links on Linux</h2>
+      <p>The <code>.deb</code> and <code>.rpm</code> packages of <a href="/linux/">Prism for Linux</a> register it for <code>magnet:</code> links, so clicking one in the browser opens Prism, just as on Windows. With the AppImage, or if another app took over the links, copy the link and paste it into Prism with <strong>Add URL</strong> (<kbd>Ctrl</kbd>+<kbd>N</kbd>), or choose Prism for magnet links in your desktop’s <em>Default Applications</em> settings.</p>
+
+      <h2 id="nothing">Nothing happens when I click a magnet link</h2>
+      <p>The browser doesn’t know which app should open it — either none is installed, or you once chose “don’t open”.</p>
+      <ul>
+        <li><strong>Windows 11:</strong> Settings → Apps → Default apps → scroll down to <strong>Choose defaults by link type</strong> → find <strong>MAGNET</strong> and pick your torrent app.</li>
+        <li><strong>Windows 10:</strong> Settings → Apps → Default apps → <strong>Choose default apps by protocol</strong> → MAGNET.</li>
+        <li><strong>In the browser:</strong> if you blocked the prompt earlier, open the site’s settings (the icon left of the address) and reset its permissions, or just copy the link and paste it into the app.</li>
+      </ul>
+
+      <h2 id="metadata">Stuck on “fetching metadata” or 0 peers</h2>
+      <p>A magnet link only contains the fingerprint, so the client first has to find someone who has the file. If nobody is sharing it right now, it waits — forever, if the torrent is dead.</p>
+      <ul>
+        <li><strong>Check the seed count</strong> on the page where you found the link. Zero or very few seeds means it may never start.</li>
+        <li><strong>Check the firewall.</strong> If a security suite or a work network blocks peer-to-peer traffic, the client can’t reach anyone.</li>
+        <li><strong>Try without the VPN</strong>, or with a VPN server that allows peer-to-peer traffic.</li>
+        <li><strong>Use the .torrent file</strong> if the site offers one; it includes the file list, so at least that step is skipped.</li>
+      </ul>
+      <p>More on speed in <a href="/guides/torrents-faster/">how to make torrents download faster</a>.</p>
+
+      <h2 id="legal">Is it legal and safe?</h2>
+      <p>BitTorrent and magnet links are just a way to share files — Linux distributions, the Internet Archive, game updates and open datasets all use them. What matters is the content: download only what you have the right to, such as free software, public-domain works and files shared with permission.</p>
+      <p>As for safety, the fingerprint guarantees you get exactly the file the link describes, but not that the file is harmless. Get links from the official source (for example a distribution’s own download page), and scan executables before you run them.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="faq" aria-labelledby="faq-title" style="padding-top:0">
+  <div class="container faq-wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2 class="h2" id="faq-title">Magnet links, answered.</h2>
+    </div>
+    <div class="accordion reveal d1" data-faq>
+      <details class="acc" open><summary>How do I download a magnet link?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Install a BitTorrent client such as Prism or qBittorrent, click the magnet link and allow the browser to open it in the app, then choose the files and a folder. If clicking does nothing, copy the link and paste it into the app (in Prism: Add URL).</p></div></details>
+      <details class="acc"><summary>Can I download magnet links without uTorrent?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Yes. Any BitTorrent client opens magnet links. Prism and qBittorrent are free, open source and have no ads; Prism also handles ordinary downloads, videos and browser downloads in the same app.</p></div></details>
+      <details class="acc"><summary>What app opens magnet links?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Whichever BitTorrent client is set as the default for the MAGNET link type. On Windows you can change it under Settings → Apps → Default apps → Choose defaults by link type.</p></div></details>
+      <details class="acc"><summary>Why is my magnet link stuck on fetching metadata?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>The client hasn’t found anyone sharing the file yet. Check that the torrent has seeds, make sure no firewall blocks peer-to-peer traffic, try without a VPN, or use the .torrent file instead of the magnet link.</p></div></details>
+      <details class="acc"><summary>What is the difference between a magnet link and a torrent file?<svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary>
+        <div class="acc-body"><p>Both identify the same download. A .torrent file is a small file that already contains the list of files; a magnet link is just text with the fingerprint, and the client fetches the file list from other peers first.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="more-guides-title" style="padding-top:0">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">Guides</p>
+      <h2 class="h2" id="more-guides-title">More guides.</h2>
+    </div>
+    {{guides}}
+  </div>
+</section>
+
+{{cta}}

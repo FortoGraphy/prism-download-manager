@@ -685,7 +685,7 @@ impl Core {
         let mut removed = Vec::new();
         for id in ids {
             let Some(item) = self.item(id) else { continue };
-            let leaving_list = !(use_trash && !item.trashed);
+            let leaving_list = !use_trash || item.trashed;
             if leaving_list || delete_files {
                 let job = self.0.state.lock().jobs.remove(id);
                 if let Some(job) = job {

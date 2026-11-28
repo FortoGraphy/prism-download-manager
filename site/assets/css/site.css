@@ -1046,7 +1046,7 @@ td.num { text-align: right; }
 .cta-final .spectrum-line { height: 1px; width: min(42rem, 80%); margin: 0 auto 4rem; background: var(--grad-spectrum); opacity: 0.6; }
 
 .footer { border-top: 1px solid var(--card-border); padding-block: 3.5rem 2.5rem; font-size: 0.9rem; }
-.footer-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr)); gap: 2rem; }
+.footer-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr)); gap: 2rem; }
 .footer h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); font-weight: 600; margin-bottom: 0.9rem; }
 .footer ul { list-style: none; padding: 0; display: grid; gap: 0.55rem; }
 .footer ul a { color: var(--text-secondary); text-decoration: none; transition: color 0.14s; }
@@ -1168,3 +1168,52 @@ td.num { text-align: right; }
 .next-close:hover { color: var(--text-primary); background: var(--state-hover); }
 @media (max-width: 560px) { .next-card { right: 1rem; left: 1rem; bottom: 1rem; width: auto; } }
 @media (prefers-reduced-motion: reduce) { .next-card { transition: opacity 0.2s; transform: none; } }
+
+/* --------------------------------------------------------------------------
+   Guides and comparisons (site/guides/…, site/best-download-manager/)
+   -------------------------------------------------------------------------- */
+.lp-links-head { margin: 2.2rem 0 1rem; font-size: 1.15rem; }
+.byline { margin-top: 1.3rem; font-size: 0.88rem; color: var(--text-tertiary); }
+.byline a { color: var(--text-secondary); text-decoration: underline; text-decoration-color: rgb(var(--accent-rgb) / 0.4); text-underline-offset: 0.18em; }
+.article-section { padding-top: clamp(1.5rem, 3vw, 2.5rem); }
+.article { max-width: 46rem; }
+.article > * + * { margin-top: 1.1rem; }
+.article h2 { font-size: clamp(1.55rem, 2.6vw, 2.1rem); letter-spacing: -0.032em; font-weight: 660; line-height: 1.15; margin-top: 3.2rem; scroll-margin-top: calc(var(--nav-h) + 1.5rem); }
+.article h3 { font-size: 1.22rem; letter-spacing: -0.02em; font-weight: 640; line-height: 1.3; margin-top: 2.1rem; scroll-margin-top: calc(var(--nav-h) + 1.5rem); }
+.article h2 + *, .article h3 + * { margin-top: 0.8rem; }
+.article p, .article li { color: var(--text-secondary); font-size: 1.05rem; line-height: 1.7; }
+.article strong { color: var(--text-primary); font-weight: 600; }
+.article ul, .article ol { padding-left: 1.35rem; display: grid; gap: 0.55rem; }
+.article li::marker { color: var(--accent); font-weight: 600; }
+.article li a, .article td a { color: var(--accent); text-decoration: underline; text-decoration-color: rgb(var(--accent-rgb) / 0.4); text-underline-offset: 0.18em; }
+.article .note { font-size: 0.95rem; }
+.article .note p { font-size: inherit; }
+.article figure { margin-top: 1.6rem; }
+.article figure .shot { border-radius: var(--r-xl); overflow: hidden; }
+.article figcaption { margin-top: 0.7rem; font-size: 0.85rem; color: var(--text-tertiary); text-align: center; }
+.article pre { margin-top: 1rem; padding: 0.9rem 1.1rem; border-radius: var(--r-lg); background: var(--card); box-shadow: inset 0 0 0 1px var(--card-border); overflow-x: auto; font-size: 0.88rem; line-height: 1.6; }
+.article .table-wrap { margin-top: 1.4rem; }
+.article table th, .article table td { white-space: normal; vertical-align: top; line-height: 1.5; }
+.article table td { color: var(--text-secondary); font-size: 0.92rem; }
+.article table td:first-child { color: var(--text-primary); font-weight: 600; }
+.article .wide { max-width: none; }
+.tldr {
+  border-radius: var(--r-xl); padding: 1.3rem 1.5rem;
+  background: rgb(var(--accent-rgb) / 0.07); box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.24);
+}
+.tldr > p:first-child { font-size: 0.78rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+.tldr ol, .tldr ul { margin-top: 0.7rem; }
+.tldr li { font-size: 1rem; }
+.toc { padding: 1.1rem 1.4rem; border-radius: var(--r-xl); background: var(--card); box-shadow: inset 0 0 0 1px var(--card-border); }
+.toc > p:first-child { font-size: 0.78rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+.toc ol { margin-top: 0.6rem; gap: 0.35rem; }
+.toc li { font-size: 0.95rem; line-height: 1.5; }
+.article .toc a { color: var(--text-secondary); text-decoration: none; }
+.article .toc a:hover { color: var(--text-primary); }
+.verdict { display: inline-block; padding: 0.1em 0.5em; border-radius: 99px; font-size: 0.78rem; font-weight: 650; letter-spacing: 0.02em; }
+.verdict.yes { color: var(--success); background: rgb(var(--success-rgb) / 0.12); }
+.verdict.no { color: var(--text-tertiary); background: var(--card-strong); }
+.cmp-table { margin-block: 1.4rem 0.5rem; }
+.cmp-table table { min-width: 60rem; font-size: 0.88rem; }
+.cmp-table td:first-child { width: auto; min-width: 9rem; }
+.cmp-table tbody tr:first-child td { background: rgb(var(--accent-rgb) / 0.06); }

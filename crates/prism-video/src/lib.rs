@@ -412,7 +412,8 @@ impl VideoService {
 
     /// Recompute picker choices for another container.
     pub fn choices(&self, info: &VideoInfo, container: Container) -> Vec<Choice> {
-        choices::compute_choices(info, container)
+        let prefer = choices::VideoCodec::preferred(self.options().preferred_codec.as_deref());
+        choices::compute_choices_preferring(info, container, prefer)
     }
 
     /// Accelerated plan when every needed format is a plain HTTP file, else a yt-dlp job.

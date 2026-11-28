@@ -133,6 +133,25 @@ pub fn open(app: &AppHandle, kind: &str, id: Option<&str>) -> tauri::Result<()> 
     create(app, kind, &label, &route)
 }
 
+/// How many windows of a per-download `kind` ("complete", "progress": labelled `{kind}-{id}`)
+/// are open or being built.
+pub fn count(app: &AppHandle, kind: &str) -> usize {
+    let prefix = format!("{kind}-");
+    let building: Vec<String> = OPENING
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .filter(|l| l.starts_with(&prefix))
+        .cloned()
+        .collect();
+    let open: Vec<String> = app
+        .webview_windows()
+        .into_keys()
+        .filter(|l| l.starts_with(&prefix))
+        .collect();
+    open.len() + building.iter().filter(|l| !open.contains(l)).count()
+}
+
 /// Brings `label`'s window forward if it exists; otherwise the right to build it, or `None` when
 /// another request is building it right now (that one shows and focuses it).
 fn claim(app: &AppHandle, kind: &str, label: &str) -> Option<Opening> {

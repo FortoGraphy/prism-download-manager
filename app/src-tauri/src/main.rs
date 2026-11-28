@@ -513,6 +513,7 @@ fn spawn_event_forwarder(app: AppHandle, core: Core) {
         // Lives here (not in the frontend) because every open window would otherwise react
         // to the same event independently and race to open duplicate windows.
         let mut opened_progress = std::collections::HashSet::<String>::new();
+        let mut bursts = Bursts::default();
         loop {
             let event = match rx.recv().await {
                 Ok(e) => e,
@@ -532,6 +533,7 @@ fn spawn_event_forwarder(app: AppHandle, core: Core) {
                 &mut was_active,
                 &mut last_tooltip,
                 &mut opened_progress,
+                &mut bursts,
             );
             let _ = app.emit("core", &event);
         }
@@ -543,8 +545,56 @@ fn in_model_queue(item: &prism_core::model::DownloadItem) -> bool {
     item.queue_id.as_deref() == Some(prism_core::huggingface::QUEUE_ID)
 }
 
+/// At most this many completion dialogs, and as many progress windows, are open at once. Site
+/// Grabber or a long list of links can finish hundreds of files within seconds; a window for
+/// each made the desktop unresponsive (#153). The rest show in the list (and a notification).
+const MAX_DOWNLOAD_WINDOWS: usize = 3;
+
+/// Counts what a burst of finished downloads sends to the desktop, so hundreds of them don't
+/// turn into hundreds of notifications or sounds (#153).
+#[derive(Default)]
+struct Bursts {
+    notes: Burst,
+    #[cfg(target_os = "linux")]
+    sound: Burst,
+}
+
+#[derive(Default)]
+struct Burst {
+    since: Option<std::time::Instant>,
+    count: u32,
+}
+
+impl Burst {
+    /// Whether one more may go out: at most `max` within `window` of the first.
+    fn allow(&mut self, max: u32, window: std::time::Duration) -> bool {
+        self.allow_at(std::time::Instant::now(), max, window)
+    }
+
+    fn allow_at(&mut self, now: std::time::Instant, max: u32, window: std::time::Duration) -> bool {
+        match self.since {
+            Some(t) if now.saturating_duration_since(t) < window => {
+                if self.count >= max {
+                    return false;
+                }
+                self.count += 1;
+            }
+            _ => {
+                self.since = Some(now);
+                self.count = 1;
+            }
+        }
+        true
+    }
+}
+
+/// At most three "Download complete" / "Download failed" notifications in ten seconds.
+const NOTES_PER_BURST: u32 = 3;
+const NOTE_BURST: std::time::Duration = std::time::Duration::from_secs(10);
+
 /// Opens the item's progress window the first time it's seen active, when the setting is on.
-/// `opened_progress.insert` both checks and records "already handled" in one step.
+/// `opened_progress` records "already handled", so a window the user closed stays closed; a
+/// download that found all the windows taken gets its own once one of them closes.
 fn maybe_open_progress_window(
     app: &AppHandle,
     settings: &Settings,
@@ -554,10 +604,13 @@ fn maybe_open_progress_window(
     if item.status.is_active() {
         if settings.general.show_progress_window
             && !in_model_queue(item)
-            && opened_progress.insert(item.id.clone())
-            && let Err(e) = windows::open_progress(app, &item.id)
+            && !opened_progress.contains(&item.id)
+            && windows::count(app, "progress") < MAX_DOWNLOAD_WINDOWS
         {
-            tracing::error!("could not open the progress window: {e}");
+            opened_progress.insert(item.id.clone());
+            if let Err(e) = windows::open_progress(app, &item.id) {
+                tracing::error!("could not open the progress window: {e}");
+            }
         }
     } else if opened_progress.remove(&item.id)
         && item.status == prism_core::model::Status::Completed
@@ -574,6 +627,7 @@ fn side_effects(
     was_active: &mut Option<bool>,
     last_tooltip: &mut std::time::Instant,
     opened_progress: &mut std::collections::HashSet<String>,
+    bursts: &mut Bursts,
 ) {
     let settings = core.settings();
     let notify = |title: &str, body: &str| {
@@ -615,21 +669,25 @@ fn side_effects(
             if in_model_queue(item) {
                 // A model's files finish one after another: one notification when the queue is
                 // done instead of a dialog for every config file and weights part.
-            } else if settings.general.show_completion_dialog {
+            } else if settings.general.show_completion_dialog
+                && windows::count(app, "complete") < MAX_DOWNLOAD_WINDOWS
+            {
                 let _ = windows::open(app, "complete", Some(&item.id));
-            } else {
+            } else if bursts.notes.allow(NOTES_PER_BURST, NOTE_BURST) {
                 notify("Download complete", &item.file_name);
             }
         }
         CoreEvent::Failed(item) => {
-            notify(
-                "Download failed",
-                &format!(
-                    "{}\n{}",
-                    item.file_name,
-                    item.error.clone().unwrap_or_default()
-                ),
-            );
+            if bursts.notes.allow(NOTES_PER_BURST, NOTE_BURST) {
+                notify(
+                    "Download failed",
+                    &format!(
+                        "{}\n{}",
+                        item.file_name,
+                        item.error.clone().unwrap_or_default()
+                    ),
+                );
+            }
         }
         CoreEvent::QueueFinished { name, .. } => notify(
             "Queue finished",
@@ -680,13 +738,18 @@ fn side_effects(
                 }
             }
         }
-        // Linux plays sounds here, once, instead of in every window (#41).
+        // Linux plays sounds here, once, instead of in every window (#41); each one starts a
+        // player, so a burst of finished downloads plays one sound a second at most (#153).
         #[cfg(target_os = "linux")]
-        CoreEvent::PlaySound { kind } if settings.sounds.enabled => sound::play(
-            kind,
-            &settings.sounds.complete_sound,
-            settings.sounds.volume,
-        ),
+        CoreEvent::PlaySound { kind } if settings.sounds.enabled => {
+            if bursts.sound.allow(1, std::time::Duration::from_secs(1)) {
+                sound::play(
+                    kind,
+                    &settings.sounds.complete_sound,
+                    settings.sounds.volume,
+                )
+            }
+        }
         CoreEvent::ShowMain => windows::show_main(app),
         CoreEvent::ExitRequested => {
             let app = app.clone();
@@ -782,8 +845,24 @@ fn init_logging() -> Option<tracing_appender::non_blocking::WorkerGuard> {
 
 #[cfg(test)]
 mod tests {
-    use super::{mica_dark, open_targets};
+    use super::{Burst, mica_dark, open_targets};
     use prism_core::settings::Theme;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn a_burst_lets_out_only_the_first_few() {
+        let mut b = Burst::default();
+        let t = Instant::now();
+        let w = Duration::from_secs(10);
+        // Hundreds of downloads finishing at once (#153): three notifications, not hundreds.
+        let sent = (0..500)
+            .filter(|i| b.allow_at(t + Duration::from_millis(*i), 3, w))
+            .count();
+        assert_eq!(sent, 3);
+        // Once the burst is over, the next one goes out again.
+        assert!(b.allow_at(t + Duration::from_secs(11), 3, w));
+        assert!(b.allow_at(t + Duration::from_secs(12), 3, w));
+    }
 
     #[test]
     fn mica_follows_the_theme() {

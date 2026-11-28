@@ -36,6 +36,9 @@ describe('cookies for a captured download', () => {
   it('leaves what the user starts (menus, video button, popup) unchanged', async () => {
     expect(await cookieHeaderFor(url, false)).toBe('session=s1; prefs=p1');
   });
+  it('does not fall back to the default store when incognito store is unavailable', async () => {
+    expect(await cookieHeaderFor(url, true)).toBe('');
+  });
 });
 
 describe('storeCookiesToAdd', () => {
