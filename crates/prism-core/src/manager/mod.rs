@@ -57,7 +57,7 @@ impl Default for CoreOptions {
 }
 
 /// Everything the UI needs on startup.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Bootstrap {
     pub version: String,

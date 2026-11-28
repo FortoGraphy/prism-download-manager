@@ -145,9 +145,29 @@ export function handleEvent(e: CoreEvent) {
     }
   }
   switch (e.type) {
+    case "bootstrap": {
+      // A reconnect or a lagged stream replaces the stored state; merging would keep rows,
+      // queues and settings that another client removed while this one was disconnected.
+      const items: Record<string, DownloadItem> = {};
+      for (const i of e.payload.items) items[i.id] = i;
+      useApp.setState({
+        ready: true,
+        version: e.payload.version,
+        dataDir: e.payload.dataDir,
+        items,
+        progress: {},
+        categories: e.payload.categories,
+        queues: e.payload.queues,
+        settings: e.payload.settings,
+        grabberProjects: e.payload.grabberProjects,
+        selection: st.selection.filter((id) => items[id]),
+        anchor: st.anchor && items[st.anchor] ? st.anchor : null,
+      });
+      if (typeof document !== "undefined") applyAppearance(e.payload.settings);
+      break;
+    }
     case "itemsAdded": {
-      // Also the whole list again after the window missed events (see main.rs): live progress
-      // of a download that has stopped meanwhile goes.
+      // Incremental additions only; a full list now arrives as `bootstrap` after a resync.
       const items = { ...st.items };
       const progress = { ...st.progress };
       for (const i of e.payload) {

@@ -1,5 +1,6 @@
 //! Events emitted by the core for the UI (and anything else that listens).
 
+use crate::manager::Bootstrap;
 use crate::model::*;
 use crate::settings::Settings;
 use serde::{Deserialize, Serialize};
@@ -117,6 +118,8 @@ pub struct ZipProgress {
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
 pub enum CoreEvent {
+    /// Full state after a reconnect or lagged stream: clients replace, not merge.
+    Bootstrap(Box<Bootstrap>),
     ItemsAdded(Vec<DownloadItem>),
     ItemUpdated(DownloadItem),
     ItemsRemoved(Vec<String>),

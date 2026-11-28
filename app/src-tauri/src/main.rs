@@ -519,9 +519,9 @@ fn spawn_event_forwarder(app: AppHandle, core: Core) {
                 Ok(e) => e,
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     // The windows missed events, perhaps a download that finished (#41): they get
-                    // the whole list again (stopped downloads drop their live progress).
-                    tracing::warn!("the windows missed {n} events; sending them the list again");
-                    let _ = app.emit("core", &CoreEvent::ItemsAdded(core.bootstrap().items));
+                    // the whole state again (stopped downloads drop their live progress).
+                    tracing::warn!("the windows missed {n} events; sending them the state again");
+                    let _ = app.emit("core", &CoreEvent::Bootstrap(Box::new(core.bootstrap())));
                     continue;
                 }
                 Err(_) => break,

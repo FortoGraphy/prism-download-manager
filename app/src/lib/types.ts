@@ -371,6 +371,7 @@ export interface Bootstrap {
 }
 
 export type CoreEvent =
+  | { type: "bootstrap"; payload: Bootstrap }
   | { type: "itemsAdded"; payload: DownloadItem[] }
   | { type: "itemUpdated"; payload: DownloadItem }
   | { type: "itemsRemoved"; payload: string[] }

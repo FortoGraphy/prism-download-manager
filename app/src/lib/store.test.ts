@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { handleEvent, useApp } from "./store";
-import type { DownloadItem, Progress, Status } from "./types";
+import type { Bootstrap, DownloadItem, GrabberProject, Progress, Queue, Settings, Status } from "./types";
 
 const item = (status: Status): DownloadItem => ({
   id: "a",
@@ -48,5 +48,45 @@ describe("live progress (#41)", () => {
     handleEvent({ type: "itemsAdded", payload: [item("completed")] });
     expect(useApp.getState().progress.a).toBeUndefined();
     expect(useApp.getState().items.a.status).toBe("completed");
+  });
+});
+
+describe("bootstrap resync", () => {
+  it("replaces stale state instead of merging it", () => {
+    const freshItem = { ...item("completed"), id: "fresh" };
+    const freshQueue = { id: "fresh-queue" } as Queue;
+    const freshSettings = {} as Settings;
+    useApp.setState({
+      version: "old",
+      dataDir: "/old",
+      items: { stale: item("downloading") },
+      progress: { stale: progress(500) },
+      queues: [{ id: "stale-queue" } as Queue],
+      settings: {} as Settings,
+      grabberProjects: [{ id: "stale-project" } as GrabberProject],
+      selection: ["stale", "gone"],
+      anchor: "stale",
+    });
+    const boot: Bootstrap = {
+      version: "new",
+      items: [freshItem],
+      categories: [],
+      queues: [freshQueue],
+      settings: freshSettings,
+      grabberProjects: [],
+      dataDir: "/new",
+      captures: [],
+    };
+    handleEvent({ type: "bootstrap", payload: boot });
+    const st = useApp.getState();
+    expect(st.items).toEqual({ fresh: freshItem });
+    expect(st.progress).toEqual({});
+    expect(st.queues).toEqual([freshQueue]);
+    expect(st.settings).toBe(freshSettings);
+    expect(st.grabberProjects).toEqual([]);
+    expect(st.selection).toEqual([]);
+    expect(st.anchor).toBeNull();
+    expect(st.version).toBe("new");
+    expect(st.dataDir).toBe("/new");
   });
 });

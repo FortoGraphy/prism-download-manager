@@ -199,8 +199,8 @@ async fn events(
     let shutdown = state.shutdown.clone();
     let stream = unfold((rx, core, shutdown, true), |(mut rx, core, mut shutdown, first)| async move {
         if first {
-            // Reconnects create a fresh stream; seed it so the UI never trusts stale rows.
-            let resync = CoreEvent::ItemsAdded(core.bootstrap().items);
+            // Reconnects create a fresh stream; replace all state so the UI never trusts stale rows.
+            let resync = CoreEvent::Bootstrap(Box::new(core.bootstrap()));
             let data = serde_json::to_string(&resync).unwrap_or_else(|_| "{}".into());
             return Some((Ok(Event::default().data(data)), (rx, core, shutdown, false)));
         }
@@ -215,8 +215,8 @@ async fn events(
                 Some((Ok(Event::default().data(data)), (rx, core, shutdown, false)))
             }
             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
-                // A slow browser missed events: resend the full list so rows recover.
-                let resync = CoreEvent::ItemsAdded(core.bootstrap().items);
+                // A slow browser missed events: resend all state so nothing stays stale.
+                let resync = CoreEvent::Bootstrap(Box::new(core.bootstrap()));
                 let data = serde_json::to_string(&resync).unwrap_or_else(|_| "{}".into());
                 Some((Ok(Event::default().data(data)), (rx, core, shutdown, false)))
             }
@@ -379,7 +379,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn events_stream_starts_with_items_snapshot() {
+    async fn events_stream_starts_with_full_bootstrap() {
         let dir = tempfile::tempdir().unwrap();
         let core = Core::start(prism_core::manager::CoreOptions {
             data_dir: dir.path().to_path_buf(),
@@ -407,8 +407,20 @@ mod tests {
         .unwrap();
         let data = String::from_utf8(frame.into_data().unwrap().to_vec()).unwrap();
         assert!(data.starts_with("data: "));
-        assert!(data.contains("\"type\":\"itemsAdded\""));
-        assert!(data.contains("\"payload\":[]"));
+        let event: Value = serde_json::from_str(data.trim_start_matches("data: ")).unwrap();
+        assert_eq!(event["type"], "bootstrap");
+        for field in [
+            "version",
+            "items",
+            "categories",
+            "queues",
+            "settings",
+            "grabberProjects",
+            "dataDir",
+            "captures",
+        ] {
+            assert!(event["payload"].get(field).is_some(), "missing {field}");
+        }
         core.shutdown().await;
     }
 
