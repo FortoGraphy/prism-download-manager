@@ -1,0 +1,31 @@
+[package]
+name = "prism-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+prism-engine = { path = "../crates/prism-engine" }
+prism-video = { path = "../crates/prism-video" }
+
+# Its own workspace: the targets build with nightly and sanitizers, apart from the app.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "video_index"
+path = "fuzz_targets/video_index.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "file_name"
+path = "fuzz_targets/file_name.rs"
+test = false
+doc = false
+bench = false
