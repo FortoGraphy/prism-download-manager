@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect } from "react";
 import { Icon } from "../design/icons";
 import { inTauri } from "../lib/api";
+import { demoHost } from "../lib/demoHost";
 import { t } from "../lib/i18n";
 import { win } from "../lib/win";
 
@@ -86,7 +87,8 @@ export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, 
     </div>
   );
 
-  if (inTauri) return frame;
+  // In the app and on the website's live demo, the window is the frame; elsewhere (dev preview) it sits on a pretend desktop.
+  if (inTauri || demoHost()) return frame;
   const [w, h] = WINDOW_SIZES[kind];
   return (
     <div className="preview-desktop">

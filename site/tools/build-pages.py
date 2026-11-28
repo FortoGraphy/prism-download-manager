@@ -305,7 +305,7 @@ def build_page(path, meta, body):
 <meta name="description" content="{e(desc)}">
 {head_seo}
 <meta name="theme-color" content="#07080b" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#f3f1ec" media="(prefers-color-scheme: light)">
 <meta name="color-scheme" content="dark light">
 
 <meta property="og:type" content="{"article" if article else "website"}">

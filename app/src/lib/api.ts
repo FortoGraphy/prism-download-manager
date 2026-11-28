@@ -22,6 +22,7 @@ import type {
   VideoSection,
 } from "./types";
 import type { VideoChapter } from "./videoPart";
+import { demoBackend } from "./demoHost";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -35,7 +36,7 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
       const core = await import("@tauri-apps/api/core");
       invokeImpl = core.invoke as InvokeFn;
     } else {
-      const mock = await import("./mock");
+      const mock = await demoBackend();
       invokeImpl = mock.invoke as InvokeFn;
     }
   }
@@ -48,7 +49,7 @@ export async function onCoreEvent(handler: (e: CoreEvent) => void): Promise<() =
     const { listen } = await import("@tauri-apps/api/event");
     return listen<CoreEvent>("core", (e) => handler(e.payload));
   }
-  const mock = await import("./mock");
+  const mock = await demoBackend();
   return mock.subscribe(handler);
 }
 
@@ -58,7 +59,7 @@ export async function onAppEvent<T>(name: string, handler: (payload: T) => void)
     const { listen } = await import("@tauri-apps/api/event");
     return listen<T>(name, (e) => handler(e.payload));
   }
-  const mock = await import("./mock");
+  const mock = await demoBackend();
   return mock.subscribeApp(name, handler as (p: unknown) => void);
 }
 

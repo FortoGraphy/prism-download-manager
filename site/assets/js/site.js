@@ -22,7 +22,7 @@
   var toggle = $(".theme-toggle");
   function applyThemeChrome(t) {
     if (toggle) toggle.setAttribute("aria-label", t === "dark" ? "Switch to light theme" : "Switch to dark theme");
-    $$('meta[name="theme-color"]').forEach(function (m) { m.setAttribute("content", t === "dark" ? "#07080b" : "#f4f5f8"); });
+    $$('meta[name="theme-color"]').forEach(function (m) { m.setAttribute("content", t === "dark" ? "#07080b" : "#f3f1ec"); });
   }
   function setTheme(t, save) {
     root.setAttribute("data-theme", t);
@@ -516,16 +516,50 @@
     });
   }
 
+  /* ----------------------------------------------------- pull-the-plug demo */
+  // A button replays an interrupted download: it stops at 64%, then resumes from there.
+  var plug = $("#plug-demo");
+  if (plug) (function () {
+    var btn = plug.querySelector(".mp-btn"), fill = plug.querySelector(".mp-fill");
+    var left = plug.querySelector('[data-mp="left"]'), right = plug.querySelector('[data-mp="right"]');
+    var timers = [];
+    function later(ms, fn) { timers.push(setTimeout(fn, reduceMQ.matches ? 0 : ms)); }
+    function to(pct, ms) { plug.style.setProperty("--mp-t", (reduceMQ.matches ? 0 : ms) + "ms"); fill.style.width = pct + "%"; }
+    btn.hidden = false;
+    btn.addEventListener("click", function () {
+      timers.forEach(clearTimeout); timers = [];
+      plug.className = "mini-progress is-off";
+      btn.disabled = true;
+      left.textContent = "Downloading…"; right.textContent = "";
+      to(0, 0);
+      later(30, function () { to(64, 1100); });
+      later(1150, function () {
+        plug.className = "mini-progress is-cut";
+        left.textContent = "Power cut at 64%"; right.textContent = "Prism closed";
+      });
+      later(2300, function () {
+        plug.className = "mini-progress";
+        left.textContent = "Resuming from 64%…"; right.textContent = "";
+        to(100, 900);
+      });
+      later(3250, function () {
+        plug.className = "mini-progress is-done";
+        left.textContent = "Interrupted at 64%"; right.textContent = "Resumed ✓ file checked";
+        btn.disabled = false; btn.textContent = "Pull it again";
+      });
+    });
+  })();
+
   /* ------------------------------------------------------------ engine demo */
   var card = $("#engine-demo");
   if (card) engineDemo(card);
 
   function engineDemo(card) {
-    var N = 16, SHOWN = 8, SIZE = 6.2e9, SPEEDUP = 11, TICK = 250, MIN_SPLIT = 24e6;
+    var N = 16, MAX = 32, SHOWN = 8, SIZE = 6.2e9, SPEEDUP = 11, TICK = 250, MIN_SPLIT = 24e6;
     var q = function (k) { return card.querySelector('[data-ec="' + k + '"]'); };
     var el = { pct: q("pct"), speed: q("speed"), eta: q("eta"), conns: q("conns"), bar: q("bar"), map: q("map"), segs: q("segs"), more: q("more") };
     var lanes = $$(".lane", q("lanes")).map(function (li) {
-      return { fill: li.querySelector(".lane-fill"), range: li.querySelector(".lane-range"), speed: li.querySelector(".lane-speed") };
+      return { li: li, fill: li.querySelector(".lane-fill"), range: li.querySelector(".lane-range"), speed: li.querySelector(".lane-speed") };
     });
     var ctx = el.map.getContext("2d");
     var colors = [], track = "";
@@ -636,9 +670,12 @@
       el.speed.textContent = st.active ? fmtSpeed(st.total) : "—";
       el.eta.textContent = st.active ? fmtEta((SIZE - done) / st.total) : "—";
       el.conns.textContent = st.active + " / " + N;
-      el.segs.textContent = segs.length + " segments";
+      el.segs.textContent = segs.length + (segs.length === 1 ? " segment" : " segments");
+      if (el.more) el.more.textContent = N > SHOWN ? "+ " + (N - SHOWN) + " more connections" : "";
       lanes.forEach(function (l, i) {
-        var c = conns[i], s = c.seg;
+        var c = conns[i], s = c && c.seg;
+        l.li.hidden = i >= N;
+        if (!c) return;
         if (!s) { l.fill.style.setProperty("--p", "1"); l.range.textContent = "done"; l.speed.textContent = "—"; return; }
         var p = (s.pos - s.start) / Math.max(1, s.end - s.start);
         l.fill.style.setProperty("--p", p.toFixed(4));
@@ -647,6 +684,23 @@
       });
       draw();
       return frac;
+    }
+
+    // Visitors pick the number of connections: the server throttles each one, so more
+    // connections finish sooner (the 15x of the benchmarks).
+    var seg = card.querySelector(".ec-seg");
+    if (seg) {
+      seg.hidden = false;
+      seg.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-n]");
+        if (!b) return;
+        N = Math.min(MAX, +b.dataset.n);
+        $$("button", seg).forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); });
+        card.setAttribute("aria-label", "Simulation: one file downloading over " + N + (N === 1 ? " connection." : " connections."));
+        reset(false);
+        conns.forEach(function (c) { c.speed = c.base; });
+        render({ total: conns.reduce(function (a, c) { return a + c.speed; }, 0), active: N });
+      });
     }
 
     readColors();

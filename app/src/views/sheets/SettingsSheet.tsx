@@ -18,26 +18,30 @@ import { attempt, toast, useUi } from "../../lib/ui";
 import { pickFile, pickFolder, pickSavePath } from "../../lib/win";
 import { scheduleSummary } from "./SchedulerSheet";
 import { IS_MAC, keyLabel } from "../../lib/platform";
+import { demoHost } from "../../lib/demoHost";
 
-export const SECTIONS: { id: string; label: string; icon: IconName; group?: boolean }[] = [
-  { id: "general", label: tk("General"), icon: "settings" },
-  { id: "appearance", label: tk("Appearance"), icon: "sun" },
-  { id: "downloads", label: tk("Downloads"), icon: "download" },
-  { id: "connection", label: tk("Connection"), icon: "globe" },
-  { id: "proxy", label: tk("Proxy"), icon: "proxy" },
-  { id: "speed", label: tk("Speed & queues"), icon: "speed-limiter" },
-  { id: "capture", label: tk("File types & capture"), icon: "filter", group: true },
-  { id: "categories", label: tk("Categories"), icon: "all" },
-  { id: "browser", label: tk("Browser integration"), icon: "browser" },
-  { id: "video", label: tk("Video & streams"), icon: "video" },
-  { id: "models", label: tk("AI models"), icon: "model" },
-  { id: "scheduler", label: tk("Scheduler"), icon: "scheduler" },
-  { id: "sounds", label: tk("Notifications & sounds"), icon: "bell", group: true },
-  { id: "security", label: tk("Security & antivirus"), icon: "shield" },
-  { id: "advanced", label: tk("Advanced"), icon: "options" },
-  { id: "shortcuts", label: tk("Keyboard shortcuts"), icon: "list" },
-  { id: "about", label: tk("About Prism"), icon: "info" },
-];
+type Section = { id: string; label: string; icon: IconName; group?: boolean };
+export const SECTIONS: Section[] = (
+  [
+    { id: "general", label: tk("General"), icon: "settings" },
+    { id: "appearance", label: tk("Appearance"), icon: "sun" },
+    { id: "downloads", label: tk("Downloads"), icon: "download" },
+    { id: "connection", label: tk("Connection"), icon: "globe" },
+    { id: "proxy", label: tk("Proxy"), icon: "proxy" },
+    { id: "speed", label: tk("Speed & queues"), icon: "speed-limiter" },
+    { id: "capture", label: tk("File types & capture"), icon: "filter", group: true },
+    { id: "categories", label: tk("Categories"), icon: "all" },
+    { id: "browser", label: tk("Browser integration"), icon: "browser" },
+    { id: "video", label: tk("Video & streams"), icon: "video" },
+    { id: "models", label: tk("AI models"), icon: "model" },
+    { id: "scheduler", label: tk("Scheduler"), icon: "scheduler" },
+    { id: "sounds", label: tk("Notifications & sounds"), icon: "bell", group: true },
+    { id: "security", label: tk("Security & antivirus"), icon: "shield" },
+    { id: "advanced", label: tk("Advanced"), icon: "options" },
+    { id: "shortcuts", label: tk("Keyboard shortcuts"), icon: "list" },
+    { id: "about", label: tk("About Prism"), icon: "info" },
+  ] as Section[]
+).filter((x) => !(x.id === "browser" && demoHost())); // the website's live demo has no browser to connect
 
 const save = (patch: DeepPartial<Settings>) => void patchSettings(patch);
 const DEFAULT_HUB = "https://huggingface.co";

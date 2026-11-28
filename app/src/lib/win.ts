@@ -1,6 +1,7 @@
 // Current-window controls. All are no-ops outside Tauri (browser preview).
 
 import { inTauri } from "./api";
+import { demoHost } from "./demoHost";
 
 async function current() {
   if (!inTauri) return null;
@@ -19,6 +20,7 @@ export const win = {
   /** Closes this window for good (dialogs are destroyed, not kept hidden); the main window
    * goes through the normal close request (to the tray, if enabled). */
   close: async () => {
+    demoHost()?.close(window);
     const w = await current();
     if (!w) return;
     if (w.label === "main") await w.close();
@@ -74,6 +76,8 @@ export async function readClipboardText(): Promise<string> {
       const { invoke } = await import("@tauri-apps/api/core");
       return await invoke<string>("clipboard_read");
     }
+    // The website's demo never asks to read the visitor's clipboard.
+    if (demoHost()) return "";
     return await navigator.clipboard.readText();
   } catch {
     return "";
