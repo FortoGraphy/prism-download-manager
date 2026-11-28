@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
 import { handleDrop } from "../lib/drop";
 import { win } from "../lib/win";
+import { showAfterPaint } from "../lib/show-window";
 import { Icon } from "../design/icons";
 import { actions } from "../lib/actions";
 import { api } from "../lib/api";
@@ -39,8 +40,16 @@ export function MainWindow() {
   useEffect(() => {
     // Shown after the first paint, unless Prism started in the background (autostart) or
     // "Start minimized" is on: then it waits in the tray.
-    const show = () => requestAnimationFrame(() => requestAnimationFrame(() => void win.show()));
-    api.mainWindowStartsVisible().then((visible) => visible !== false && show(), show);
+    let cancelled = false;
+    let cancelShow: (() => void) | undefined;
+    const show = () => {
+      if (!cancelled) cancelShow = showAfterPaint(() => void win.show());
+    };
+    void api.mainWindowStartsVisible().then((visible) => visible !== false && show(), show);
+    return () => {
+      cancelled = true;
+      cancelShow?.();
+    };
   }, []);
 
   // Settings › General › "Remove downloads whose files were deleted": checked again whenever the

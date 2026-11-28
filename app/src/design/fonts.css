@@ -2,6 +2,9 @@
    Prism — self-hosted fonts (SIL Open Font License 1.1, see fonts/OFL-*.txt)
    Inter 4 variable (opsz + wght axes) — from @fontsource-variable/inter 5.3.0
    JetBrains Mono variable (wght)    — from @fontsource-variable/jetbrains-mono 5.3.0
+   Only latin + latin-ext subsets are shipped (covers EN/CZ/DE/PL/...).
+   Use fallback text immediately while WebKit loads and decodes local fonts.
+   Each new webview has its own font loading lifecycle.
    Only latin, latin-ext + vietnamese subsets are shipped (covers EN/CZ/DE/PL/VI/...).
    `font-display: block` is intentional: the app is local, fonts load in
    < 5 ms from disk and we never want a flash of fallback type.
@@ -10,7 +13,7 @@
 @font-face {
   font-family: "Inter Variable";
   font-style: normal;
-  font-display: block;
+  font-display: swap;
   font-weight: 100 900;
   src: url("./fonts/InterVariable-latin.woff2") format("woff2-variations"),
        url("./fonts/InterVariable-latin.woff2") format("woff2");
@@ -21,7 +24,7 @@
 @font-face {
   font-family: "Inter Variable";
   font-style: normal;
-  font-display: block;
+  font-display: swap;
   font-weight: 100 900;
   src: url("./fonts/InterVariable-latin-ext.woff2") format("woff2-variations"),
        url("./fonts/InterVariable-latin-ext.woff2") format("woff2");
@@ -43,7 +46,7 @@
 @font-face {
   font-family: "JetBrains Mono Variable";
   font-style: normal;
-  font-display: block;
+  font-display: swap;
   font-weight: 100 800;
   src: url("./fonts/JetBrainsMonoVariable-latin.woff2") format("woff2-variations"),
        url("./fonts/JetBrainsMonoVariable-latin.woff2") format("woff2");
@@ -54,7 +57,7 @@
 @font-face {
   font-family: "JetBrains Mono Variable";
   font-style: normal;
-  font-display: block;
+  font-display: swap;
   font-weight: 100 800;
   src: url("./fonts/JetBrainsMonoVariable-latin-ext.woff2") format("woff2-variations"),
        url("./fonts/JetBrainsMonoVariable-latin-ext.woff2") format("woff2");

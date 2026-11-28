@@ -1,5 +1,6 @@
 import { MotionConfig } from "motion/react";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { StartupFrame } from "./components/StartupFrame";
 import { MenuHost } from "./components/MenuHost";
 import { ToastHost } from "./components/ToastHost";
 import { TooltipHost } from "./components/TooltipHost";
@@ -9,20 +10,27 @@ import { type Route, parseRoute } from "./lib/route";
 import { api } from "./lib/api";
 import { useApp } from "./lib/store";
 import { attempt } from "./lib/ui";
-import { MainWindow } from "./views/MainWindow";
+// Share the import promise between preloading and React.lazy (including failures).
+function preloadable<T extends React.ComponentType<any>>(load: () => Promise<{ default: T }>) {
+  let pending: ReturnType<typeof load> | undefined;
+  const preload = () => pending ??= load();
+  return Object.assign(lazy(preload), { preload });
+}
+
+const MainWindow = preloadable(() => import("./views/MainWindow").then((m) => ({ default: m.MainWindow })));
 
 // Secondary windows are separate webviews; each only loads its own chunk.
-const CaptureWindow = lazy(() => import("./windows/CaptureWindow"));
-const AddUrlWindow = lazy(() => import("./windows/AddUrlWindow"));
-const BatchWindow = lazy(() => import("./windows/BatchWindow"));
-const VideoWindow = lazy(() => import("./windows/VideoWindow"));
-const TorrentWindow = lazy(() => import("./windows/TorrentWindow"));
-const ModelWindow = lazy(() => import("./windows/ModelWindow"));
-const ToolsWindow = lazy(() => import("./windows/ToolsWindow"));
-const CompleteWindow = lazy(() => import("./windows/CompleteWindow"));
-const DetailsWindow = lazy(() => import("./windows/DetailsWindow"));
-const MiniWindow = lazy(() => import("./windows/MiniWindow"));
-const DropzoneWindow = lazy(() => import("./windows/DropzoneWindow"));
+const CaptureWindow = preloadable(() => import("./windows/CaptureWindow"));
+const AddUrlWindow = preloadable(() => import("./windows/AddUrlWindow"));
+const BatchWindow = preloadable(() => import("./windows/BatchWindow"));
+const VideoWindow = preloadable(() => import("./windows/VideoWindow"));
+const TorrentWindow = preloadable(() => import("./windows/TorrentWindow"));
+const ModelWindow = preloadable(() => import("./windows/ModelWindow"));
+const ToolsWindow = preloadable(() => import("./windows/ToolsWindow"));
+const CompleteWindow = preloadable(() => import("./windows/CompleteWindow"));
+const DetailsWindow = preloadable(() => import("./windows/DetailsWindow"));
+const MiniWindow = preloadable(() => import("./windows/MiniWindow"));
+const DropzoneWindow = preloadable(() => import("./windows/DropzoneWindow"));
 
 function View({ route }: { route: Route }) {
   switch (route.name) {
@@ -57,6 +65,15 @@ function View({ route }: { route: Route }) {
 
 export function App() {
   const [route, setRoute] = useState(() => parseRoute(location.hash));
+
+  useEffect(() => {
+    const selected = { main: MainWindow, capture: CaptureWindow, addurl: AddUrlWindow,
+      batch: BatchWindow, video: VideoWindow, torrent: TorrentWindow, model: ModelWindow,
+      tools: ToolsWindow, complete: CompleteWindow, details: DetailsWindow,
+      progress: DetailsWindow, mini: MiniWindow, dropzone: DropzoneWindow }[route.name];
+    // React's lazy boundary handles import failures when the view is rendered.
+    void selected.preload().catch(() => {});
+  }, [route.name]);
   const ready = useApp((s) => s.ready);
   const reduced = useApp((s) => s.settings?.appearance.motion);
   // Set before the views render; changing the language remounts them in the new one.
@@ -80,11 +97,11 @@ export function App() {
 
   return (
     <MotionConfig reducedMotion={reduced === "reduced" ? "always" : reduced === "full" ? "never" : "user"}>
-      {ready && (
-        <Suspense fallback={null}>
+      {ready ? (
+        <Suspense fallback={<StartupFrame />}>
           <View key={lang} route={route} />
         </Suspense>
-      )}
+      ) : <StartupFrame />}
       <TooltipHost />
       <MenuHost />
       <ToastHost />

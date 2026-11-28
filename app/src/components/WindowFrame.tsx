@@ -3,6 +3,7 @@ import { Icon } from "../design/icons";
 import { inTauri } from "../lib/api";
 import { t } from "../lib/i18n";
 import { win } from "../lib/win";
+import { showAfterPaint } from "../lib/show-window";
 
 /** Preview sizes mirror `spec()` in src-tauri/src/windows.rs (used only in the browser preview). */
 export const WINDOW_SIZES: Record<string, [number, number]> = {
@@ -38,19 +39,7 @@ interface Props {
  * Outside Tauri the window is staged at its real size on a wallpaper for previews.
  */
 export function WindowFrame({ kind, title, icon, actions, onClose, minimizable, children, className, bare }: Props) {
-  useEffect(() => {
-    // After the first paint; the timer covers webviews that pause animation frames while hidden.
-    let shown = false;
-    const show = () => {
-      if (!shown) {
-        shown = true;
-        void win.show();
-      }
-    };
-    requestAnimationFrame(() => requestAnimationFrame(show));
-    const timer = window.setTimeout(show, 120);
-    return () => window.clearTimeout(timer);
-  }, []);
+  useEffect(() => showAfterPaint(() => void win.show()), []);
 
   const close = onClose ?? (() => void win.close());
   useEffect(() => {
