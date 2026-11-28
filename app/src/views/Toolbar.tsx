@@ -10,6 +10,7 @@ import { canPause, canResume, displayName } from "../lib/present";
 import { useApp } from "../lib/store";
 import { attempt, useUi } from "../lib/ui";
 import { win } from "../lib/win";
+import { keyLabel } from "../lib/platform";
 
 export function Toolbar() {
   const selection = useApp((s) => s.selection);
@@ -97,7 +98,7 @@ function SearchBox() {
           <Icon name="close" size={13} />
         </button>
       ) : (
-        <span className="kbd">Ctrl K</span>
+        <span className="kbd">{keyLabel("Ctrl K")}</span>
       )}
     </label>
   );

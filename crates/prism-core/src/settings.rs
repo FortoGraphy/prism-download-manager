@@ -65,8 +65,8 @@ pub struct General {
     pub check_updates: bool,
     /// Finished downloads whose file was deleted from the computer leave the list (off by default).
     pub remove_deleted_files: bool,
-    /// UI language code ("en", "cs", "de", "es", "fr", "it", "id", "ru", "tr", "vi", "zh", "ar"); empty = the
-    /// system's language.
+    /// UI language code ("en", "cs", "de", "es", "fr", "it", "id", "pt", "ru", "tr", "vi", "zh", "ar"); empty =
+    /// the system's language.
     pub language: String,
     /// macOS (#34): no Dock icon while Prism waits in the menu bar (it's back while the main
     /// window is open).
@@ -223,6 +223,26 @@ pub struct Connection {
     pub http_version: HttpVersion,
     /// Upper bound of simultaneous connections to one host across all downloads (0 = unlimited).
     pub max_connections_per_host: u32,
+    /// Trackers added to every torrent next to its own (#175), as the user typed them; see
+    /// [`Connection::extra_trackers`].
+    pub torrent_trackers: Vec<String>,
+}
+
+impl Connection {
+    /// The torrent trackers that are tracker addresses (udp, http(s) or ws(s) URLs), each once.
+    pub fn extra_trackers(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for t in &self.torrent_trackers {
+            let t = t.trim();
+            let ok = url::Url::parse(t).is_ok_and(|u| {
+                matches!(u.scheme(), "udp" | "http" | "https" | "ws" | "wss") && u.host().is_some()
+            });
+            if ok && !out.iter().any(|o| o == t) {
+                out.push(t.to_string());
+            }
+        }
+        out
+    }
 }
 
 impl Default for Connection {
@@ -233,6 +253,7 @@ impl Default for Connection {
             read_timeout_secs: 30,
             http_version: HttpVersion::Http1,
             max_connections_per_host: 0,
+            torrent_trackers: Vec::new(),
         }
     }
 }
@@ -518,5 +539,30 @@ mod tests {
         assert_eq!(s.appearance.theme, Theme::Light);
         assert!(s.downloads.speed_limiter_enabled);
         assert_eq!(s.appearance.accent, "prism");
+    }
+
+    #[test]
+    fn only_tracker_addresses_become_extra_trackers() {
+        let mut s = Settings::default();
+        assert!(s.connection.extra_trackers().is_empty());
+        s.apply_patch(&serde_json::json!({"connection": {"torrentTrackers": [
+            " udp://tracker.example.org:1337/announce ",
+            "https://t.example/announce",
+            "udp://tracker.example.org:1337/announce",
+            "wss://tracker.example/ws",
+            "tracker.example.org:80",
+            "ftp://x.example/a",
+            "file:///etc/passwd",
+            "",
+        ]}}))
+        .unwrap();
+        assert_eq!(
+            s.connection.extra_trackers(),
+            [
+                "udp://tracker.example.org:1337/announce",
+                "https://t.example/announce",
+                "wss://tracker.example/ws",
+            ]
+        );
     }
 }

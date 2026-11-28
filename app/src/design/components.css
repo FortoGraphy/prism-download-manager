@@ -271,6 +271,14 @@
   transform-origin: left; transform: scaleX(var(--p));
   transition: transform var(--dur-progress) linear;
 }
+.piecebar__run { /* a torrent's run of pieces: --a/--b as above, --o = share downloaded */
+  position: absolute; top: 0; bottom: 0;
+  left: calc(var(--a) * 100%);
+  width: calc((var(--b) - var(--a)) * 100%);
+  background: var(--accent);
+  opacity: var(--o);
+  transition: opacity var(--dur-progress) linear;
+}
 .segbar__seg[data-active="true"]::after { /* the live write-head */
   content: ""; position: absolute; top: 0; bottom: 0; width: 2px;
   left: calc(var(--p) * 100% - 1px);

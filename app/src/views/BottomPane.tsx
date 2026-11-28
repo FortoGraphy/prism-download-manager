@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { IconButton } from "../components/IconButton";
 import { useItemDetails } from "../components/useItemDetails";
-import { ConnectionLanes, FileMap, SpeedChart } from "../components/Visuals";
+import { ConnectionLanes, FileMap, PeerLanes, PieceMap, SpeedChart } from "../components/Visuals";
 import { Icon } from "../design/icons";
 import { actions } from "../lib/actions";
 import { formatBytes, formatClock, formatDate, formatDuration, formatSpeed } from "../lib/format";
@@ -54,13 +54,19 @@ export function BottomPane() {
       <div className="pane__tabs" role="tablist">
         {TABS.map((x) => (
           <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} className={`pane__tab${tab === x.id ? " on" : ""}`} onClick={() => useUi.getState().setBottom({ bottomTab: x.id })}>
-            {t(x.label)}
+            {x.id === "connections" && item.kind === "torrent" ? t("Peers") : t(x.label)}
           </button>
         ))}
         <span className="spacer" />
         <span className="pane__file">
           <span className="ellipsis">{item.fileName}</span>
-          {details?.segments.length ? <span className="badge badge--accent">{t("{count} conn", { count: details.segments.filter((s) => s.state === "active").length })}</span> : null}
+          {details?.torrent ? (
+            <span className="badge badge--accent">
+              {t("Peers")} {details.torrent.peers.length}
+            </span>
+          ) : details?.segments.length ? (
+            <span className="badge badge--accent">{t("{count} conn", { count: details.segments.filter((s) => s.state === "active").length })}</span>
+          ) : null}
         </span>
         <IconButton icon="external" size={15} label={t("Open details window")} onClick={() => actions.details(item.id)} />
         <IconButton icon="chevron-down" size={15} label={t("Hide pane")} onClick={() => useUi.getState().setBottom({ bottomOpen: false })} />
@@ -81,6 +87,20 @@ export function BottomPane() {
 function ConnectionsTab({ details, done }: { details: ItemDetails | null; done: boolean }) {
   if (done) return <p className="pane__hint">{t("Download complete — no open connections.")}</p>;
   if (!details) return <p className="pane__hint">{t("Loading…")}</p>;
+  // A torrent has no segments: its pieces come from many peers at once (#176).
+  if (details.item.kind === "torrent") {
+    const pieces = details.torrent?.pieces;
+    return (
+      <div className="pane__conn">
+        <div className="pane__map">
+          <span>{t("File map")}</span>
+          <PieceMap pieces={pieces} />
+          <span className="tnum">{pieces ? t("Pieces {done} / {total}", { done: pieces.done, total: pieces.total }) : "—"}</span>
+        </div>
+        <PeerLanes peers={details.torrent?.peers ?? []} max={24} />
+      </div>
+    );
+  }
   const size = details.item.size ?? 0;
   const unit = details.item.kind === "hls" || details.item.kind === "dash" ? "segments" : "bytes";
   return (

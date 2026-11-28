@@ -460,24 +460,24 @@ function Playlist({ entries, checked, onChange }: { entries: PlaylistEntry[]; ch
         </Checkbox>
       </div>
       <div className="plist__rows">
-        {entries.map((e, i) => (
-          <div
-            key={e.url}
-            className="plist__row"
-            onClick={() => {
-              const n = new Set(checked);
-              if (n.has(e.url)) n.delete(e.url);
-              else n.add(e.url);
-              onChange(n);
-            }}
-          >
-            <Checkbox checked={checked.has(e.url)} label={t("Select {name}", { name: e.title ?? e.url })} onChange={() => undefined} />
-            <span className="tnum text-tertiary">{i + 1}</span>
-            <span className="thumb" style={e.thumbnail ? { backgroundImage: `url("${e.thumbnail}")` } : undefined} />
-            <span className="ellipsis">{e.title ?? e.url}</span>
-            <span className="tnum text-tertiary">{formatClock(e.duration)}</span>
-          </div>
-        ))}
+        {entries.map((e, i) => {
+          // The row and its checkbox both toggle (the checkbox stops its click from reaching the row).
+          const toggle = () => {
+            const n = new Set(checked);
+            if (n.has(e.url)) n.delete(e.url);
+            else n.add(e.url);
+            onChange(n);
+          };
+          return (
+            <div key={e.url} className="plist__row" onClick={toggle}>
+              <Checkbox checked={checked.has(e.url)} label={t("Select {name}", { name: e.title ?? e.url })} onChange={toggle} />
+              <span className="tnum text-tertiary">{i + 1}</span>
+              <span className="thumb" style={e.thumbnail ? { backgroundImage: `url("${e.thumbnail}")` } : undefined} />
+              <span className="ellipsis">{e.title ?? e.url}</span>
+              <span className="tnum text-tertiary">{formatClock(e.duration)}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

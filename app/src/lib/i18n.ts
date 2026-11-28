@@ -17,6 +17,7 @@ import es from "../locales/es.json";
 import fr from "../locales/fr.json";
 import id from "../locales/id.json";
 import it from "../locales/it.json";
+import pt from "../locales/pt.json";
 import ru from "../locales/ru.json";
 import turkish from "../locales/tr.json";
 import vi from "../locales/vi.json";
@@ -34,6 +35,7 @@ export const LANGUAGES = [
   { code: "fr", name: "Français" },
   { code: "id", name: "Bahasa Indonesia" },
   { code: "it", name: "Italiano" },
+  { code: "pt", name: "Português (Brasil)" },
   { code: "ru", name: "Русский" },
   { code: "tr", name: "Türkçe" },
   { code: "vi", name: "Tiếng Việt" },
@@ -43,7 +45,7 @@ export const LANGUAGES = [
 
 export type Language = (typeof LANGUAGES)[number]["code"];
 
-export const CATALOGS: Record<Language, Catalog> = { en, cs, de, es, fr, id, it, ru, tr: turkish, vi, zh, ar };
+export const CATALOGS: Record<Language, Catalog> = { en, cs, de, es, fr, id, it, pt, ru, tr: turkish, vi, zh, ar };
 
 /** Languages written right to left: the whole layout mirrors (`<html dir="rtl">`). */
 const RTL: readonly Language[] = ["ar"];

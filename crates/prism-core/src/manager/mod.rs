@@ -401,6 +401,7 @@ impl Core {
         self.0.video.set_options(jobs::video_options(&s));
         if let Some(t) = self.0.torrent.get() {
             t.set_limits(global, global);
+            t.set_extra_trackers(s.connection.extra_trackers());
         }
     }
 
@@ -799,6 +800,7 @@ impl Core {
                 .get(id)
                 .map(|h| h.iter().copied().collect())
                 .unwrap_or_default(),
+            torrent: job.and_then(|j| j.torrent_details(self)),
             item,
         })
     }
@@ -1049,6 +1051,7 @@ impl Core {
             0
         };
         engine.set_limits(global, global);
+        engine.set_extra_trackers(s.connection.extra_trackers());
         Ok(engine)
     }
 

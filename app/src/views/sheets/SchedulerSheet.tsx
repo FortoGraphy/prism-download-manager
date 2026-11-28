@@ -9,6 +9,7 @@ import { displayName } from "../../lib/present";
 import { useApp } from "../../lib/store";
 import type { PostAction, Queue } from "../../lib/types";
 import { attempt, toast } from "../../lib/ui";
+import { IS_MAC } from "../../lib/platform";
 
 const DAYS = [tk("Mo"), tk("Tu"), tk("We"), tk("Th"), tk("Fr"), tk("Sa"), tk("Su")];
 
@@ -360,7 +361,7 @@ function QueueFiles({ id }: { id: string }) {
           </div>
         ))}
       </div>
-      <p className="hint">{t("Drag to reorder, or focus a row and press Alt+↑ / Alt+↓.")}</p>
+      <p className="hint">{IS_MAC ? t("Drag to reorder, or focus a row and press ⌥↑ / ⌥↓.") : t("Drag to reorder, or focus a row and press Alt+↑ / Alt+↓.")}</p>
     </div>
   );
 }

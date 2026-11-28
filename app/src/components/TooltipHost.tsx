@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { keyLabel } from "../lib/platform";
 
 interface Tip {
   text: string;
@@ -27,7 +28,7 @@ export function TooltipHost() {
         const r = el.getBoundingClientRect();
         const below = r.top < 48;
         setShift(0);
-        setTip({ text: el.dataset.tip ?? "", kbd: el.dataset.kbd, x: r.left + r.width / 2, y: below ? r.bottom + 6 : r.top - 6, below });
+        setTip({ text: el.dataset.tip ?? "", kbd: el.dataset.kbd && keyLabel(el.dataset.kbd), x: r.left + r.width / 2, y: below ? r.bottom + 6 : r.top - 6, below });
       }, delay);
     };
     const hide = () => {

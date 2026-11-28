@@ -87,6 +87,27 @@ export interface ItemDetails {
   segments: SegmentInfo[];
   progress?: Progress | null;
   speedHistory: number[];
+  /** A running torrent's pieces and peers (it has no segments). */
+  torrent?: TorrentDetails | null;
+}
+
+export interface TorrentPieces {
+  total: number;
+  done: number;
+  /** The pieces in equal runs, in order: the share (0..1) of each run downloaded. */
+  map: number[];
+}
+
+export interface PeerInfo {
+  address: string;
+  client?: string | null;
+  downloaded: number;
+  speed: number;
+}
+
+export interface TorrentDetails {
+  pieces?: TorrentPieces | null;
+  peers: PeerInfo[];
 }
 
 export interface Category {
@@ -226,6 +247,8 @@ export interface Settings {
     readTimeoutSecs: number;
     httpVersion: "http1" | "auto" | "http3";
     maxConnectionsPerHost: number;
+    /** Trackers added to every torrent next to its own (#175). */
+    torrentTrackers?: string[];
   };
   proxy: {
     mode: "none" | "system" | "http" | "socks5";

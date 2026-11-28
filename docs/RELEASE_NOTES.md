@@ -1,7 +1,36 @@
-# Prism 1.2.8 — One beam. Many rays.
+# Prism 1.2.9 — One beam. Many rays.
 
 A fast, open-source download manager for Windows, Linux and macOS, with browser integration
 and video downloads.
+
+## What's new in 1.2.9
+
+* **Torrents show where their data comes from**
+  ([#176](https://github.com/FortoGraphy/prism-download-manager/issues/176)). The details window
+  and the pane below the list now show which pieces of a torrent are in, and the peers it
+  downloads from, each with its speed. A torrent always came from many peers at once; Prism
+  showed an empty file map and no connections instead.
+* **Extra trackers for torrents**
+  ([#175](https://github.com/FortoGraphy/prism-download-manager/issues/175)): Settings →
+  Connection → Extra trackers adds your trackers to every torrent next to its own. Private
+  torrents keep only theirs.
+* **A click on a checkbox in a list of links ticks it**
+  ([#149](https://github.com/FortoGraphy/prism-download-manager/issues/149)). In Download links,
+  a video playlist and Site Grabber, only a click next to the box worked.
+* **The window keeps its colours after the computer wakes up**
+  ([#174](https://github.com/FortoGraphy/prism-download-manager/issues/174)). On Windows, the
+  background behind the sidebar could switch to the system's light or dark mode instead of
+  Prism's theme.
+* **Browsers installed as snaps**
+  ([#170](https://github.com/FortoGraphy/prism-download-manager/issues/170)): Brave, Chromium,
+  Opera and Vivaldi from the Snap Store can't reach Prism. Settings → Browser integration now
+  says so, and which package to install instead, rather than calling them not installed.
+  Flatpak browsers get the same note.
+* **Brazilian Portuguese**, thanks to AstralunaProject (PR #178)!
+* **On macOS, Prism uses the Mac's words and keys**: Show in Finder, Get Info, the menu bar and
+  ⌘ shortcuts, with ⌘⌫ to delete and ⌘I for the info. Thanks to katsi14 (PR #161)!
+* A video index with offsets past the end of what a file can hold is now refused (PR #166), and
+  SECURITY.md explains how to verify a download (PR #165). Thanks to Illumye!
 
 ## What's new in 1.2.8
 

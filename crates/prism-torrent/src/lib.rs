@@ -32,12 +32,54 @@ pub enum TorrentSource {
 }
 
 impl TorrentSource {
-    fn to_add(&self) -> AddTorrent<'static> {
+    /// What librqbit is given, with `extra` trackers next to the torrent's own: written into a
+    /// magnet link (librqbit reads custom trackers only for torrent files), else returned for
+    /// [`AddTorrentOptions::trackers`].
+    fn to_add(&self, extra: &[String]) -> (AddTorrent<'static>, Option<Vec<String>>) {
+        let extra = (!extra.is_empty()).then(|| extra.to_vec());
         match self {
-            TorrentSource::Url(u) => AddTorrent::from_url(u.clone()),
-            TorrentSource::File(b) => AddTorrent::from_bytes(b.clone()),
+            TorrentSource::Url(u) if is_magnet(u) => (
+                AddTorrent::from_url(magnet_with_trackers(u, extra.as_deref().unwrap_or(&[]))),
+                None,
+            ),
+            TorrentSource::Url(u) => (AddTorrent::from_url(u.clone()), extra),
+            TorrentSource::File(b) => (AddTorrent::from_bytes(b.clone()), extra),
         }
     }
+}
+
+fn is_magnet(url: &str) -> bool {
+    url.trim_start()
+        .get(..7)
+        .is_some_and(|s| s.eq_ignore_ascii_case("magnet:"))
+}
+
+/// The magnet link with a `tr` parameter for each tracker of `extra` it doesn't name yet.
+fn magnet_with_trackers(magnet: &str, extra: &[String]) -> String {
+    let mut out = magnet.trim().to_string();
+    for tracker in extra {
+        let tr = format!("tr={}", encode_component(tracker));
+        if out.contains(&tr) || out.contains(&format!("tr={tracker}")) {
+            continue;
+        }
+        out.push(if out.contains('?') { '&' } else { '?' });
+        out.push_str(&tr);
+    }
+    out
+}
+
+/// Percent-encodes everything but the unreserved characters (RFC 3986), for a query value.
+fn encode_component(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() * 3);
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -84,12 +126,36 @@ pub struct TorrentProgress {
     pub name: Option<String>,
 }
 
+/// Which pieces of a torrent are downloaded, for the file map (#176).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TorrentPieces {
+    pub total: u32,
+    pub done: u32,
+    /// The pieces in equal runs, in order: the share (0..=1) of each run already downloaded.
+    pub map: Vec<f32>,
+}
+
+/// A peer the torrent is connected to.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TorrentPeer {
+    /// `ip:port`.
+    pub address: String,
+    /// The client it announced (`qBittorrent 5.1.2`), when it did.
+    pub client: Option<String>,
+    /// Bytes received from it so far.
+    pub downloaded: u64,
+}
+
 /// A running BitTorrent session.
 pub struct TorrentEngine {
     session: Arc<Session>,
     /// Metadata `inspect` resolved for URL sources (magnets, .torrent links), so `add` knows
     /// the torrent's layout without resolving it a second time.
     inspected: Mutex<HashMap<String, TorrentMeta>>,
+    /// Trackers added to every torrent next to its own (the user's list, #175).
+    extra_trackers: Mutex<Vec<String>>,
 }
 
 impl TorrentEngine {
@@ -161,19 +227,35 @@ impl TorrentEngine {
         Ok(Self {
             session,
             inspected: Mutex::new(HashMap::new()),
+            extra_trackers: Mutex::new(Vec::new()),
         })
+    }
+
+    /// Trackers to add to the torrents added from now on, next to their own. A private torrent
+    /// keeps only its own tracker: librqbit drops the others for it.
+    pub fn set_extra_trackers(&self, trackers: Vec<String>) {
+        *self
+            .extra_trackers
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = trackers;
+    }
+
+    fn extra_trackers(&self) -> Vec<String> {
+        self.extra_trackers
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// Read a torrent's metadata (resolving a magnet via DHT/trackers) without downloading.
     pub async fn inspect(&self, source: &TorrentSource) -> Result<TorrentMeta> {
+        let (add, trackers) = source.to_add(&self.extra_trackers());
         let opts = AddTorrentOptions {
             list_only: true,
+            trackers,
             ..Default::default()
         };
-        let resp = self
-            .session
-            .add_torrent(source.to_add(), Some(opts))
-            .await?;
+        let resp = self.session.add_torrent(add, Some(opts)).await?;
         let meta = match resp {
             AddTorrentResponse::ListOnly(list) => {
                 meta_from_info(list.info_hash.as_string(), &list.info)
@@ -221,17 +303,16 @@ impl TorrentEngine {
         } else {
             output_folder.to_path_buf()
         };
+        let (add, trackers) = source.to_add(&self.extra_trackers());
         let opts = AddTorrentOptions {
             paused,
             only_files,
             output_folder: Some(folder.to_string_lossy().into_owned()),
             overwrite: true,
+            trackers,
             ..Default::default()
         };
-        let resp = self
-            .session
-            .add_torrent(source.to_add(), Some(opts))
-            .await?;
+        let resp = self.session.add_torrent(add, Some(opts)).await?;
         let handle = resp.into_handle().context("torrent was not added")?;
         Ok(handle.info_hash().as_string())
     }
@@ -278,6 +359,45 @@ impl TorrentEngine {
         })
     }
 
+    /// Which pieces are downloaded, in at most `runs` runs. None while the torrent is starting
+    /// (its metadata or the check of existing data isn't done yet).
+    pub fn pieces(&self, info_hash: &str, runs: usize) -> Option<TorrentPieces> {
+        let id = librqbit::dht::Id20::from_str(info_hash).ok()?;
+        let api = librqbit::api::Api::new(self.session.clone(), None);
+        let (have, total) = api.api_dump_haves(TorrentIdOrHash::Hash(id)).ok()?;
+        let bytes = have.as_raw_slice();
+        // Most significant bit first: piece 0 is the top bit of the first byte.
+        let has = |i: u32| {
+            bytes
+                .get((i / 8) as usize)
+                .is_some_and(|b| (b >> (7 - i % 8)) & 1 == 1)
+        };
+        Some(piece_map(total, runs, has))
+    }
+
+    /// The peers the torrent is connected to, the ones that sent the most first.
+    pub fn peers(&self, info_hash: &str) -> Vec<TorrentPeer> {
+        let Some(live) = self.handle(info_hash).and_then(|h| h.live()) else {
+            return Vec::new();
+        };
+        let mut peers: Vec<TorrentPeer> = live
+            .per_peer_stats_snapshot(Default::default())
+            .peers
+            .into_iter()
+            .map(|(address, p)| TorrentPeer {
+                address,
+                client: p.client_name.filter(|c| !c.trim().is_empty()),
+                downloaded: p.counters.fetched_bytes,
+            })
+            .collect();
+        peers.sort_by(|a, b| {
+            b.downloaded
+                .cmp(&a.downloaded)
+                .then_with(|| a.address.cmp(&b.address))
+        });
+        peers
+    }
+
     pub async fn pause(&self, info_hash: &str) -> Result<()> {
         let handle = self.handle(info_hash).context("unknown torrent")?;
         self.session.pause(&handle).await
@@ -313,6 +433,26 @@ impl TorrentEngine {
     pub fn default_limits() -> LimitsConfig {
         LimitsConfig::default()
     }
+}
+
+/// `total` pieces in `runs` (at most one per piece) runs of nearly equal length, each the share
+/// of its pieces that `has` says are downloaded.
+fn piece_map(total: u32, runs: usize, has: impl Fn(u32) -> bool) -> TorrentPieces {
+    let n = runs.clamp(1, total.max(1) as usize) as u64;
+    let mut map = Vec::with_capacity(n as usize);
+    let mut done = 0;
+    for r in 0..n {
+        let from = (r * total as u64 / n) as u32;
+        let to = ((r + 1) * total as u64 / n) as u32;
+        let got = (from..to).filter(|&i| has(i)).count() as u32;
+        done += got;
+        map.push(if to > from {
+            got as f32 / (to - from) as f32
+        } else {
+            0.0
+        });
+    }
+    TorrentPieces { total, done, map }
 }
 
 /// Drops the torrents `keep` says no to from the session's saved state (librqbit's
@@ -480,6 +620,51 @@ mod serde_bytes_b64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn piece_map_folds_pieces_into_runs() {
+        let have = [0u32, 1, 2, 3, 9];
+        let m = piece_map(10, 5, |i| have.contains(&i));
+        assert_eq!((m.total, m.done), (10, 5));
+        assert_eq!(m.map, vec![1.0, 1.0, 0.0, 0.0, 0.5]);
+        // Fewer pieces than runs: one run per piece.
+        let m = piece_map(3, 100, |i| i == 1);
+        assert_eq!(m.map, vec![0.0, 1.0, 0.0]);
+        // Uneven runs still cover every piece once.
+        let m = piece_map(7, 3, |_| true);
+        assert_eq!((m.done, m.map.len()), (7, 3));
+        assert!(m.map.iter().all(|f| *f == 1.0));
+        assert_eq!(piece_map(0, 10, |_| true).done, 0);
+    }
+
+    #[test]
+    fn extra_trackers_go_into_a_magnet_once() {
+        let hash = "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=x";
+        let own = format!("{hash}&tr=udp%3A%2F%2Fa.example%3A80%2Fannounce");
+        let extra = vec![
+            "udp://a.example:80/announce".to_string(),
+            "https://b.example/announce?k=1&x=2".to_string(),
+        ];
+        let out = magnet_with_trackers(&own, &extra);
+        let m = librqbit::Magnet::parse(&out).unwrap();
+        assert_eq!(
+            m.trackers,
+            vec![
+                "udp://a.example:80/announce".to_string(),
+                "https://b.example/announce?k=1&x=2".to_string(),
+            ]
+        );
+        assert_eq!(magnet_with_trackers(hash, &[]), hash);
+        assert!(is_magnet("  MAGNET:?xt=urn:btih:00"));
+        assert!(!is_magnet("https://example.com/a.torrent"));
+        // Other sources hand the list to librqbit as it is.
+        let (_, t) = TorrentSource::Url("https://example.com/a.torrent".into()).to_add(&extra);
+        assert_eq!(t, Some(extra.clone()));
+        let (_, t) = TorrentSource::Url(own).to_add(&extra);
+        assert_eq!(t, None);
+        let (_, t) = TorrentSource::File(vec![]).to_add(&[]);
+        assert_eq!(t, None);
+    }
 
     #[test]
     fn source_roundtrip_base64() {

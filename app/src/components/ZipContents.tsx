@@ -9,6 +9,7 @@ import { buildTree, type TreeNode } from "../lib/tree";
 import type { ZipFile } from "../lib/types";
 import { attempt } from "../lib/ui";
 import { ProgressBar } from "./Visuals";
+import { showInFolderLabel } from "../lib/platform";
 
 /** A file downloaded on its own: on its way, saved, or not saved (with the reason's code). */
 type Save = { state: "saving"; done: number } | { state: "saved"; path: string } | { state: "failed"; problem: string };
@@ -252,7 +253,7 @@ export function ZipContents({ captureId, dir }: { captureId: string; dir: string
     if (s?.state === "saved") {
       meta = (
         <button type="button" className="zrow__link" onClick={() => void attempt(api.revealPath(s.path), t("Could not open the folder"))}>
-          {t("Show in folder")}
+          {showInFolderLabel()}
         </button>
       );
       action = <Icon name="check" size={15} strokeWidth={2.4} className="text-success" />;

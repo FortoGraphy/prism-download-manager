@@ -12,6 +12,7 @@ import { Ring } from "../lib/ring";
 import { type AppState, counts, useApp, type View } from "../lib/store";
 import { openTools, selectedMediaPaths } from "../lib/tools";
 import { attempt, useUi } from "../lib/ui";
+import { openFolderLabel } from "../lib/platform";
 
 const same = (a: View, b: View) => a.kind === b.kind && ("id" in a ? a.id : "") === ("id" in b ? b.id : "");
 
@@ -85,7 +86,7 @@ export function Sidebar() {
     if (!cat) return;
     openMenuAt({ x: e.clientX, y: e.clientY }, [
       { label: t("Edit category…"), icon: "rename", onSelect: () => ui().openDialog({ kind: "category", category: cat }) },
-      { label: t("Open folder"), icon: "folder-open", disabled: !cat.saveDir, onSelect: () => cat.saveDir && void attempt(api.openPath(cat.saveDir)) },
+      { label: openFolderLabel(), icon: "folder-open", disabled: !cat.saveDir, onSelect: () => cat.saveDir && void attempt(api.openPath(cat.saveDir)) },
       { separator: true },
       { label: t("Delete category"), icon: "delete", danger: true, disabled: cat.builtin, onSelect: () => void attempt(api.deleteCategory(cat.id), t("Could not delete the category")) },
     ]);

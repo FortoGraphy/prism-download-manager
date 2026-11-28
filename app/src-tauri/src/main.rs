@@ -148,8 +148,9 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Windows switched between light and dark: with the theme following it, the Mica
-            // behind the window switches too (it was picked only when the window opened).
+            // The main window's theme changed (Windows switched between light and dark, or
+            // Prism's theme now follows it): the Mica behind it switches too (it was picked only
+            // when the window opened).
             if window.label() == "main"
                 && let WindowEvent::ThemeChanged(_) = event
                 && let Some(main) = window.app_handle().get_webview_window("main")
@@ -391,6 +392,16 @@ fn mica_dark(theme: prism_core::settings::Theme, system: Option<tauri::Theme>) -
     }
 }
 
+/// The theme a window is told to keep: Prism's own, or none to follow the system.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn window_theme(theme: prism_core::settings::Theme) -> Option<tauri::Theme> {
+    match theme {
+        prism_core::settings::Theme::Light => Some(tauri::Theme::Light),
+        prism_core::settings::Theme::Dark => Some(tauri::Theme::Dark),
+        prism_core::settings::Theme::System => None,
+    }
+}
+
 pub(crate) fn apply_window_material(window: &tauri::WebviewWindow, settings: &Settings) {
     #[cfg(target_os = "windows")]
     {
@@ -410,6 +421,10 @@ pub(crate) fn apply_window_material(window: &tauri::WebviewWindow, settings: &Se
                 );
             }
         }
+        // The window keeps Prism's theme. Left to follow Windows, it took the system's back on
+        // every settings broadcast (one comes after waking from sleep), which turned the Mica
+        // light under Prism's dark theme, or dark under the light one (#174).
+        let _ = window.set_theme(window_theme(settings.appearance.theme));
         if settings.appearance.window_material {
             let dark = mica_dark(settings.appearance.theme, window.theme().ok());
             let _ = window_vibrancy::apply_mica(window, Some(dark));

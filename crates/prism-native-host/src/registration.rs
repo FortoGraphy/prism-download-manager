@@ -723,6 +723,21 @@ mod platform {
         })
     }
 
+    /// Snap name of a Chromium-based browser, to detect confined installs we can't serve (#170).
+    /// Snap Firefox is handled apart: it reaches the host through the WebExtensions portal.
+    fn snap_name(b: Browser) -> Option<&'static str> {
+        if cfg!(target_os = "macos") {
+            return None;
+        }
+        match b {
+            Browser::Chromium => Some("chromium"),
+            Browser::Brave => Some("brave"),
+            Browser::Opera => Some("opera"),
+            Browser::Vivaldi => Some("vivaldi"),
+            _ => None,
+        }
+    }
+
     fn manifest_name() -> String {
         format!("{HOST_NAME}.json")
     }
@@ -803,6 +818,16 @@ mod platform {
             st.supported = false;
             st.note = Some(format!(
                 "Flatpak browser ({id}): native messaging is not supported inside the Flatpak sandbox"
+            ));
+        }
+        if let (Some(name), Ok(h)) = (snap_name(b), home(loc))
+            && !st.installed
+            && h.join("snap").join(name).exists()
+        {
+            st.installed = true;
+            st.supported = false;
+            st.note = Some(format!(
+                "Snap browser ({name}): native messaging is not supported inside the Snap sandbox; install the .deb or .rpm package"
             ));
         }
         if b == Browser::Firefox
@@ -988,6 +1013,42 @@ mod tests {
             let _ =
                 winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER).delete_subkey_all(&unique);
         }
+    }
+
+    /// A Chromium-based browser installed only as a snap (#170) shows as installed but not
+    /// supported, with a note, instead of "not installed"; nothing is registered for it.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn snap_chromium_browsers_are_reported_unsupported() {
+        let dir = tempfile::tempdir().unwrap();
+        let host = dir.path().join(crate::HOST_BINARY_NAME);
+        fs::write(&host, b"").unwrap();
+        let home = dir.path().join("home");
+        let loc = Locations {
+            manifest_dir: None,
+            home: Some(home.clone()),
+            registry_root: None,
+        };
+        fs::create_dir_all(home.join("snap/brave/current")).unwrap();
+        let st = &status(&[Browser::Brave], &host, &loc)[0];
+        assert!(st.installed && !st.supported, "{st:?}");
+        assert!(
+            st.note
+                .as_deref()
+                .unwrap_or("")
+                .starts_with("Snap browser (brave)")
+        );
+        let mut opts = RegisterOptions::new(&host);
+        opts.locations = loc.clone();
+        register(&opts).unwrap();
+        assert!(!home.join(".config/BraveSoftware").exists());
+        // A regular install next to the snap is served as usual.
+        fs::create_dir_all(home.join(".config/BraveSoftware/Brave-Browser")).unwrap();
+        let st = &status(&[Browser::Brave], &host, &loc)[0];
+        assert!(st.installed && st.supported && st.note.is_none(), "{st:?}");
+        // Chrome has no snap: nothing changes for it.
+        fs::create_dir_all(home.join("snap/google-chrome")).unwrap();
+        assert!(!status(&[Browser::Chrome], &host, &loc)[0].installed);
     }
 
     /// Waterfox gets the Firefox manifest (and Firefox's extension IDs) in its own dir on

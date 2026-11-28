@@ -2,7 +2,7 @@ import { useState } from "react";
 import { RateField, Switch } from "../components/Controls";
 import { IconButton } from "../components/IconButton";
 import { useItemDetails } from "../components/useItemDetails";
-import { ConnectionLanes, FileMap, FileTile, ProgressBar, SpeedChart } from "../components/Visuals";
+import { ConnectionLanes, FileMap, FileTile, PeerLanes, PieceMap, ProgressBar, SpeedChart } from "../components/Visuals";
 import { WindowFrame } from "../components/WindowFrame";
 import { Icon } from "../design/icons";
 import { api } from "../lib/api";
@@ -39,6 +39,10 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
   const segments = details?.segments ?? [];
   const active = segments.filter((s) => s.state === "active" && s.pos < s.end).length;
   const unit = item.kind === "hls" || item.kind === "dash" ? "segments" : "bytes";
+  // A torrent has no segments: its pieces come from many peers at once (#176).
+  const isTorrent = item.kind === "torrent";
+  const torrent = details?.torrent;
+  const pieces = torrent?.pieces;
   const history = details?.speedHistory.slice(-60) ?? [];
   const limit = limitDraft ?? item.speedLimit;
   const speed = progress?.speed ?? 0;
@@ -114,20 +118,27 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
               <div className="kpi__k">{t("Time left")}</div>
               <div className="kpi__v tnum">{status === "downloading" ? formatDuration(progress?.etaSecs) : "—"}</div>
             </div>
-            <div>
-              <div className="kpi__k">{t("Connections")}</div>
-              <div className="kpi__v tnum">
-                {active}
-                <small> / {item.connections}</small>
+            {isTorrent ? (
+              <div>
+                <div className="kpi__k">{t("Peers")}</div>
+                <div className="kpi__v tnum">{torrent?.peers.length ?? progress?.connections ?? 0}</div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <div className="kpi__k">{t("Connections")}</div>
+                <div className="kpi__v tnum">
+                  {active}
+                  <small> / {item.connections}</small>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <ProgressBar value={p.fraction} state={sv.bar} size="thick" label={t("Progress")} />
         <div className="map">
           <span>{t("File map")}</span>
-          <FileMap segments={segments} size={item.size ?? 0} unit={unit} />
-          <span className="tnum">{t("{count} segments", { count: segments.length })}</span>
+          {isTorrent ? <PieceMap pieces={pieces} /> : <FileMap segments={segments} size={item.size ?? 0} unit={unit} />}
+          <span className="tnum">{isTorrent ? (pieces ? t("Pieces {done} / {total}", { done: pieces.done, total: pieces.total }) : "—") : t("{count} segments", { count: segments.length })}</span>
         </div>
         {status === "failed" && item.error && (
           <div className="banner banner--danger">
@@ -139,8 +150,14 @@ export default function DetailsWindow({ id, simple }: { id: string; simple?: boo
 
       <div className={`panel${simple ? " panel--single" : ""}`}>
         <div className="panel__conn">
-          <div className="ph">{t("Connections")}</div>
-          {status === "completed" ? <p className="lanes__empty">{t("Download complete.")}</p> : <ConnectionLanes segments={segments} max={12} unit={unit} />}
+          <div className="ph">{isTorrent ? t("Peers") : t("Connections")}</div>
+          {status === "completed" ? (
+            <p className="lanes__empty">{t("Download complete.")}</p>
+          ) : isTorrent ? (
+            <PeerLanes peers={torrent?.peers ?? []} max={12} />
+          ) : (
+            <ConnectionLanes segments={segments} max={12} unit={unit} />
+          )}
         </div>
         {!simple && (
           <div className="panel__speed">

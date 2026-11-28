@@ -32,7 +32,33 @@ pub struct ItemDetails {
     pub segments: Vec<SegmentInfo>,
     pub progress: Option<Progress>,
     pub speed_history: Vec<u64>,
+    /// A running torrent's pieces and peers, shown in place of segments and connections.
+    pub torrent: Option<TorrentDetails>,
 }
+
+/// What the details show for a torrent: it has no segments, its pieces come from many peers at
+/// once (#176).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TorrentDetails {
+    /// None until the torrent's metadata is in and its data on disk checked.
+    pub pieces: Option<prism_torrent::TorrentPieces>,
+    /// The connected peers, the ones that sent the most first.
+    pub peers: Vec<PeerInfo>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeerInfo {
+    pub address: String,
+    pub client: Option<String>,
+    pub downloaded: u64,
+    /// Bytes per second, measured between two reads of the details.
+    pub speed: u64,
+}
+
+/// Runs of pieces in a torrent's file map.
+const PIECE_RUNS: usize = 160;
 
 pub(crate) struct JobOutcome {
     pub id: String,
@@ -116,6 +142,13 @@ impl Job {
                 .collect(),
             Job::Video(j) => j.segments(),
             Job::Torrent(_) => Vec::new(),
+        }
+    }
+
+    pub fn torrent_details(&self, core: &Core) -> Option<TorrentDetails> {
+        match self {
+            Job::Torrent(j) => j.details(core),
+            _ => None,
         }
     }
 
@@ -1460,6 +1493,44 @@ pub(crate) struct TorrentJob {
     hash: Mutex<Option<String>>,
     stop: CancellationToken,
     last: Mutex<Option<prism_torrent::TorrentProgress>>,
+    rates: Mutex<PeerRates>,
+}
+
+/// Bytes each peer had sent at the last measurement, and the speeds it gave.
+#[derive(Default)]
+struct PeerRates {
+    at: Option<Instant>,
+    bytes: HashMap<String, u64>,
+    speed: HashMap<String, u64>,
+}
+
+impl PeerRates {
+    /// Measures again when the last measurement is old enough to give a steady speed (the
+    /// details are read by several views), then returns each peer's speed.
+    fn update(&mut self, now: Instant, peers: &[prism_torrent::TorrentPeer]) {
+        let elapsed = self.at.map(|at| now.duration_since(at).as_secs_f64());
+        if elapsed.is_some_and(|e| e < 0.4) {
+            return;
+        }
+        self.speed = match elapsed {
+            Some(e) => peers
+                .iter()
+                .filter_map(|p| {
+                    let before = *self.bytes.get(&p.address)?;
+                    Some((
+                        p.address.clone(),
+                        (p.downloaded.saturating_sub(before) as f64 / e) as u64,
+                    ))
+                })
+                .collect(),
+            None => HashMap::new(),
+        };
+        self.bytes = peers
+            .iter()
+            .map(|p| (p.address.clone(), p.downloaded))
+            .collect();
+        self.at = Some(now);
+    }
 }
 
 impl TorrentJob {
@@ -1468,6 +1539,7 @@ impl TorrentJob {
             hash: Mutex::new(torrent_hash(item)),
             stop: CancellationToken::new(),
             last: Mutex::new(None),
+            rates: Mutex::new(PeerRates::default()),
         });
         let j = job.clone();
         let core = core.clone();
@@ -1493,6 +1565,26 @@ impl TorrentJob {
 
     fn stop(&self, _kind: StopKind) {
         self.stop.cancel();
+    }
+
+    fn details(&self, core: &Core) -> Option<TorrentDetails> {
+        let engine = core.0.torrent.get()?;
+        let hash = self.hash.lock().clone()?;
+        let peers = engine.peers(&hash);
+        let mut rates = self.rates.lock();
+        rates.update(Instant::now(), &peers);
+        Some(TorrentDetails {
+            pieces: engine.pieces(&hash, PIECE_RUNS),
+            peers: peers
+                .into_iter()
+                .map(|p| PeerInfo {
+                    speed: rates.speed.get(&p.address).copied().unwrap_or(0),
+                    address: p.address,
+                    client: p.client,
+                    downloaded: p.downloaded,
+                })
+                .collect(),
+        })
     }
 
     fn progress(&self, item: &DownloadItem) -> Progress {
@@ -1969,5 +2061,33 @@ mod tests {
         );
         s.proxy.mode = ProxyMode::None;
         assert_eq!(proxy_config(&s), ProxyConfig::None);
+    }
+
+    #[test]
+    fn peer_speeds_come_from_two_measurements() {
+        let peer = |address: &str, downloaded: u64| prism_torrent::TorrentPeer {
+            address: address.into(),
+            client: None,
+            downloaded,
+        };
+        let t0 = Instant::now();
+        let mut r = PeerRates::default();
+        r.update(t0, &[peer("a:1", 1000)]);
+        assert!(r.speed.is_empty());
+        // Too soon after the last one: the speeds stay.
+        r.update(t0 + Duration::from_millis(100), &[peer("a:1", 9000)]);
+        assert!(r.speed.is_empty());
+        r.update(
+            t0 + Duration::from_secs(2),
+            &[peer("a:1", 5000), peer("b:2", 700)],
+        );
+        assert_eq!(r.speed.get("a:1"), Some(&2000));
+        // A peer seen for the first time has no speed yet.
+        assert_eq!(r.speed.get("b:2"), None);
+        r.update(
+            t0 + Duration::from_secs(3),
+            &[peer("a:1", 5000), peer("b:2", 1700)],
+        );
+        assert_eq!((r.speed["a:1"], r.speed["b:2"]), (0, 1000));
     }
 }

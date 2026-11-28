@@ -257,3 +257,33 @@ async fn a_finished_torrent_lets_go_of_its_files() {
     assert!(!state.join(format!("{hash}.torrent")).exists());
     engine.shutdown().await;
 }
+
+/// The file map shows which pieces are downloaded (#176): with the data of pieces 1 and 3 of 4
+/// on disk, the session's check finds those two, and the map says so in order.
+#[tokio::test]
+async fn the_piece_map_shows_the_pieces_on_disk() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("out");
+    let data = contents(7, PIECE * 4);
+    let source = TorrentSource::File(torrent("map.bin", &[(&["map.bin"], data.clone())]));
+    let mut partial = vec![0u8; data.len()];
+    for piece in [1, 3] {
+        let r = piece * PIECE..(piece + 1) * PIECE;
+        partial[r.clone()].copy_from_slice(&data[r]);
+    }
+    write(&out.join("map.bin"), &partial);
+    let engine = TorrentEngine::start_offline(out.clone()).await.unwrap();
+    let (done, hash) = added(&engine, &source, &out).await;
+    assert!(!done);
+    let pieces = engine
+        .pieces(&hash, 100)
+        .expect("pieces of a checked torrent");
+    assert_eq!((pieces.total, pieces.done), (4, 2));
+    assert_eq!(pieces.map, vec![0.0, 1.0, 0.0, 1.0]);
+    let pieces = engine.pieces(&hash, 2).unwrap();
+    assert_eq!(pieces.map, vec![0.5, 0.5]);
+    // No network: nobody to download from.
+    assert!(engine.peers(&hash).is_empty());
+    assert!(engine.pieces("0123", 10).is_none());
+    engine.shutdown().await;
+}

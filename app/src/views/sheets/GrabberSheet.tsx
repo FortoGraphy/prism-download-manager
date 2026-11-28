@@ -355,18 +355,16 @@ function Results({ projectId, files }: { projectId: string; files: FoundFile[] }
           {shown.map((f) => {
             const isImg = PRESETS[0].exts.includes(fileExtension(f.fileName));
             const v = fileVisual({ fileName: f.fileName, kind: "http", category: "" });
+            // The row and its checkbox both toggle (the checkbox stops its click from reaching the row).
+            const toggle = () => {
+              const n = new Set(checked);
+              if (n.has(f.url)) n.delete(f.url);
+              else n.add(f.url);
+              setChecked(n);
+            };
             return (
-              <div
-                key={f.url}
-                className="grow2"
-                onClick={() => {
-                  const n = new Set(checked);
-                  if (n.has(f.url)) n.delete(f.url);
-                  else n.add(f.url);
-                  setChecked(n);
-                }}
-              >
-                <Checkbox checked={checked.has(f.url)} label={t("Select {name}", { name: f.fileName })} onChange={() => undefined} />
+              <div key={f.url} className="grow2" onClick={toggle}>
+                <Checkbox checked={checked.has(f.url)} label={t("Select {name}", { name: f.fileName })} onChange={toggle} />
                 {isImg ? (
                   <img className="ph" src={f.url} alt="" loading="lazy" decoding="async" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
                 ) : (

@@ -16,6 +16,7 @@ import { useUi } from "../lib/ui";
 import { EmptyState } from "./EmptyState";
 import { itemMenu } from "./itemMenu";
 import { useVisibleIds } from "./useListing";
+import { showInFolderLabel } from "../lib/platform";
 
 const ROW = { comfortable: 44, compact: 30 } as const;
 
@@ -339,7 +340,7 @@ const Row = memo(function Row({ id, index, top, cols, selected, fresh, compact, 
         ) : (
           <IconButton icon="resume" label={t("Resume")} size={16} onClick={() => actions.resume([id])} />
         )}
-        <IconButton icon="folder-open" label={t("Show in folder")} size={16} onClick={() => actions.reveal(id)} />
+        <IconButton icon="folder-open" label={showInFolderLabel()} size={16} onClick={() => actions.reveal(id)} />
         <IconButton icon="link" label={t("Copy link")} size={16} onClick={() => void actions.copyLinks([id])} />
       </div>
     </div>

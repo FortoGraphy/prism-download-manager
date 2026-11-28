@@ -22,6 +22,7 @@ import { TitleRow } from "./TitleRow";
 import { UpdateBanner } from "./UpdateBanner";
 import { Toolbar } from "./Toolbar";
 import { listIds } from "./useListing";
+import { IS_MAC } from "../lib/platform";
 
 const isTyping = (target: EventTarget | null) => {
   const el = target as HTMLElement | null;
@@ -142,6 +143,10 @@ function useGlobalShortcuts() {
       else if (isTyping(e.target)) handled = false;
       else if (ctrl && k === "a") useApp.getState().select(listIds(useApp.getState(), ui.filter));
       else if (e.key === "Delete" && sel.length) actions.requestDelete(sel, e.shiftKey);
+      // A Mac keyboard has no Delete or F2 key: ⌘⌫ deletes (like Move to Trash in Finder) and ⌘I
+      // opens the properties (like Get Info).
+      else if (IS_MAC && e.metaKey && e.key === "Backspace" && sel.length) actions.requestDelete(sel, e.shiftKey);
+      else if (IS_MAC && e.metaKey && k === "i" && sel.length) ui.openDialog({ kind: "properties", id: sel[sel.length - 1] });
       else handled = false;
       if (handled) e.preventDefault();
     };

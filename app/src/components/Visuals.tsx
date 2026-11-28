@@ -7,7 +7,7 @@ import { formatBytes, formatClock, formatSpeed } from "../lib/format";
 import { t } from "../lib/i18n";
 import { fileVisual, type ProgressState } from "../lib/present";
 import { smoothPath } from "../lib/ring";
-import type { DownloadItem, SegmentInfo } from "../lib/types";
+import type { DownloadItem, PeerInfo, SegmentInfo, TorrentPieces } from "../lib/types";
 
 export function ProgressBar({ value, state, size, label }: { value: number | null; state: ProgressState; size?: "thin" | "thick" | "xl"; label?: string }) {
   const indeterminate = value == null && state === "active";
@@ -133,6 +133,55 @@ export function FileMap({ segments, size, unit = "bytes" }: { segments: SegmentI
           />
         );
       })}
+    </div>
+  );
+}
+
+/** A torrent's file map (#176): which pieces are downloaded. Each run of pieces is as opaque
+ *  as the share of it already in, in quarters. */
+export function PieceMap({ pieces }: { pieces?: TorrentPieces | null }) {
+  const n = pieces?.map.length ?? 0;
+  if (!pieces || !n) return <div className="segbar" />;
+  const level = (f: number) => (f >= 1 ? 1 : f <= 0 ? 0 : Math.max(0.25, Math.round(f * 4) / 4));
+  // Neighbouring runs at the same level draw as one.
+  const runs: { a: number; b: number; f: number }[] = [];
+  pieces.map.forEach((f, i) => {
+    const last = runs[runs.length - 1];
+    if (last && last.f === level(f)) last.b = i + 1;
+    else runs.push({ a: i, b: i + 1, f: level(f) });
+  });
+  return (
+    <div className="segbar" role="img" aria-label={t("Pieces {done} / {total}", { done: pieces.done, total: pieces.total })}>
+      {runs
+        .filter((r) => r.f > 0)
+        .map((r) => (
+          <span key={r.a} className="piecebar__run" style={{ ["--a" as string]: r.a / n, ["--b" as string]: r.b / n, ["--o" as string]: 0.3 + 0.7 * r.f }} />
+        ))}
+    </div>
+  );
+}
+
+/** One lane per peer a torrent downloads from (#176): the fastest fills its lane, the others
+ *  their share of its speed. In the order the core sends them (most data sent first), so the
+ *  lanes don't jump around with every speed change. */
+export function PeerLanes({ peers, max }: { peers: PeerInfo[]; max?: number }) {
+  if (!peers.length) return <p className="lanes__empty">{t("No peers connected yet.")}</p>;
+  const shown = max ? peers.slice(0, max) : peers;
+  const top = Math.max(1, ...peers.map((p) => p.speed));
+  return (
+    <div className="lanes">
+      {shown.map((p, i) => (
+        <div key={p.address} className="lane lane--peer" style={{ ["--c" as string]: spectrum(i) }}>
+          <span className="lane__id">{String(i + 1).padStart(2, "0")}</span>
+          <span className="lane__track">
+            <span className="lane__fill" style={{ transform: `scaleX(${Math.min(1, p.speed / top)})` }} />
+          </span>
+          <span className="lane__range" title={p.client ? `${p.client} · ${p.address}` : p.address}>
+            {p.client || p.address}
+          </span>
+          <span className="lane__speed">{formatSpeed(p.speed)}</span>
+        </div>
+      ))}
     </div>
   );
 }
