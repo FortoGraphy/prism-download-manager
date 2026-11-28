@@ -81,9 +81,10 @@ Flags: `--host <addr>` (default `127.0.0.1`), `--port <u16>` (default `8080`),
 `PRISM_WEB_DOWNLOAD_DIR` override the default directories. `PRISM_WEB_TOKEN` sets a
 fixed bearer token shared by the web UI and the browser extension: it is trimmed,
 must be non-empty, and is never printed (`Access token: from PRISM_WEB_TOKEN`).
-With it set, no `web-ui.json` or `ipc.json` is written, so the desktop app's native
+With it set, no `web-ui.json` or `web-ipc.json` is written, so the desktop app's native
 host keeps working unchanged. Without it, prism-web generates a token (or accepts
-`--no-auth-token` on loopback only) and publishes `ipc.json` as before.
+`--no-auth-token` on loopback only) and publishes `web-ipc.json` in its data dir, never
+the desktop app's `ipc.json`.
 
 Docker (the build context needs the prebuilt binary at the target path above):
 

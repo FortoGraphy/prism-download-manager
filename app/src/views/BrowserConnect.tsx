@@ -163,6 +163,9 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
 
   return (
     <div className="bconnect">
+      {webMode && (
+        <p className="lead">{t("In prism-web, set the server URL and bearer token in the extension Options page; native messaging is not used.")}</p>
+      )}
       <div className="bconnect__pick" role="radiogroup" aria-label={t("Your browser")}>
         {browsers.map((id) => (
           <button key={id} type="button" role="radio" aria-checked={id === current} className={`bchip${id === current ? " on" : ""}`} onClick={() => setBrowser(id)}>
@@ -276,8 +279,9 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
         )}
       </AnimatePresence>
 
-      <div className="bconnect__manual">
-        <button type="button" className="disclose" aria-expanded={byHand} onClick={() => setByHand(!byHand)}>
+      {!webMode && (
+        <div className="bconnect__manual">
+          <button type="button" className="disclose" aria-expanded={byHand} onClick={() => setByHand(!byHand)}>
           <Icon name={byHand ? "chevron-down" : "chevron-right"} size={12} strokeWidth={2.2} /> {t("Prefer to add it by hand?")}
         </button>
         {byHand && firefox && (
@@ -401,7 +405,8 @@ export function BrowserConnect({ status, connected, hideOwnStatus }: { status: I
             </ol>
           </>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

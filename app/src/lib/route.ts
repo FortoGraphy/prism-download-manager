@@ -48,6 +48,12 @@ export function parseRoute(hash: string): Route {
   }
 }
 
+/** Identity of a routed view, so a new request remounts it even on the same hash name. */
+export function routeKey(route: Route): string {
+  const arg = "id" in route ? route.id : "source" in route ? route.source : "request" in route ? JSON.stringify(route.request) : "";
+  return `${route.name}:${arg}`;
+}
+
 /** `#/tools/<tab>[/<hex of the request's JSON>]` (see `open_tools` in windows.rs). */
 function toolsRequest(tab = "", hex = ""): ToolsRequest {
   const fallback: ToolsRequest = { tab: tab === "shrink" ? "shrink" : "convert" };

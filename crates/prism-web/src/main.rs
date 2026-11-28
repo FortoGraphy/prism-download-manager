@@ -65,6 +65,8 @@ async fn main() {
             std::process::exit(1);
         }
     };
+    // A desktop queue can persist a shell or power finish action; never execute it here.
+    core.restrict_post_actions();
 
     // Only set the folder on a fresh install; never overwrite a user's saved choice.
     if let Some(dir) = args.download_dir()
@@ -118,11 +120,26 @@ async fn main() {
     let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
     let server = axum::serve(listener, web::router(core.clone(), auth, ipc_auth, shutdown_rx))
         .with_graceful_shutdown(async move {
-            let _ = tokio::signal::ctrl_c().await;
+            wait_for_shutdown().await;
             let _ = shutdown_tx.send(true);
         });
     if let Err(e) = server.await {
         tracing::error!("web server stopped: {e}");
     }
     core.shutdown().await;
+}
+
+#[cfg(unix)]
+async fn wait_for_shutdown() {
+    let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        .expect("cannot listen for SIGTERM");
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {}
+        _ = sigterm.recv() => {}
+    }
+}
+
+#[cfg(not(unix))]
+async fn wait_for_shutdown() {
+    let _ = tokio::signal::ctrl_c().await;
 }

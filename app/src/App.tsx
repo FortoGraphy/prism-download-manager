@@ -5,7 +5,7 @@ import { ToastHost } from "./components/ToastHost";
 import { TooltipHost } from "./components/TooltipHost";
 import { setLanguage, t } from "./lib/i18n";
 import { applyPreviewParams } from "./lib/previewParams";
-import { type Route, parseRoute } from "./lib/route";
+import { type Route, parseRoute, routeKey } from "./lib/route";
 import { actions } from "./lib/actions";
 import { api, onCoreEvent, webMode } from "./lib/api";
 import { useApp } from "./lib/store";
@@ -84,7 +84,7 @@ export function App() {
     <MotionConfig reducedMotion={reduced === "reduced" ? "always" : reduced === "full" ? "never" : "user"}>
       {ready && (
         <Suspense fallback={null}>
-          <View key={`${lang}:${route.name}:${"id" in route ? route.id : "source" in route ? route.source : ""}`} route={route} />
+          <View key={`${lang}:${routeKey(route)}`} route={route} />
         </Suspense>
       )}
       <TooltipHost />

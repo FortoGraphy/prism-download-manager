@@ -96,7 +96,7 @@ as `prism-web-linux-x64.tar.gz`.
 Authentication depends on `PRISM_WEB_TOKEN`. Set it to a long random secret and the UI and the
 extension share that one bearer token; no token files are written. Without it, prism-web generates
 a UI token, printed as `Access token:` and saved in `web-ui.json` in its data dir, and a separate
-extension token in `ipc.json` (the path is printed as `IPC info:`). Keep the tokens private —
+extension token in `web-ipc.json` (the path is printed as `IPC info:`). Keep the tokens private —
 anyone with one can control your downloads. Commands and setup are in
 [BUILD.md — prism-web](../../BUILD.md#prism-web-standalone-linux-binary).
 

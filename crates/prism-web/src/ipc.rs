@@ -99,7 +99,7 @@ pub fn router(core: Core, auth: IpcAuth) -> Router {
 }
 
 async fn health() -> Json<Value> {
-    Json(json!({"ok": true, "app": "prism", "version": env!("CARGO_PKG_VERSION")}))
+    Json(json!({"ok": true, "app": "prism"}))
 }
 
 async fn message(
@@ -173,5 +173,13 @@ mod tests {
         std::fs::write(&file, b"{\"token\":\"somebody-else\"}").unwrap();
         drop(auth);
         assert!(file.exists());
+    }
+
+    #[tokio::test]
+    async fn health_does_not_disclose_the_version() {
+        let body = health().await;
+        assert_eq!(body.0["ok"], true);
+        assert_eq!(body.0["app"], "prism");
+        assert!(body.0.get("version").is_none());
     }
 }

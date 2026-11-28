@@ -1138,5 +1138,15 @@
   "What's inside a ZIP": "查看 ZIP 内容",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "“下载文件”窗口会在下载前显示 ZIP 中的文件，并且可以只下载其中一个。",
   "Finished means finished": "完成就是完成",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "修复了窗口打开时已完成的下载有时仍显示为正在下载的问题。"
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "修复了窗口打开时已完成的下载有时仍显示为正在下载的问题。",
+  "Other finish actions need the desktop app.": "其他完成操作需要桌面应用。",
+  "Updates are available in the desktop app.": "更新可在桌面应用中使用。",
+  "Desktop-only settings": "仅限桌面的设置",
+  "Settings from the desktop app": "来自桌面应用的设置",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.": "这些仅限桌面的值在此处隐藏，但在移除之前 prism-web 无法保存任何设置。扫描器将重置为“自动”，自定义命令、参数和工具路径将被清除。",
+  "Remove desktop-only values": "移除仅限桌面的值",
+  "yt-dlp updated": "yt-dlp 已更新",
+  "yt-dlp is managed outside Prism": "yt-dlp 在 Prism 之外管理",
+  "In prism-web, set the server URL and bearer token in the extension Options page; native messaging is not used.": "在 prism-web 中，请在扩展的选项页面设置服务器 URL 和持有者令牌；不使用原生消息传递。",
+  "Could not copy the links": "无法复制链接"
 }

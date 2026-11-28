@@ -85,12 +85,12 @@ impl Args {
             .or_else(|| std::env::var_os("PRISM_WEB_DOWNLOAD_DIR").map(PathBuf::from))
     }
 
-    /// Where the native host looks for `ipc.json`. Kept separate from the web data dir.
+    /// Discovery file for the browser extension. Never the desktop app's `ipc.json`.
     pub fn ipc_file(&self) -> PathBuf {
         self.ipc_file
             .clone()
             .or_else(|| std::env::var_os("PRISM_WEB_IPC_FILE").map(PathBuf::from))
-            .unwrap_or_else(prism_core::paths::ipc_file)
+            .unwrap_or_else(|| self.data_dir().join("web-ipc.json"))
     }
 
     /// Port written to `ipc.json`: the published port when behind Docker NAT.
@@ -117,7 +117,7 @@ impl Args {
            --no-auth-token        Serve without a UI bearer token (trusted networks only)\n\
            --data-dir <path>      Data directory (or PRISM_WEB_DATA_DIR)\n\
            --download-dir <path>  Default save folder on a fresh install\n\
-           --ipc-file <path>      Native-host discovery file (or PRISM_WEB_IPC_FILE)\n\
+           --ipc-file <path>      Extension discovery file (default: web-ipc.json)\n\
            --warmup               Download yt-dlp/ffmpeg/deno, then exit\n\
            -h, --help             Show this help"
     }
@@ -144,6 +144,15 @@ mod tests {
         assert_eq!(a.port, 8080);
         assert!(!a.no_auth_token);
         assert!(!a.warmup);
+    }
+
+    #[test]
+    fn default_ipc_file_is_web_specific() {
+        let a = Args {
+            data_dir: Some(PathBuf::from("/prism-web-data")),
+            ..Args::default()
+        };
+        assert_eq!(a.ipc_file(), PathBuf::from("/prism-web-data/web-ipc.json"));
     }
 
     #[test]

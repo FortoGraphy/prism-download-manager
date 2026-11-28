@@ -320,10 +320,13 @@ function Results({ projectId, files }: { projectId: string; files: FoundFile[] }
 
   const download = async () => {
     const n = await attempt(api.downloadGrabbed(projectId, sel.map((f) => f.url), dir || null, keep), t("Could not add the files"));
-    if (n !== undefined) {
-      toast(t("{count} downloads added", { count: n || sel.length }), { kind: "success" });
+    if (n === undefined) return;
+    if (n > 0) {
+      toast(t("{count} downloads added", { count: n }), { kind: "success" });
       useUi.getState().closeSheet();
       useApp.getState().setView({ kind: "grabber", id: projectId });
+    } else {
+      toast(t("Nothing to download"));
     }
   };
 

@@ -212,33 +212,35 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
               />
             </Row>
           </Group>
-          <Group title={t("Startup")}>
-            <Toggle
-              title={t("Launch at startup")}
-              hint={t("Start with Windows, minimized to the tray")}
-              value={s.general.launchAtStartup}
-              onChange={async (v) => {
-                await attempt(api.setAutostart(v), t("Could not change autostart"));
-                save({ general: { launchAtStartup: v } });
-              }}
-            />
-            <Toggle title={t("Start minimized")} value={s.general.startMinimized} onChange={(v) => save({ general: { startMinimized: v } })} />
-            <Toggle
-              title={t("Close button hides to the tray")}
-              hint={noTray ? t("Downloads keep running; quit with the power button in the toolbar") : t("Downloads keep running; quit from the tray menu")}
-              value={s.general.closeToTray}
-              onChange={(v) => save({ general: { closeToTray: v } })}
-            />
-            <Toggle
-              title={mac ? t("Hide the menu bar icon") : t("Hide the tray icon")}
-              hint={mac ? t("No menu bar icon; start Prism again to open its window.") : t("No tray icon; start Prism again to open its window.")}
-              value={s.general.hideTrayIcon}
-              onChange={(v) => save({ general: { hideTrayIcon: v } })}
-            />
-            {mac && (
-              <Toggle title={t("Hide the Dock icon")} hint={t("While Prism waits in the menu bar. The icon is back while its window is open")} value={s.general.hideDockIcon} onChange={(v) => save({ general: { hideDockIcon: v } })} />
-            )}
-          </Group>
+          {!webMode && (
+            <Group title={t("Startup")}>
+              <Toggle
+                title={t("Launch at startup")}
+                hint={t("Start with Windows, minimized to the tray")}
+                value={s.general.launchAtStartup}
+                onChange={async (v) => {
+                  await attempt(api.setAutostart(v), t("Could not change autostart"));
+                  save({ general: { launchAtStartup: v } });
+                }}
+              />
+              <Toggle title={t("Start minimized")} value={s.general.startMinimized} onChange={(v) => save({ general: { startMinimized: v } })} />
+              <Toggle
+                title={t("Close button hides to the tray")}
+                hint={noTray ? t("Downloads keep running; quit with the power button in the toolbar") : t("Downloads keep running; quit from the tray menu")}
+                value={s.general.closeToTray}
+                onChange={(v) => save({ general: { closeToTray: v } })}
+              />
+              <Toggle
+                title={mac ? t("Hide the menu bar icon") : t("Hide the tray icon")}
+                hint={mac ? t("No menu bar icon; start Prism again to open its window.") : t("No tray icon; start Prism again to open its window.")}
+                value={s.general.hideTrayIcon}
+                onChange={(v) => save({ general: { hideTrayIcon: v } })}
+              />
+              {mac && (
+                <Toggle title={t("Hide the Dock icon")} hint={t("While Prism waits in the menu bar. The icon is back while its window is open")} value={s.general.hideDockIcon} onChange={(v) => save({ general: { hideDockIcon: v } })} />
+              )}
+            </Group>
+          )}
           <Group title={t("Windows")}>
             <Toggle title={t("Show the Download File dialog")} hint={t("Off = new downloads start immediately with default settings")} value={s.general.showCaptureDialog} onChange={(v) => save({ general: { showCaptureDialog: v } })} />
             <Toggle title={t("Open a progress window for new downloads")} value={s.general.showProgressWindow} onChange={(v) => save({ general: { showProgressWindow: v } })} />
@@ -257,12 +259,14 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
                 if (v) void api.removeDeletedFiles().catch(() => {});
               }}
             />
-            <Toggle title={t("Check for updates automatically")} hint={t("Prism asks before installing; it restarts by itself and your downloads continue")} value={s.general.checkUpdates} onChange={(v) => save({ general: { checkUpdates: v } })} />
+            {!webMode && <Toggle title={t("Check for updates automatically")} hint={t("Prism asks before installing; it restarts by itself and your downloads continue")} value={s.general.checkUpdates} onChange={(v) => save({ general: { checkUpdates: v } })} />}
           </Group>
-          <Group title={t("Clipboard")}>
-            <Toggle title={t("Watch the clipboard for links")} value={s.clipboard.monitor} onChange={(v) => save({ clipboard: { monitor: v } })} />
-            <Toggle title={t("Ask before adding copied links")} hint={t("Off = copied links go straight into the list, to start whenever you want")} value={s.clipboard.ask} onChange={(v) => save({ clipboard: { ask: v } })} />
-          </Group>
+          {!webMode && (
+            <Group title={t("Clipboard")}>
+              <Toggle title={t("Watch the clipboard for links")} value={s.clipboard.monitor} onChange={(v) => save({ clipboard: { monitor: v } })} />
+              <Toggle title={t("Ask before adding copied links")} hint={t("Off = copied links go straight into the list, to start whenever you want")} value={s.clipboard.ask} onChange={(v) => save({ clipboard: { ask: v } })} />
+            </Group>
+          )}
         </>
       );
     }
@@ -431,9 +435,11 @@ function SectionBody({ id, s }: { id: string; s: Settings }) {
     case "sounds":
       return (
         <>
-          <Group title={t("Notifications")}>
-            <Toggle title={t("System notifications")} hint={t("When downloads finish or fail while Prism is in the background")} value={s.general.notifications} onChange={(v) => save({ general: { notifications: v } })} />
-          </Group>
+          {!webMode && (
+            <Group title={t("Notifications")}>
+              <Toggle title={t("System notifications")} hint={t("When downloads finish or fail while Prism is in the background")} value={s.general.notifications} onChange={(v) => save({ general: { notifications: v } })} />
+            </Group>
+          )}
           <Group title={t("Sounds")}>
             <Toggle title={t("Play sounds")} value={s.sounds.enabled} onChange={(v) => save({ sounds: { enabled: v } })} />
             <Toggle title={t("Download complete")} value={s.sounds.onComplete} onChange={(v) => save({ sounds: { onComplete: v } })} />
@@ -570,7 +576,7 @@ function Appearance({ s }: { s: Settings }) {
       <div className="twocol">
         <Group title={t("Materials & motion")}>
           <Toggle title={t("Liquid glass")} hint={t("Frosted, translucent sidebar & toolbars")} value={!s.appearance.reduceTransparency} onChange={(v) => save({ appearance: { reduceTransparency: !v } })} />
-          <Toggle title={t("Window material")} hint={t("Mica / vibrancy behind the window (restart window)")} value={s.appearance.windowMaterial} onChange={(v) => save({ appearance: { windowMaterial: v } })} />
+          {!webMode && <Toggle title={t("Window material")} hint={t("Mica / vibrancy behind the window (restart window)")} value={s.appearance.windowMaterial} onChange={(v) => save({ appearance: { windowMaterial: v } })} />}
           <Row title={t("Motion")}>
             <Segmented
               size="sm"
@@ -703,7 +709,7 @@ function BrowserIntegration() {
   const live = useExtensionStatus();
   return (
     <>
-      <p className="lead">{t("The Prism extension hands downloads and videos to this app through a native messaging host.")}</p>
+      {!webMode && <p className="lead">{t("The Prism extension hands downloads and videos to this app through a native messaging host.")}</p>}
       <div className={`banner ${status?.extensionConnected && !status.extensionOutdated ? "banner--ok" : "banner--warn"}`}>
         <Icon name={status?.extensionConnected && !status.extensionOutdated ? "status-completed" : "warning"} size={18} />
         <div>
@@ -725,7 +731,7 @@ function BrowserIntegration() {
           </div>
         </div>
         <span className="spacer" />
-        {needsRepair(status) && (
+        {!webMode && needsRepair(status) && (
           <button type="button" className="btn btn--primary" disabled={busy} onClick={repair}>
             <Icon name="refresh-url" size={15} /> {busy ? t("Repairing…") : t("Repair")}
           </button>
@@ -735,10 +741,12 @@ function BrowserIntegration() {
         <div className="group__t">{t("Install the extension")}</div>
         <BrowserConnect status={live.status ?? status} connected={live.connected} hideOwnStatus />
       </div>
-      <div className="group">
-        <div className="group__t">{t("Browsers")}</div>
-        <IntegrationList status={status} />
-      </div>
+      {!webMode && (
+        <div className="group">
+          <div className="group__t">{t("Browsers")}</div>
+          <IntegrationList status={status} />
+        </div>
+      )}
     </>
   );
 }
@@ -827,7 +835,15 @@ function Video({ s }: { s: Settings }) {
     const r = kind === "ensure" ? await attempt(api.ensureTools(), t("Could not install the tools")) : await attempt(api.updateYtdlp(), t("Could not update yt-dlp"));
     setBusy("");
     if (r) {
-      toast(kind === "ensure" ? t("Video tools ready") : t("yt-dlp is up to date"), { kind: "success" });
+      const status = (r as { status?: string }).status;
+      const message = kind === "ensure"
+        ? t("Video tools ready")
+        : status === "updated"
+          ? t("yt-dlp updated")
+          : status === "notManaged"
+            ? t("yt-dlp is managed outside Prism")
+            : t("yt-dlp is up to date");
+      toast(message, { kind: "success" });
       void api.toolStatus().then(setTools);
     }
   };

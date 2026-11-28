@@ -6,8 +6,7 @@
 //   "{count} files": { "one": "{count} soubor", "few": "{count} soubory", "other": "{count} souborů" }
 //
 // Plural entries are picked with Intl.PluralRules by the `count` variable; `en.json` holds the
-// English plural forms. `i18n.test.ts` checks that every catalog covers every key the code uses,
-// except the small set of English-only prism-web notes listed in `ENGLISH_ONLY` in that test.
+// English plural forms. `i18n.test.ts` checks that every catalog covers every key the code uses.
 
 import { createElement, Fragment, type ReactNode } from "react";
 import ar from "../locales/ar.json";

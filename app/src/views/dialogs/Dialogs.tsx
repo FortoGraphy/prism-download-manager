@@ -386,8 +386,10 @@ function SpeedLimitDialog({ ids, onClose }: { ids: string[] | null; onClose: () 
   useEffect(() => setBps(current), [current, ids]);
   const save = async () => {
     if (!ids) return;
-    await Promise.all(ids.map((id) => attempt(api.updateItem(id, { speedLimit: bps }), t("Could not set the limit"))));
-    toast(bps ? t("Limited to {speed}", { speed: `${formatBytes(bps)}/s` }) : t("Speed limit removed"), { ms: 2000 });
+    const results = await Promise.all(ids.map((id) => attempt(api.updateItem(id, { speedLimit: bps }), t("Could not set the limit"))));
+    if (results.every((r) => r !== undefined)) {
+      toast(bps ? t("Limited to {speed}", { speed: `${formatBytes(bps)}/s` }) : t("Speed limit removed"), { ms: 2000 });
+    }
     onClose();
   };
   return (

@@ -1184,5 +1184,15 @@
   "What's inside a ZIP": "Qué hay dentro de un ZIP",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "La ventana «Descargar archivo» muestra los archivos de un ZIP antes de descargarlo y puede descargar solo uno de ellos.",
   "Finished means finished": "Terminado es terminado",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Una descarga que terminaba con la ventana abierta a veces seguía pareciendo en curso."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Una descarga que terminaba con la ventana abierta a veces seguía pareciendo en curso.",
+  "Other finish actions need the desktop app.": "Las demás acciones al finalizar requieren la aplicación de escritorio.",
+  "Updates are available in the desktop app.": "Las actualizaciones están disponibles en la aplicación de escritorio.",
+  "Desktop-only settings": "Ajustes solo para escritorio",
+  "Settings from the desktop app": "Ajustes de la aplicación de escritorio",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.": "Estos valores solo para escritorio están ocultos aquí, pero prism-web no puede guardar ningún ajuste hasta que se eliminen. El escáner se restablece a Automático y se borran el comando personalizado, los argumentos y las rutas de las herramientas.",
+  "Remove desktop-only values": "Eliminar valores solo para escritorio",
+  "yt-dlp updated": "yt-dlp actualizado",
+  "yt-dlp is managed outside Prism": "yt-dlp se administra fuera de Prism",
+  "In prism-web, set the server URL and bearer token in the extension Options page; native messaging is not used.": "En prism-web, configura la URL del servidor y el token Bearer en la página de opciones de la extensión; no se usa la mensajería nativa.",
+  "Could not copy the links": "No se pudieron copiar los enlaces"
 }

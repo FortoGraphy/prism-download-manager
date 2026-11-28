@@ -1184,5 +1184,15 @@
   "What's inside a ZIP": "Cosa c’è in uno ZIP",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "La finestra «Scarica file» mostra i file di uno ZIP prima di scaricarlo e può scaricarne anche uno solo.",
   "Finished means finished": "Finito vuol dire finito",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Un download finito con la finestra aperta a volte sembrava ancora in corso."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Un download finito con la finestra aperta a volte sembrava ancora in corso.",
+  "Other finish actions need the desktop app.": "Le altre azioni al termine richiedono l’app desktop.",
+  "Updates are available in the desktop app.": "Gli aggiornamenti sono disponibili nell’app desktop.",
+  "Desktop-only settings": "Impostazioni solo desktop",
+  "Settings from the desktop app": "Impostazioni dall’app desktop",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.": "Questi valori solo desktop sono nascosti qui, ma prism-web non può salvare alcuna impostazione finché non vengono rimossi. Lo scanner viene reimpostato su Automatico e il comando personalizzato, gli argomenti e i percorsi degli strumenti vengono cancellati.",
+  "Remove desktop-only values": "Rimuovi i valori solo desktop",
+  "yt-dlp updated": "yt-dlp aggiornato",
+  "yt-dlp is managed outside Prism": "yt-dlp è gestito al di fuori di Prism",
+  "In prism-web, set the server URL and bearer token in the extension Options page; native messaging is not used.": "In prism-web, imposta l’URL del server e il token bearer nella pagina Opzioni dell’estensione; la messaggistica nativa non viene usata.",
+  "Could not copy the links": "Impossibile copiare i link"
 }

@@ -64,6 +64,7 @@ export const actions = {
   copyLinks: async (ids: string[]) => {
     const urls = items(ids).map((i) => i.url);
     if (await copyText(urls.join("\n"))) toast(urls.length > 1 ? t("{count} links copied", { count: urls.length }) : t("Link copied"), { kind: "success", ms: 2200 });
+    else toast(t("Could not copy the links"), { kind: "error" });
   },
   moveToQueue: (ids: string[], queueId: string | null) => void attempt(api.assignToQueue(ids, queueId), t("Could not move to queue")),
   moveInQueue: (ids: string[], delta: number) => void attempt(api.moveInQueue(ids, delta), t("Could not reorder")),

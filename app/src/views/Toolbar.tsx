@@ -58,7 +58,7 @@ export function Toolbar() {
       <span className="spacer" data-tauri-drag-region />
       <SearchBox />
       {/* Without a tray icon its Quit is gone, so the window has one (#60). */}
-      {noTray && <IconButton icon="power" label={t("Quit Prism")} onClick={() => void api.quit()} />}
+      {!webMode && noTray && <IconButton icon="power" label={t("Quit Prism")} onClick={() => void api.quit()} />}
       <IconButton icon="options" label={t("Settings")} kbd="Ctrl ," onClick={() => ui().openSheet({ kind: "settings" })} />
       {!webMode && <Caption />}
     </header>

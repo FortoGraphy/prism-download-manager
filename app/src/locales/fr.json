@@ -1184,5 +1184,15 @@
   "What's inside a ZIP": "Ce que contient un ZIP",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "La fenêtre « Télécharger un fichier » montre les fichiers d’un ZIP avant le téléchargement et peut n’en télécharger qu’un seul.",
   "Finished means finished": "Terminé, c’est terminé",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Un téléchargement terminé pendant que la fenêtre était ouverte avait parfois encore l’air en cours."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Un téléchargement terminé pendant que la fenêtre était ouverte avait parfois encore l’air en cours.",
+  "Other finish actions need the desktop app.": "Les autres actions de fin nécessitent l’application de bureau.",
+  "Updates are available in the desktop app.": "Les mises à jour sont disponibles dans l’application de bureau.",
+  "Desktop-only settings": "Paramètres réservés au bureau",
+  "Settings from the desktop app": "Paramètres de l’application de bureau",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.": "Ces valeurs propres au bureau sont masquées ici, mais prism-web ne peut enregistrer aucun paramètre tant qu’elles ne sont pas supprimées. L’analyseur est réinitialisé sur Automatique et la commande personnalisée, ses arguments et les chemins des outils sont effacés.",
+  "Remove desktop-only values": "Supprimer les valeurs réservées au bureau",
+  "yt-dlp updated": "yt-dlp mis à jour",
+  "yt-dlp is managed outside Prism": "yt-dlp est géré hors de Prism",
+  "In prism-web, set the server URL and bearer token in the extension Options page; native messaging is not used.": "Dans prism-web, définissez l’URL du serveur et le jeton Bearer dans la page Options de l’extension ; la messagerie native n’est pas utilisée.",
+  "Could not copy the links": "Impossible de copier les liens"
 }

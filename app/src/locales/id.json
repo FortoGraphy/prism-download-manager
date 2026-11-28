@@ -1138,5 +1138,15 @@
   "What's inside a ZIP": "Isi sebuah ZIP",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "Jendela “Unduh file” menampilkan file di dalam ZIP sebelum diunduh dan bisa mengunduh satu file saja.",
   "Finished means finished": "Selesai berarti selesai",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Unduhan yang selesai saat jendela terbuka kadang masih terlihat seperti sedang diunduh."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Unduhan yang selesai saat jendela terbuka kadang masih terlihat seperti sedang diunduh.",
+  "Other finish actions need the desktop app.": "Tindakan selesai lainnya memerlukan aplikasi desktop.",
+  "Updates are available in the desktop app.": "Pembaruan tersedia di aplikasi desktop.",
+  "Desktop-only settings": "Pengaturan khusus desktop",
+  "Settings from the desktop app": "Pengaturan dari aplikasi desktop",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.": "Nilai khusus desktop ini disembunyikan di sini, tetapi prism-web tidak dapat menyimpan pengaturan apa pun sampai nilai tersebut dihapus. Pemindai direset ke Otomatis dan perintah kustom, argumen, serta jalur alat dihapus.",
+  "Remove desktop-only values": "Hapus nilai khusus desktop",
+  "yt-dlp updated": "yt-dlp diperbarui",
+  "yt-dlp is managed outside Prism": "yt-dlp dikelola di luar Prism",
+  "In prism-web, set the server URL and bearer token in the extension Options page; native messaging is not used.": "Di prism-web, atur URL server dan token bearer di halaman Opsi ekstensi; pesan native tidak digunakan.",
+  "Could not copy the links": "Tautan tidak dapat disalin"
 }

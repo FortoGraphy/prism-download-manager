@@ -92,6 +92,23 @@ impl Core {
         self.emit(CoreEvent::QueuesChanged(queues));
     }
 
+    /// Drop finish actions that cannot run in a restricted (prism-web) build.
+    pub fn restrict_post_actions(&self) {
+        let mut changed = false;
+        {
+            let mut st = self.0.state.lock();
+            for q in &mut st.queues {
+                if !matches!(q.schedule.on_complete, PostAction::None | PostAction::Sound) {
+                    q.schedule.on_complete = PostAction::None;
+                    changed = true;
+                }
+            }
+        }
+        if changed {
+            self.save_queues();
+        }
+    }
+
     pub fn upsert_queue(&self, mut q: Queue) -> Result<Vec<Queue>> {
         {
             let mut st = self.0.state.lock();

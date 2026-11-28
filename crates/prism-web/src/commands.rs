@@ -524,6 +524,49 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn web_normalizes_persisted_unsafe_finish_actions() {
+        let dir = tempfile::tempdir().unwrap();
+        let options = || prism_core::manager::CoreOptions {
+            data_dir: dir.path().to_path_buf(),
+            ipc: false,
+            clipboard: false,
+        };
+        let core = Core::start(options()).await.unwrap();
+        let risky: prism_core::model::Queue = serde_json::from_value(json!({
+            "id": "persisted", "name": "Persisted", "maxConcurrent": 1,
+            "speedLimit": 0, "position": 99, "builtin": false, "running": false,
+            "schedule": {"enabled": true, "onComplete": {"type": "shutdown"}}
+        }))
+        .unwrap();
+        core.upsert_queue(risky).unwrap();
+        core.restrict_post_actions();
+        assert_eq!(
+            core.queues()
+                .iter()
+                .find(|q| q.id == "persisted")
+                .unwrap()
+                .schedule
+                .on_complete,
+            PostAction::None
+        );
+        core.shutdown().await;
+        drop(core);
+
+        let restarted = Core::start(options()).await.unwrap();
+        assert_eq!(
+            restarted
+                .queues()
+                .iter()
+                .find(|q| q.id == "persisted")
+                .unwrap()
+                .schedule
+                .on_complete,
+            PostAction::None
+        );
+        restarted.shutdown().await;
+    }
+
+    #[tokio::test]
     async fn web_rejects_executable_settings_patches() {
         let dir = tempfile::tempdir().unwrap();
         let core = Core::start(prism_core::manager::CoreOptions {

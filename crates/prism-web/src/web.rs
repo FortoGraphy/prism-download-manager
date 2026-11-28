@@ -197,7 +197,13 @@ async fn events(
     let core = state.core.clone();
     let rx = core.subscribe();
     let shutdown = state.shutdown.clone();
-    let stream = unfold((rx, core, shutdown), |(mut rx, core, mut shutdown)| async move {
+    let stream = unfold((rx, core, shutdown, true), |(mut rx, core, mut shutdown, first)| async move {
+        if first {
+            // Reconnects create a fresh stream; seed it so the UI never trusts stale rows.
+            let resync = CoreEvent::ItemsAdded(core.bootstrap().items);
+            let data = serde_json::to_string(&resync).unwrap_or_else(|_| "{}".into());
+            return Some((Ok(Event::default().data(data)), (rx, core, shutdown, false)));
+        }
         let event = tokio::select! {
             biased;
             _ = shutdown.wait_for(|shutting_down| *shutting_down) => return None,
@@ -206,13 +212,13 @@ async fn events(
         match event {
             Ok(event) => {
                 let data = serde_json::to_string(&event).unwrap_or_else(|_| "{}".into());
-                Some((Ok(Event::default().data(data)), (rx, core, shutdown)))
+                Some((Ok(Event::default().data(data)), (rx, core, shutdown, false)))
             }
             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
                 // A slow browser missed events: resend the full list so rows recover.
                 let resync = CoreEvent::ItemsAdded(core.bootstrap().items);
                 let data = serde_json::to_string(&resync).unwrap_or_else(|_| "{}".into());
-                Some((Ok(Event::default().data(data)), (rx, core, shutdown)))
+                Some((Ok(Event::default().data(data)), (rx, core, shutdown, false)))
             }
             Err(tokio::sync::broadcast::error::RecvError::Closed) => None,
         }
@@ -369,6 +375,40 @@ mod tests {
         let ipc_auth = crate::ipc::IpcAuth::new(dir.path().join("ipc.json"), None);
         let (_, shutdown_rx) = watch::channel(false);
         let _ = router(core.clone(), auth, ipc_auth, shutdown_rx);
+        core.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn events_stream_starts_with_items_snapshot() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::start(prism_core::manager::CoreOptions {
+            data_dir: dir.path().to_path_buf(),
+            ipc: false,
+            clipboard: false,
+        })
+        .await
+        .unwrap();
+        let auth = crate::auth::Auth::new(dir.path(), 8080, true, None).unwrap();
+        let (_, shutdown_rx) = watch::channel(false);
+        let state = Arc::new(AppState {
+            core: core.clone(),
+            auth,
+            shutdown: shutdown_rx,
+        });
+        let response = events(State(state), HeaderMap::new()).await.unwrap().into_response();
+        let mut body = Box::pin(response.into_body());
+        let frame = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            std::future::poll_fn(|cx| body.as_mut().poll_frame(cx)),
+        )
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+        let data = String::from_utf8(frame.into_data().unwrap().to_vec()).unwrap();
+        assert!(data.starts_with("data: "));
+        assert!(data.contains("\"type\":\"itemsAdded\""));
+        assert!(data.contains("\"payload\":[]"));
         core.shutdown().await;
     }
 

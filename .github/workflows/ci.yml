@@ -48,10 +48,8 @@ jobs:
         run: |
           npm ci --prefix app
           npm run build --prefix app
-      - name: Rust tests (workspace + prism-web)
-        run: |
-          cargo test --workspace --exclude prism-app
-          cargo test -p prism-web
+      - name: Rust tests (workspace)
+        run: cargo test --workspace --exclude prism-app
       - name: Smoke test prism-web token transport
         if: runner.os == 'Linux'
         env:

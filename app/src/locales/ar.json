@@ -1253,5 +1253,15 @@
   "What's inside a ZIP": "ما بداخل ملف ZIP",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "تعرض نافذة «تنزيل ملف» الملفات الموجودة في ZIP قبل تنزيله، ويمكنها تنزيل ملف واحد منها فقط.",
   "Finished means finished": "المكتمل مكتمل",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "التنزيل الذي اكتمل والنافذة مفتوحة كان يبدو أحياناً كأنه ما زال قيد التنزيل."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "التنزيل الذي اكتمل والنافذة مفتوحة كان يبدو أحياناً كأنه ما زال قيد التنزيل.",
+  "Other finish actions need the desktop app.": "تحتاج إجراءات الإنهاء الأخرى إلى تطبيق سطح المكتب.",
+  "Updates are available in the desktop app.": "التحديثات متاحة في تطبيق سطح المكتب.",
+  "Desktop-only settings": "إعدادات سطح المكتب فقط",
+  "Settings from the desktop app": "إعدادات من تطبيق سطح المكتب",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.": "هذه القيم الخاصة بسطح المكتب مخفية هنا، لكن prism-web لا يمكنه حفظ أي إعدادات حتى تُزال. تتم إعادة ضبط الماسح إلى تلقائي ويتم مسح الأمر المخصص والوسائط ومسارات الأدوات.",
+  "Remove desktop-only values": "إزالة قيم سطح المكتب فقط",
+  "yt-dlp updated": "تم تحديث yt-dlp",
+  "yt-dlp is managed outside Prism": "yt-dlp مُدار خارج Prism",
+  "In prism-web, set the server URL and bearer token in the extension Options page; native messaging is not used.": "في prism-web، اضبط عنوان URL للخادم ورمز الحامل في صفحة خيارات الإضافة؛ لا يُستخدم المراسلة الأصلية.",
+  "Could not copy the links": "تعذر نسخ الروابط"
 }

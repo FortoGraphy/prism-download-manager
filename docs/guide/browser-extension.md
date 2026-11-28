@@ -77,14 +77,14 @@ instead.
 
 1. Start prism-web (by default it listens on `127.0.0.1:8080`; use `--host` / `--port` to
    change that). Set `PRISM_WEB_TOKEN` to the token shared by the web UI and the extension.
-   Without it, prism-web generates a token for the extension and writes it to its `ipc.json`
+   Without it, prism-web generates a token for the extension and writes it to its `web-ipc.json`
    discovery file: look for `IPC info: <path>` in the startup output to find that file. The
    `Access token:` printed at startup is for the web UI.
 2. Add the extension, then open its **Options** page.
 3. Set **Prism web server root URL** to the server root, e.g. `http://127.0.0.1:8080` —
    not a path prefix.
 4. Set **Bearer token** to the `PRISM_WEB_TOKEN` value, or, if you left it unset, to the
-   generated extension token in that `ipc.json` file.
+   generated extension token in that `web-ipc.json` file.
 
 The token and download metadata cross the network between the browser and the server. For
 anything beyond loopback, put prism-web behind HTTPS (for example a reverse proxy): over
@@ -95,7 +95,7 @@ plain HTTP they are visible on the network. Never paste the token into issues.
 | Symptom | Fix |
 |---|---|
 | Popup says **Not connected** / *Prism isn't reachable* | Start Prism (it lives in the tray), then click **Retry** in the popup. Still failing → Prism → Settings → Browser integration → **Repair**, then restart the browser. |
-| *Prism isn't reachable* when using prism-web | Check **Prism web server root URL** is the root (`http://127.0.0.1:8080`), not a path prefix; check **Bearer token** matches `PRISM_WEB_TOKEN` or the generated token in `ipc.json`; confirm the server is running and reachable. Beyond loopback use HTTPS via a reverse proxy — plain HTTP exposes the token. |
+| *Prism isn't reachable* when using prism-web | Check **Prism web server root URL** is the root (`http://127.0.0.1:8080`), not a path prefix; check **Bearer token** matches `PRISM_WEB_TOKEN` or the generated token in `web-ipc.json`; confirm the server is running and reachable. Beyond loopback use HTTPS via a reverse proxy — plain HTTP exposes the token. |
 | *Failed to start native messaging host* (Windows) while Prism runs and Browser integration is green | The browser couldn't start Prism's helper. Update Prism: since 1.2.6 the helper no longer needs the Visual C++ Redistributable. Still failing → Windows lacks the `ComSpec` variable, which Chrome needs to start any helper: run `setx ComSpec "%SystemRoot%\system32\cmd.exe"` in a terminal, then quit the browser completely and start it again. Chrome started with `--enable-logging --v=1` writes the reason to its log (search for `launch_context_win`). |
 | Downloads still go to the browser | Make sure *Capture downloads* is on in the popup; check the file type is in Settings → File types (e.g. images are not captured by default); `blob:` downloads (some web apps) can't be handed over. |
 | No **Download video** button | Hover the video; check *Show video button* in the extension options; reload the page after installing. |

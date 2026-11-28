@@ -1161,5 +1161,15 @@
   "What's inside a ZIP": "Bir ZIP'in içinde ne var",
   "The “Download file” window shows the files in a ZIP before you download it, and can download just one of them.": "«Dosya indir» penceresi bir ZIP'teki dosyaları indirmeden önce gösterir ve yalnızca birini indirebilir.",
   "Finished means finished": "Bitti demek bitti",
-  "A download that finished while the window was open sometimes still looked like it was downloading.": "Pencere açıkken biten bir indirme bazen hâlâ iniyormuş gibi görünüyordu."
+  "A download that finished while the window was open sometimes still looked like it was downloading.": "Pencere açıkken biten bir indirme bazen hâlâ iniyormuş gibi görünüyordu.",
+  "Other finish actions need the desktop app.": "Diğer bitiş eylemleri masaüstü uygulamasını gerektirir.",
+  "Updates are available in the desktop app.": "Güncellemeler masaüstü uygulamasında mevcuttur.",
+  "Desktop-only settings": "Yalnızca masaüstü ayarları",
+  "Settings from the desktop app": "Masaüstü uygulamasındaki ayarlar",
+  "These desktop-only values are hidden here, but prism-web cannot save any settings until they are removed. The scanner is reset to Automatic and the custom command, arguments and tool paths are cleared.": "Bu masaüstü değerleri burada gizlidir, ancak prism-web bunlar kaldırılana kadar hiçbir ayarı kaydedemez. Tarayıcı Otomatik’e sıfırlanır ve özel komut, bağımsız değişkenler ve araç yolları temizlenir.",
+  "Remove desktop-only values": "Yalnızca masaüstü değerlerini kaldır",
+  "yt-dlp updated": "yt-dlp güncellendi",
+  "yt-dlp is managed outside Prism": "yt-dlp Prism dışında yönetiliyor",
+  "In prism-web, set the server URL and bearer token in the extension Options page; native messaging is not used.": "prism-web’de uzantının Seçenekler sayfasında sunucu URL’sini ve taşıyıcı belirtecini ayarlayın; yerel mesajlaşma kullanılmaz.",
+  "Could not copy the links": "Bağlantılar kopyalanamadı"
 }

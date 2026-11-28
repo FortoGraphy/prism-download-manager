@@ -75,11 +75,7 @@ export function SchedulerSheet({ initial }: { initial?: string }) {
   const next = nextRuns.find(([id]) => id === draft.id)?.[1];
 
   const save = async () => {
-    // A queue seeded by the desktop app can still carry a finish action prism-web rejects.
-    const queue = FINISH_ACTIONS.some((a) => a.type === draft.schedule.onComplete.type)
-      ? draft
-      : { ...draft, schedule: { ...draft.schedule, onComplete: { type: "none" as const } } };
-    const res = await attempt(api.upsertQueue(queue), t("Could not save the queue"));
+    const res = await attempt(api.upsertQueue(draft), t("Could not save the queue"));
     if (res) {
       useApp.setState({ queues: res });
       toast(t("{name} saved", { name: draft.name }), { kind: "success", ms: 1800 });
