@@ -19,13 +19,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FortoGraphy/prism-download-manager/releases/latest"><b>⬇ Download</b></a> ·
+  <a href="https://github.com/FortoGraphy/prism-download-manager/releases/latest"><b>⬇&nbsp;Download</b></a> ·
   <a href="https://prismdl.site/"><b>Website</b></a> ·
-  <a href="https://prismdl.site/demo/"><b>🖱 Try the live demo</b></a> ·
-  <a href="https://youtu.be/IkZu0XN2lLQ"><b>▶ Watch the film</b></a> ·
-  <a href="docs/guide/installation.md">Install guide</a> ·
-  <a href="docs/guide/browser-extension.md">Browser extension</a> ·
-  <a href="https://ko-fi.com/prismdownloadmanager"><b>☕ Buy me a beam</b></a>
+  <a href="https://prismdl.site/demo/"><b>🖱&nbsp;Try&nbsp;the&nbsp;live&nbsp;demo</b></a> ·
+  <a href="https://youtu.be/IkZu0XN2lLQ"><b>▶&nbsp;Watch&nbsp;the&nbsp;film</b></a> ·
+  <a href="docs/guide/installation.md">Install&nbsp;guide</a> ·
+  <a href="docs/guide/browser-extension.md">Browser&nbsp;extension</a> ·
+  <a href="https://ko-fi.com/prismdownloadmanager"><b>☕&nbsp;Buy&nbsp;me&nbsp;a&nbsp;beam</b></a>
 </p>
 
 <p align="center">
